@@ -16,7 +16,11 @@ https://docs.google.com/spreadsheets/d/1EicKYz_AR5gNJzcSNDgjePKYvapRo3htBw5Dzuc-
 
 # Supporting files 
 
-Supporting files from Ensembl VEP downloads and ClinVar hg19 and hg38 vcf (paresed) have been supplied for the annotations. 
+Supporting files from Ensembl VEP downloads and ClinVar hg19 and hg38 VCF (parsed) have been supplied for the annotations. They can be found here: https://doi.org/10.5281/zenodo.13938368
+
+Due to the large nature of some of these files, they cannot be stored on base GitHub. 
+
+The files are private on Zenodo, I will add users as requested.
 
 # Script 
 
