@@ -14,7 +14,9 @@ Please refer to this sheet for additional information about the functional data.
 
 https://docs.google.com/spreadsheets/d/1EicKYz_AR5gNJzcSNDgjePKYvapRo3htBw5Dzuc-QDM/edit?gid=1962463955#gid=1962463955
 
-# Supporting files 
+# Supporting files and dataframe
+
+The final dataframe has been added to zenodo (due to the large nature of the dataframe, it cannot be hosted on base Github)
 
 Supporting files from Ensembl VEP downloads and ClinVar hg19 and hg38 VCF (parsed) have been supplied for the annotations. They can be found here: https://doi.org/10.5281/zenodo.13938368
 
