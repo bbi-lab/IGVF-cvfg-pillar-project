@@ -24,6 +24,8 @@ Due to the large nature of some of these files, they cannot be stored on base Gi
 
 The files are private on Zenodo, I will add users as requested.
 
+There are two files for the dataframe: one expanded version (meaning all possible variants are defined per row) and condensed version (meaning amino acid level datasets have information condensed when mapped back to more than one nucleotide change)
+
 # Script 
 
 The VEP_gnomad_parse is jupyter notebook. Please read the comments carefully. This script will create the VEP_input that was added to the web interface and will also concatenate the VEP_output (if stored in the same folder). In addition, it will concatenate the single gene gnomad_v4 downloads into one file. 
