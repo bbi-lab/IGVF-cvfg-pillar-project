@@ -18,7 +18,7 @@ https://docs.google.com/spreadsheets/d/1EicKYz_AR5gNJzcSNDgjePKYvapRo3htBw5Dzuc-
 
 The final dataframe has been added to zenodo (due to the large nature of the dataframe, it cannot be hosted on base Github)
 
-Supporting files from Ensembl VEP downloads and ClinVar hg19 and hg38 VCF (parsed) have been supplied for the annotations. They can be found here: https://doi.org/10.5281/zenodo.13938368
+Supporting files from Ensembl VEP downloads and ClinVar hg19 and hg38 VCF (parsed) have been supplied for the annotations. They can be found here: https://doi.org/10.5281/zenodo.14736656
 
 Due to the large nature of some of these files, they cannot be stored on base GitHub. 
 
