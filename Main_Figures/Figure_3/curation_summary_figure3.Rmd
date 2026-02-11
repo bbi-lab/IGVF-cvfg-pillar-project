@@ -1,0 +1,464 @@
+---
+title: "Curation_summary_final"
+author: "Malvika Tejura"
+date: "2025-12-18"
+output: html_document
+---
+
+```{r}
+
+#sunburst plot to show assay type, model system, and gene combinations
+
+library(plotly)
+library(ggsci)
+library(dplyr)
+library(tidyr)
+library(reticulate)
+library(ggrepel)
+
+npg_colors_extended <- c(
+  "#E64B35FF", # red-orange
+  "#4DBBD5FF", # cyan
+  "#00A087FF", # teal
+  "#3C5488FF", # blue
+  "#F39B7FFF", # peach
+  "#8491B4FF", # lavender-blue
+  "#91D1C2FF", # mint
+  "#DC0000FF", # red
+  "#7E6148FF", # brown
+  "#B09C85FF", # tan
+
+  "#1F78B4FF", # steel blue
+  "#33A02CFF", # green
+  "#FB9A99FF", # soft pink
+  "#E31A1CFF", # dark red
+  "#FDBF6FFF", # gold
+  "#6A3D9AFF", # purple
+  "#A6CEE3FF", # light blue
+  "#B2DF8AFF", # light green
+  "#CAB2D6FF", # lilac
+  "#FFFF99FF"  # pale yellow
+)
+
+
+npg_colors = c("#E64B35FF","#4DBBD5FF", "#00A087FF", "#3C5488FF", "#F39B7FFF", "#8491B4FF" ,"#91D1C2FF", "#DC0000FF", "#7E6148FF", "#B09C85FF")
+
+curation = read.csv("~/Downloads/MAVE_curation_v3_figures.csv")
+
+pillar_project_datasets = c('BRCA1_Findlay_2018', 'BRCA2_Hu_2024', 'VHL_Buckley_2024',
+       'JAG1_Gilbert_2024', 'BRCA2_Sahu_2023_exon13_SGE',
+       'BRCA2_Sahu_2023_exon13_Cisplatin',
+       'BRCA2_Sahu_2023_exon13_Olaparib', 'BARD1_unpublished',
+       'PALB2_unpublished', 'XRCC2_unpublished', 'SFPQ_unpublished',
+       'BRCA2_unpublished', 'RAD51D_unpublished', 'CTCF_unpublished',
+       'BAP1_Waters_2024', 'DDX3X_Radford_2023_cLFC_day15',
+       'RHO_Wan_2019', 'RAD51C_Olvera-León_2024_z_score_D4_D14',
+       'BRCA2_Sahu_2025_HDR', 'BRCA2_Sahu_2023_exon13_global_score',
+       'FKRP_Ma_2024', 'LARGE1_Ma_2024',
+       'CARD11_Meitlis_2020_Ibrutinib_no_introns',
+       'CARD11_Meitlis_2020_DMSO_no_introns',
+       'ASPA_Grønbæk-Thygesen_2024_abundance',
+       'ASPA_Grønbæk-Thygesen_2024_toxicity',
+       'BRCA1_Adamovich_2022_Cisplatin', 'BRCA1_Adamovich_2022_HDR',
+       'CALM1_CALM2_CALM3_Weile_2017', 'CBS_Sun_2020_high_B6',
+       'CBS_Sun_2020_low_B6', 'CHEK2_Gebbia_2024', 'CRX_Shepherdson_2024',
+       'F9_Popp_2025_carboxy_F9_specific',
+       'F9_Popp_2025_carboxy_gla_motif', 'F9_Popp_2025_heavy_chain',
+       'F9_Popp_2025_light_chain', 'F9_Popp_2025_model',
+       'F9_Popp_2025_strep_2', 'G6PD_unpublished',
+       'GCK_Gersing_2023_complementation', 'GCK_Gersing_2024_abundance',
+       'HMBS_van_Loggerenberg_2023_combined',
+       'HMBS_van_Loggerenberg_2023_erythroid',
+       'HMBS_van_Loggerenberg_2023_ubquitous',
+       'KCNE1_Muhammad_2024_absence_of_WT',
+       'KCNE1_Muhammad_2024_potassium_flux',
+       'KCNE1_Muhammad_2024_presence_of_WT', 'KCNH2_Jiang_2022',
+       'KCNH2_Kozek_Glazer_2020', 'KCNH2_O_Neill_2024_surface_expression',
+       'MSH2_Jia_2021', 'NDUFAF6_Sung_2024', 'OTC_Lo_2023',
+       'PAX6_McDonnell_2024_BLX_geneticin',
+       'PAX6_McDonnell_2024_BLX_no_geneticin',
+       'PAX6_McDonnell_2024_LE9_geneticin',
+       'PAX6_McDonnell_2024_LE9_no_geneticin', 'PTEN_Matreyek_2018',
+       'PTEN_Mighell_2018', 'SCN5A_Glazer_2020',
+       'SCN5A_Ma_2024_current_density', 'SGCB_Li_2023',
+       'TARDBP_Bolognesi_Faure_2019', 'TP53_Boettcher_2019',
+       'TP53_Fayer_2021_meta', 'TP53_Fortuno_2021_Kato_meta',
+       'TP53_Giacomelli_2018_combined_score',
+       'TP53_Giacomelli_2018_p53WT_Nutlin3',
+       'TP53_Giacomelli_2018_p53null_Nutlin3',
+       'TP53_Giacomelli_2018_p53null_etoposide', 'TP53_Kato_2003_AIP1nWT',
+       'TP53_Kato_2003_BAXnWT', 'TP53_Kato_2003_GADD45nWT',
+       'TP53_Kato_2003_MDM2nWT', 'TP53_Kato_2003_NOXAnWT',
+       'TP53_Kato_2003_P53R2nWT', 'TP53_Kato_2003_WAF1nWT',
+       'TP53_Kato_2003_h1433snWT', 'TPK1_Weile_2017',
+       'TSC2_rapgap_unpublished', 'TSC2_tuberin_unpublished',
+       'KCNQ4_Zheng_2022_current_homozygous',
+       'KCNQ4_Zheng_2022_v12_homozygous')
+
+
+curation <- curation[curation$Dataset_tag %in% pillar_project_datasets, ]
+
+curation <- curation %>%
+  filter(
+    Assay.Type != "Not Applicable (trained predictor)",
+    Disease != "None",
+    Model_system != "Not Applicable"
+  )
+
+c <- curation %>%
+  mutate(
+    id_type   = paste0("type_", tolower(Disease)),
+    id_assay  = paste0("assay_", tolower(Disease), "_", tolower(Assay.Type)),
+    id_model  = paste0("model_", tolower(Disease), "_", tolower(Assay.Type), "_", tolower(Model_system)),
+    id_gene   = paste0("gene_", tolower(Disease), "_", tolower(Assay.Type), "_", tolower(Model_system), "_", tolower(Gene..HGNC.symbol.))
+  )
+
+nodes <- bind_rows(
+  # root: type of gene
+  c %>% distinct(ids = id_type,  labels = tolower(Disease),            parents = ""),
+  # assay types under type of gene
+  c %>% distinct(ids = id_assay, labels = tolower(Assay.Type),         parents = id_type),
+  # model system under assay type
+  c %>% distinct(ids = id_model, labels = tolower(Model_system),       parents = id_assay),
+  # gene under model system
+  c %>% distinct(ids = id_gene,  labels = tolower(Gene..HGNC.symbol.), parents = id_model)
+)
+
+# sort genes alphabetically
+nodes <- nodes %>%
+  group_by(parents) %>%
+  arrange(if_else(grepl("^gene_", ids), labels, ""), .by_group = TRUE) %>%
+  ungroup()
+
+# make a disease → color map
+disease_ids <- unique(nodes$ids[grepl("^type_", nodes$ids)])
+color_map <- setNames(c("#F39B7FFF","#B09C85FF", "#00A087FF", "#3C5488FF")[seq_along(disease_ids)], disease_ids)
+
+# assign colors by tracing back to the disease parent
+nodes <- nodes %>%
+  mutate(
+    disease_parent = case_when(
+      grepl("^type_", ids) ~ ids,
+      TRUE ~ sub("^(type_[^_]+).*", "\\1", parents)  # pull disease id prefix
+    ),
+    color = color_map[disease_parent],
+    labels = if_else(grepl("^type_", ids), "", labels) # hide disease labels
+  )
+
+
+# helper to wrap long text
+wrap_label <- function(x, width = 12) {
+  gsub(paste0("(.{1,", width, "})(\\s|$)"), "\\1<br>", x)
+}
+
+nodes <- nodes %>%
+  mutate(
+    labels = if_else(grepl("^model_", ids),
+                     sapply(labels, wrap_label),  # wrap only model system labels
+                     labels)
+  )
+
+# keep everything (don’t drop diseases; just hide labels)
+fig <- plot_ly(nodes,
+  ids = ~ids,
+  labels = ~labels,
+  parents = ~parents,
+  type = "sunburst",
+  branchvalues = "total",
+  marker = list(colors = ~color),
+  insidetextorientation = "radial"
+)
+
+fig
+
+reticulate::py_module_available("plotly")
+
+save_image(fig, "/Users/malvikatejura/Downloads/sunburst_updated_npg_colors.svg", width = 2000, height = 1600, scale = 2)
+
+```
+
+```{r}
+#Figure 2C, variant effect measurements 
+
+tested = read.csv("~/Downloads/var_effect_measurements_dataset.csv")
+
+df2 <- tested %>%
+  mutate(
+    assay_type = case_when(
+      SGE == "Yes"  ~ "SGE",
+      Vamp == "Yes" ~ "VAMP",
+      TRUE          ~ "Other"
+    )
+  )
+
+summary_df <- df2 %>%
+  group_by(Gene, assay_type) %>%
+  summarise(
+    n_variants = sum(n_unique_IDs, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+
+gene_order <- summary_df %>%
+  group_by(Gene) %>%
+  summarise(total = sum(n_variants)) %>%
+  arrange(desc(total)) %>%
+  pull(Gene)
+
+# Reorder Gene factor
+summary_df <- summary_df %>%
+  mutate(Gene = factor(Gene, levels = gene_order))
+
+# Plot stacked bars in descending order
+y = ggplot(summary_df, aes(x = Gene, y = n_variants, fill = assay_type)) +
+  geom_col(position = "stack", color = NA) +
+  scale_fill_manual(
+    values = c("SGE" = "#E57525",
+               "VAMP" = "#09A3A3",
+               "Other" = "grey") 
+  ) +
+  theme_classic() +
+  labs(x = "Gene", y = "Total Variant effect measurements", fill = "Assay") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5, face = 'italic'))
+
+y
+
+ggsave('~/Downloads/barplot_variants_npg_colors.png',y, dpi = 300, device = 'png', height = 4, width = 6)
+
+#2C pie chart
+
+igvf_summary <- tested %>%
+  group_by(IGVF) %>%
+  summarise(
+    n_variants = sum(n_unique_IDs, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+igvf_summary <- igvf_summary %>%
+  mutate(
+    pct = n_variants / sum(n_variants),
+    label = scales::percent(pct, accuracy = 0.1)
+  )
+
+
+IGVF_pie = ggplot(igvf_summary, aes(x = "", y = n_variants, fill = IGVF)) +
+  geom_bar(
+    stat = "identity",
+    width = 1,
+    color = "black"
+  ) +
+  coord_polar("y") +
+  scale_fill_manual(
+    values = c(
+      "Yes" = "#176082",  
+      "No"  = "#D6EAEC"  
+    )
+  ) +
+  geom_text(
+    aes(label = NA),
+    position = position_stack(vjust = 0.5),
+    color = "black",
+    size = 4
+  ) +
+  theme_void() +
+  labs(fill = "IGVF")
+
+IGVF_pie
+
+ggsave('~/Downloads/IGVF_pie_chart.png',IGVF_pie, dpi = 300, device = 'png', height = 4, width = 4)
+
+```
+
+```{r}
+
+#venn diagram Figure 2D
+
+venn = read.csv("~/Downloads/venn_counts_122225.csv")
+
+# install.packages("eulerr")
+library(eulerr)
+
+# Collapse counts
+B <- venn$count[venn$clnsig_group == "Benign"] +
+     venn$count[venn$clnsig_group == "Likely benign"] +
+     venn$count[venn$clnsig_group == "Benign/Likely benign"]
+
+P <- venn$count[venn$clnsig_group == "Pathogenic"] +
+     venn$count[venn$clnsig_group == "Likely pathogenic"] +
+     venn$count[venn$clnsig_group == "Pathogenic/Likely pathogenic"]
+
+G <- venn$count[venn$clnsig_group == "gnomad_total"]
+D <- venn$count[venn$clnsig_group == "unseen_SNV"]
+
+BG = venn$gnomad[venn$clnsig_group == "Benign"] +
+          venn$gnomad[venn$clnsig_group == "Likely benign"] +
+          venn$gnomad[venn$clnsig_group == "Benign/Likely benign"]
+
+PG = venn$gnomad[venn$clnsig_group == "Pathogenic"] +
+          venn$gnomad[venn$clnsig_group == "Likely pathogenic"] +
+          venn$gnomad[venn$clnsig_group == "Pathogenic/Likely pathogenic"]
+
+V = venn$count[venn$clnsig_group == "VUS total"]
+
+VG = venn$gnomad[venn$clnsig_group == "VUS total"]
+
+B_new = B - BG
+P_new = P - PG
+V_new = V - VG
+
+B_new
+P_new
+V_new
+G_new <- G - (BG+PG+VG)
+
+B
+
+
+#build Euler input call
+fit <- euler(c(
+  B    = B_new,
+  P    = P_new,
+  G    = G_new,
+  D    = D,
+  V    = V_new,
+  "B&G" = BG,
+  "P&G" = PG,
+  "V&G" = VG
+))
+
+fit
+
+
+
+sets <- unique(unlist(strsplit(names(fit$original), "&")))
+sets
+
+colors <- c("B"  = "#1D7AAB",
+            "P"  = "#CA7682",
+            "G"  = "#A5A9BE",
+            "D"  = "white",
+            "V" = "#545454")
+
+
+#without labels 
+x = plot(fit,
+     fills = list(fill = colors[sets], alpha = 0.5),
+     edges = list(col = "black"),
+     labels = NA)
+
+
+x
+
+#with labels 
+y = plot(
+  fit,
+  fills = list(fill =  colors[sets], alpha = 0.6),
+  edges = list(col = "black"),
+  labels = list(cex = 1.3, font = 2),
+  quantities = list(cex = 0.9, font = 1)
+)
+y
+
+
+
+ggsave('~/Downloads/venn_variants_updated.png',x, dpi = 300, device = 'png', height = 4, width = 4, bg =  "transparent")
+
+```
+
+```{r}
+
+data = read.csv("~/Downloads/curation_summary_12172025.csv")
+
+data_2 <- data[!duplicated(data$Gene), ]
+
+sum(data_2$gene_test_count)
+
+filtered_data <- data %>%
+  distinct(Gene, .keep_all = TRUE)
+
+acmg_sf_genes <- c(
+  "BRCA1",
+  "BRCA2",
+  "PTEN",
+  "TP53",
+  "MSH2",
+  "PALB2",
+  "RAD51C",
+  "RAD51D",
+  "CHEK2",
+  "VHL",
+  "TSC2",
+  "F9",
+  "SCN5A",
+  "KCNH2",
+  "KCNE1",
+  "CALM1", "CALM2", "CALM3",
+  "GCK",
+  "JAG1"
+)
+
+length(acmg_sf_genes)
+
+label_genes <- c("BRCA1",
+  "BRCA2",
+  "PTEN",
+  "TP53",
+  "MSH2",
+  "PALB2",
+  "RAD51C",
+  "RAD51D",
+  "CHEK2",
+  "VHL",
+  "TSC2",
+  "F9",
+  "SCN5A",
+  "KCNH2", "CALM2", "CALM3",
+  "GCK",
+  "JAG1", "SCN5A","TARDBP","F9","RHO","TSC2","PALB2","G6PD","BARD1")
+
+
+
+x <- ggplot(filtered_data,
+       aes(x = gene_test_count, 
+           y = possible_SNVs,
+           size = Uncertain.significance,
+           fill = IGVF_produced)) + 
+  geom_point(aes(color = ifelse(gene_symbol %in% acmg_sf_genes, "highlight", "normal")),
+             shape = 21, alpha = 1, stroke = ifelse(filtered_data$gene_symbol %in% acmg_sf_genes, 1, 0)) +
+  geom_text_repel(
+  aes(label = ifelse(gene_symbol %in% label_genes, gene_symbol, NA)),
+  size = 3,
+  fontface = "italic",
+  max.overlaps = 30,     # allow more labels
+  box.padding = 0.7,      # more space around text
+  point.padding = 0.6,    # more space around points
+  force = 2,              # stronger repulsion between labels
+  force_pull = 0.3,       # pull toward data point but not too tight
+  segment.size = 0.2,     # thinner lines
+  segment.color = "grey40",
+  min.segment.length = 0  # always draw a line
+) +
+  theme_classic() +
+  labs(x = "Number of Clinical Tests",
+       y = "Possible Number of SNVs",
+       size = "Number of VUS in ClinVar (SNV)") +
+  scale_fill_manual(name = "IGVF produced",
+                    values = c("Yes" = "#176082","No" = "grey")) +
+  scale_color_manual(values = c("highlight" = "red3", "normal" = 'black'),
+                     guide = "none") +  # border colors
+  theme(
+    plot.title = element_text(size = 18, hjust = 0.5),
+    axis.title = element_text(size = 12),
+    axis.text = element_text(size = 12),
+    legend.title = element_text(size = 8),
+    legend.text = element_text(size = 6),
+    plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"),
+    legend.position = "bottom"
+  )
+
+
+x
+
+ggsave('~/Downloads/bubble_plot_only_pp_092925_no_legend.png',x, dpi = 300, device = 'png', height = 5, width = 6)
+
+```
