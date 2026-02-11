@@ -1,9 +1,9 @@
 
 ---
 
-##  Overview
+##  A scalable approach to resolving variants of uncertain significance
 
-This repository contains two primary components:
+This repository contains all the scripts necessary to recreate the analyses presented in `A scalable approach to resolving variants of uncertain significance`
 
 ### 1. Analysis Scripts (`Analysis/`)
 
