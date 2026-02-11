@@ -5,7 +5,7 @@
 
 This repository contains two primary components:
 
-### 1. Analysis Scripts (`analysis/`)
+### 1. Analysis Scripts (`Analysis/`)
 
 #### ▸ Integrated Variant Effect Dataset Pipeline
 
@@ -25,7 +25,7 @@ Scripts implementing:
 - Scalable variant classification framework  
 ---
 
-### 2. Figure Generation (`figures/`)
+### 2. Figure Generation (`Main_Figures/`)
 
 Contains scripts and small supporting inputs used to generate:
 
