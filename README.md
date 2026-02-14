@@ -1,11 +1,11 @@
 
 ---
 
-##  Overview
+##  A scalable approach to resolving variants of uncertain significance
 
-This repository contains two primary components:
+This repository contains all the scripts necessary to recreate the analyses presented in `A scalable approach to resolving variants of uncertain significance`
 
-### 1. Analysis Scripts (`analysis/`)
+### 1. Analysis Scripts (`Analysis/`)
 
 #### ▸ Integrated Variant Effect Dataset Pipeline
 
@@ -25,7 +25,7 @@ Scripts implementing:
 - Scalable variant classification framework  
 ---
 
-### 2. Figure Generation (`figures/`)
+### 2. Figure Generation (`Main_Figures/`)
 
 Contains scripts and small supporting inputs used to generate:
 

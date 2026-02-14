@@ -510,7 +510,7 @@ def plot_panel_c(gs_spec, danzs_oob, auths_oob, fig):
     cbar_ax = fig.add_axes([bbox_auth.x1 + 0.01, bbox_auth.y0, 0.015, bbox_auth.height])
     
     plot_confusion(danz_agg, ax_danz, "ExCALIBR Evidence", danz_metrics, show_cbar=False)
-    plot_confusion(auth_agg, ax_auth, "Author Annotations", auth_metrics, show_cbar=True, cbar_ax=cbar_ax)
+    plot_confusion(auth_agg, ax_auth, "Functional Annotations", auth_metrics, show_cbar=True, cbar_ax=cbar_ax)
     
     # ax_danz.text(-0.25, 1.15, "c", transform=ax_danz.transAxes,
     #             fontsize=FONTSIZE_PANEL_LETTER, fontweight='bold', va='top', ha='left')
