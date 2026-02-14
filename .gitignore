@@ -2,3 +2,4 @@
 # Jupyter
 # =========================
 .ipynb_checkpoints/
+.R_history
