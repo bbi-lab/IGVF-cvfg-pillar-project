@@ -42,7 +42,7 @@ Each figure directory includes:
 
 Large supporting datasets are hosted externally on Zenodo to comply with GitHub file size limits.
 
-**Zenodo record:**  
+**Zenodo record:** https://zenodo.org/records/18637474 
 
 The Zenodo archive includes:
 
@@ -61,21 +61,8 @@ Files included in this GitHub repository are:
 
 Primary languages:
 
-- Python (v X)
-- R (v X)  
+- Python (3.12+)
+- R (v 4.1.3)  
 
 Additional package dependencies are specified within individual scripts.
 
----
-
----
-
-## Citation
-
-If using this resource, please cite:
-
----
-
-##  Contact
-
-For questions regarding the dataset or framework, please open an issue or contact the corresponding author.
