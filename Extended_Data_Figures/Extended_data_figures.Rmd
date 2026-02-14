@@ -1,0 +1,1597 @@
+---
+title: "Extended_Data_figures"
+author: "Malvika Tejura"
+date: "2026-02-11"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = FALSE,
+  error = FALSE
+)
+options(warn = 0)
+```
+
+```{r}
+
+DATA_DIR = "~/Downloads/data_local"
+OUT_DIR = "/Users/malvikatejura/Downloads/outputs"
+```
+
+```{r}
+
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(ggsankey)
+library(tidyverse)
+library(readxl)
+
+#----color palette----
+
+colors_custom <- c(
+  "Pathogenic" = "#CA7682",
+  "Likely Pathogenic" = "#E6B1B8",
+  "Likely pathogenic" = "#E6B1B8",
+  "Benign" = "#1D7AAB",
+  "Uncertain" = "#A0A0A0",
+  "No Classification" = "#A0A0A0",
+  "Likely Benign" = "#63A1C4",
+  "Likely benign" = "#63A1C4",
+  '-12' = "#176082",  # deepest blue
+  '-11' = "#1D7AAB",  # deep steel blue
+  '-10' = "#4B91A6",  # medium steel blue
+   '-9' = "#63A1C4",  # sky blue
+   '-8' = "#7AB5D1",  # soft blue-gray
+   '-7' = "#99C8DC",  # light blue-gray
+   '-6' = "#B8DCE8",  # very light blue
+   '-5' = "#D0E8F0",  # icy pale blue
+   '-4' = "#E4F1F6",  # faint pale blue
+   '-3' = "#EDF6FA",  # hint of blue
+   '-2' = "#F4F9FC",  # nearly white blue
+   '-1' = "#F9FCFE",  # even paler blue
+    '0' = "#E0E0E0",  # true neutral
+
+    '1' = "#F7E4E7",  # very pale pink
+    '2' = "#F0D0D5",  # pale dusty pink
+    '3' = "#E6B1B8",  # blush pink
+    '4' = "#D68F99",  # dusty rose
+    '5' = "#CA7682",  # muted rose
+    '6' = "#B85C6B",  # deeper rose
+    '7' = "#A84957",  # muted wine
+    '8' = "#943744",  # rich berry red
+    '9' = "#7F2936",  # burgundy
+   '10' = "#671B28",  # dark wine red
+   '11' = "#520F1C",  # deeper red
+   '12' = "#3A060D",  # near black red
+
+  'No evidence'         = "#B09C85FF",  # base gray
+  'No Classification'   = "#A0A0A0",
+  'Gnomad'   = "#A0A0A0",# silver gray
+  'Conflicting evidence'= "grey",  # neutral gray
+   "Functional" = "#C8A2C8",  # lilac
+  "Predictive" = "lightblue",   # warmer orchid
+  
+  "mix" = "#A5A9BE",
+  "Functional only" = "#00A087FF",
+    "Predictive only" = "#F39B7FFF",
+    "Both"            = "gold",
+  "-12 to -6" = "#176082",
+  "-12 to -5" = "#176082",
+  "-5 to -4" = "#63A1C4",
+  "-3 to -1" = "#99C8DC" ,
+  "-4 to -1" = "#99C8DC" ,
+  "1 to 3" = "#F0D0D5",
+  "4 to 5" = "#D68F99",
+  "0" = 'grey',
+  "6 to 9" = "#B85C6B",
+  "10 to 12" = "#520F1C",
+  "No conflict" = 'whitesmoke',
+  "Conflicting" = 'darkgrey'
+  
+)
+
+```
+
+```{r}
+
+#Extended Data Figure 4 and 6
+
+#AM and MP2
+
+controls_AM_YP  = read_excel(file.path(DATA_DIR, "Supplemental_Data/Supplementary_Data_5.xlsx"), sheet = "controls_AM_GeneSpecific")
+controls_MP2_YP  = read_excel(file.path(DATA_DIR, "Supplemental_Data/Supplementary_Data_5.xlsx"), sheet = "controls_MP2_GeneSpecific")
+
+
+#OddsPath
+
+controls_REVEL_OP  = read_excel(file.path(DATA_DIR, "Supplemental_Data/Supplementary_Data_6.xlsx"), sheet = "controls_REVEL_OP")
+controls_AM_OP  = read_excel(file.path(DATA_DIR, "Supplemental_Data/Supplementary_Data_6.xlsx"), sheet = "controls_AM_OP")
+controls_MP2_OP  = read_excel(file.path(DATA_DIR, "Supplemental_Data/Supplementary_Data_6.xlsx"), sheet = "controls_MP2_OP")
+
+
+##------------Controls Sankey plot --------------------
+make_sankey_controls <- function(df, points_col, colors_custom, clinvar) {
+  
+  df <- df %>% mutate(clinvar = {{ clinvar }})
+  
+  # Fix clinvar naming
+  df$clinvar[df$clinvar == 'Pathogenic/Likely pathogenic'] <- "Likely pathogenic"
+  df$clinvar[df$clinvar == 'Benign/Likely benign'] <- "Likely benign"
+  
+  # Dynamically pick the points column using {{ }}
+  summary_data <- df %>%
+    group_by(clinvar, {{ points_col }}) %>%
+    summarise(count = n(), .groups = "drop")
+  
+  # Expand the dataframe
+  expanded_df <- summary_data[rep(1:nrow(summary_data), summary_data$count), -3]
+  rownames(expanded_df) <- NULL
+  
+  # Prepare for sankey
+  sankey_data <- expanded_df %>%
+    ggsankey::make_long(clinvar, {{ points_col }})
+  
+  # Factor levels
+  levels_order <- c(
+    'Benign', "Likely benign", "Likely Benign", 
+    'Uncertain', "No Classification", 
+    "Likely pathogenic", "Likely Pathogenic", "Pathogenic"
+  )
+  
+  sankey_data$node <- factor(sankey_data$node, levels = levels_order)
+  sankey_data$next_node <- factor(sankey_data$next_node, levels = levels_order)
+  
+  # Make the plot
+  gc <- ggplot(sankey_data, aes(
+    x = x,
+    next_x = next_x,
+    node = node,
+    next_node = next_node,
+    fill = node,
+    label = NA
+  )) +
+    geom_sankey(flow.alpha = 0.7, node.color = "black") +
+    geom_sankey_label(size = 3, color = "black") +
+    scale_fill_manual(values = colors_custom) +
+    theme_minimal() +
+    theme(
+      axis.text = element_blank(),
+      axis.title = element_blank(),
+      axis.ticks = element_blank(),
+      panel.grid = element_blank(),
+      legend.position = "none"
+    ) +
+    labs(
+      title = paste0("Sankey Diagram: ClinVar → ", rlang::as_name(rlang::ensym(points_col))),
+      fill = "Node Category"
+    )
+  
+  return(gc)
+}
+
+##----- confusion matrix function ----
+make_confusion_matrix_controls_chek2 <- function(df, points_col, clnsig_col, predictor, func_col, pred_col) {
+
+  # ---- Collapse ClinVar ----
+  df[[clnsig_col]] <- dplyr::case_when(
+    df[[clnsig_col]] %in% c("Likely pathogenic", "Likely Pathogenic", "Pathogenic/Likely pathogenic") ~ "Pathogenic",
+    df[[clnsig_col]] %in% c("Likely benign", "Likely Benign", "Benign/Likely benign") ~ "Benign",
+    TRUE ~ df[[clnsig_col]]
+  )
+
+  # ---- Collapse POINTS the same way ----
+  df[[points_col]] <- dplyr::case_when(
+    df[[points_col]] %in% c("Likely pathogenic", "Likely Pathogenic", "Pathogenic/Likely pathogenic") ~ "Pathogenic",
+    df[[points_col]] %in% c("Likely benign", "Likely Benign", "Benign/Likely benign") ~ "Benign",
+    TRUE ~ df[[points_col]]
+  )
+
+  # ---- Only determinates ----
+  df_det <- df[df[[points_col]] %in% c("Pathogenic", "Benign"), ]
+
+  # ---- All possible combinations ----
+  all_levels <- tidyr::expand_grid(
+    clnsig = c("Benign", "Pathogenic"),
+    points = c("Benign", "Pathogenic")
+  )
+
+  # ---- Summary table ----
+  summary_data <- df_det %>%
+    dplyr::count(
+      clnsig = .data[[clnsig_col]],
+      points = .data[[points_col]],
+      name = "count"
+    ) %>%
+    dplyr::right_join(all_levels, by = c("clnsig", "points")) %>%
+    dplyr::mutate(
+      count = tidyr::replace_na(count, 0),
+      consistency = ifelse(clnsig == points, "Consistent", "Inconsistent"),
+      fill_status = ifelse(count == 0, "Zero", consistency)
+    )
+
+  # ---- Extract confusion matrix values ----
+  TP <- summary_data$count[summary_data$clnsig == "Pathogenic" & summary_data$points == "Pathogenic"]
+  TN <- summary_data$count[summary_data$clnsig == "Benign"     & summary_data$points == "Benign"]
+  FP <- summary_data$count[summary_data$clnsig == "Benign"     & summary_data$points == "Pathogenic"]
+  FN <- summary_data$count[summary_data$clnsig == "Pathogenic" & summary_data$points == "Benign"]
+
+  TP <- sum(TP); TN <- sum(TN); FP <- sum(FP); FN <- sum(FN)
+
+  # ---- Metrics ----
+  sensitivity  <- TP / (TP + FN)
+  specificity  <- TN / (TN + FP)
+  concordance  <- (TP + TN) / (TP + TN + FP + FN)
+  
+  denominator <- sqrt(
+  as.numeric(TP + FP) *
+  as.numeric(TP + FN) *
+  as.numeric(TN + FP) *
+  as.numeric(TN + FN)
+)
+  
+  mcc <- ((TP * TN) - (FP * FN)) / denominator
+  
+  mcc <- ((TP * TN) - (FP * FN)) / denominator
+
+  # convert NaN to 0
+  mcc <- ifelse(is.nan(mcc) | is.infinite(mcc), 0, mcc)
+
+  percent_classified <- (TP + TN + FP + FN) / nrow(df)
+
+  metrics_df <- data.frame(
+    TP = TP, TN = TN, FP = FP, FN = FN,
+    Sensitivity = round(sensitivity, 3),
+    Specificity = round(specificity, 3),
+    Concordance = round(concordance, 3),
+    MCC = round(mcc, 3),
+    Determinate_calls = round(percent_classified, 3)
+  )
+  
+  #----- FP,FN Stats ----
+  
+  # Identify row-level FP and FN
+  FP_rows <- df[df[[clnsig_col]] == "Benign"     & df[[points_col]] == "Pathogenic", ]
+  FN_rows <- df[df[[clnsig_col]] == "Pathogenic" & df[[points_col]] == "Benign", ]
+
+  
+  get_stats <- function(df, func_col, pred_col) {
+  
+  func_vals <- df[[func_col]]
+  pred_vals <- df[[pred_col]]
+  
+  has_func <- func_vals != 0 & !is.na(func_vals)
+  has_pred <- pred_vals != 0 & !is.na(pred_vals)
+  
+  both <- has_func & has_pred
+  
+  same_direction <- both & (sign(func_vals) == sign(pred_vals))
+  opp_direction  <- both & (sign(func_vals) != sign(pred_vals))
+  
+  # 4-way direction breakdown (only for opposite-direction variants)
+  opp <- opp_direction
+
+  opp_func_pos <- sum(opp & func_vals > 0, na.rm = TRUE)
+  opp_func_neg <- sum(opp & func_vals < 0, na.rm = TRUE)
+  opp_pred_pos <- sum(opp & pred_vals > 0, na.rm = TRUE)
+  opp_pred_neg <- sum(opp & pred_vals < 0, na.rm = TRUE)
+
+  data.frame(
+    total                = nrow(df),
+    func_nonzero         = sum(has_func),
+    pred_nonzero         = sum(has_pred),
+    both_nonzero         = sum(both),
+    same_direction       = sum(same_direction),
+    opposite_direction   = sum(opp_direction),
+    only_functional      = sum(has_func & !has_pred),
+    only_predictor       = sum(has_pred & !has_func),
+    
+    opp_func_positive     = opp_func_pos,
+    opp_func_negative     = opp_func_neg,
+    opp_pred_positive     = opp_pred_pos,
+    opp_pred_negative     = opp_pred_neg
+  )
+  }
+  
+  FP_stats <- get_stats(FP_rows, func_col, pred_col)
+  FN_stats <- get_stats(FN_rows, func_col, pred_col)
+  
+  FP_stats$predictor <- predictor
+  FN_stats$predictor <- predictor
+
+  # ---- Plot ----
+  p <- ggplot(summary_data, aes(x = clnsig, y = points, fill = fill_status)) +
+    geom_tile(color = "white") +
+    geom_text(aes(label = count), size = 6, fontface = "bold") +
+    scale_fill_manual(values = c(
+      "Consistent" = "#D8BFD8",
+      "Inconsistent" = "#F2F2F2",
+      "Zero" = "white"
+    )) +
+    labs(
+      x = "ClinVar",
+      y = paste0("Experimental + Predictive classification (", predictor, ")"),
+      title = paste0(
+        "(Determinates = ", nrow(df_det),
+        ", Total = ", nrow(df),
+        ", Error = ", round((FP + FN) / nrow(df) * 100, 2), "%)"
+      )
+    ) +
+    theme_classic(base_size = 10) +
+    theme(legend.position = "none")
+
+  list(plot = p, metrics = metrics_df, summary = summary_data,FP_stats = FP_stats,
+  FN_stats = FN_stats)
+}
+
+##----sankey----
+
+sankey_controls_MP2_YP = make_sankey_controls(controls_MP2_YP, Class_MP2, colors_custom, clnsig_group_18_25)
+
+sankey_controls_AM_YP = make_sankey_controls(controls_AM_YP, Class_AM, colors_custom, clnsig_group_18_25)
+
+
+sankey_controls_REVEL_OP = make_sankey_controls(controls_REVEL_OP, Class_OP_REVEL, colors_custom, clnsig_group_18_25)
+
+sankey_controls_MP2_OP = make_sankey_controls(controls_MP2_OP, Class_OP_MP2, colors_custom, clnsig_group_18_25)
+
+sankey_controls_AM_OP = make_sankey_controls(controls_AM_OP, Class_OP_AM, colors_custom, clnsig_group_18_25)
+
+
+##----apply confusion matrix ----
+
+cm_controls_AM_YP_1star <- make_confusion_matrix_controls_chek2(controls_AM_YP, "Class_AM", "clnsig_group_18_25", "AM_GeneSpecific","Fxn_points", "Points_AM_GeneSpecific_GenomeWide")
+
+cm_controls_MP2_YP_1star <- make_confusion_matrix_controls_chek2(controls_MP2_YP, "Class_MP2", "clnsig_group_18_25", "MP2_GeneSpecific","Fxn_points", "Points_MP2_GeneSpecific_GenomeWide")
+
+
+#OddsPath
+
+cm_controls_REVEL_OP_1star <- make_confusion_matrix_controls_chek2(controls_REVEL_OP, "Class_OP_REVEL", "clnsig_group_18_25", "REVEL_OP","OP_points", "Points_REVEL_GenomeWide")
+
+cm_controls_AM_OP_1star <- make_confusion_matrix_controls_chek2(controls_AM_OP, "Class_OP_AM", "clnsig_group_18_25", "AM_OP","OP_points", "Points_AM_GenomeWide")
+
+cm_controls_MP2_OP_1star <- make_confusion_matrix_controls_chek2(controls_MP2_OP, "Class_OP_AM", "clnsig_group_18_25", "MP2_OP","OP_points", "Points_MP2_GenomeWide")
+
+save_my_plot <- function(plot, filename, folder,
+                         width = 6, height = 4, dpi = 300) {
+
+  # Create folder if it doesn't exist
+  if (!dir.exists(folder)) {
+    dir.create(folder, recursive = TRUE)
+  }
+
+  filepath <- file.path(folder, filename)
+
+  ggsave(
+    filename = filepath,
+    plot = plot,
+    dpi = dpi,
+    device = "png",
+    bg = "transparent",
+    width = width,
+    height = height
+  )
+
+  message("Saved: ", filepath)
+}
+
+controls_1star_OP <- list(
+  "cm_controls_AM_GeneSpecific_1star.png" = cm_controls_AM_YP_1star$plot,
+  "cm_controls_MP2_GeneSpecific_1star.png" = cm_controls_MP2_YP_1star$plot,
+  "cm_controls_REVEL_OP_1star.png" = cm_controls_REVEL_OP_1star$plot,
+  "cm_controls_AM_OP_1star.png" = cm_controls_AM_OP_1star$plot,
+  "cm_controls_MP2_OP_1star.png" = cm_controls_MP2_OP_1star$plot,
+ 
+ 
+  "sankey_controls_REVEL_OP.png" = sankey_controls_REVEL_OP,
+  "sankey_controls_AM_OP.png" = sankey_controls_AM_OP,
+  "sankey_controls_MP2_OP.png" = sankey_controls_MP2_OP,
+   "sankey_controls_AM_GeneSpecific.png" = sankey_controls_AM_YP,
+  "sankey_controls_MP2_GeneSpecific.png" = sankey_controls_MP2_YP
+  
+  
+)
+
+square_plots_OP <- c(
++   "sankey_controls_AM_GeneSpecific.png",
++   "sankey_controls_MP2_GeneSpecific.png",
++ 
++   "sankey_controls_REVEL_OP.png",
++   "sankey_controls_AM_OP.png",
++   "sankey_controls_MP2_OP.png"
++ )
+> 
+> square_plots_OP_ds <- c(
++   "metrics_controls_GeneSpecific.png"
++ )
+> 
+> for (nm in names(controls_1star_OP)) {
++   if (nm %in% square_plots_OP) {
++     w <- 7; h <- 7
++   } else if (nm %in% square_plots_OP_ds) {
++     w <- 8; h <- 8
++   }
++   else {
++     w <- 7; h <- 6
++   }
++   save_my_plot(
++     plot = controls_1star_OP[[nm]],
++     filename = nm,
++     folder = file.path(OUT_DIR, "Ext_Figure3_5"),
++     width = w,
++     height = h
++   )
++ }
+
+
+ 
+
+
+
+
+```
+
+```{r}
+#extended data fig 6 
+
+#AM and MP2 
+
+ClinGen_AM_YP  = read_excel(file.path(DATA_DIR, "Supplemental_Data/Supplementary_Data_5.xlsx"), sheet = "ClinGen_Repo_AM_GeneSpecific")
+ClinGen_MP2_YP  = read_excel(file.path(DATA_DIR, "Supplemental_Data/Supplementary_Data_5.xlsx"), sheet = "ClinGen_Repo_MP2_GeneSpecific")
+
+#OddsPath
+
+ClinGen_REVEL_OP  = read_excel(file.path(DATA_DIR, "Supplemental_Data/Supplementary_Data_6.xlsx"), sheet = "ClinGen_Repo_REVEL_OP")
+ClinGen_AM_OP  = read_excel(file.path(DATA_DIR, "Supplemental_Data/Supplementary_Data_6.xlsx"), sheet = "ClinGen_Repo_AM_OP")
+ClinGen_MP2_OP  = read_excel(file.path(DATA_DIR, "Supplemental_Data/Supplementary_Data_6.xlsx"), sheet = "ClinGen_Repo_MP2_OP")
+
+# ------ Sankey function for clingen controls ------
+
+make_sankey_clingen <- function(df, points_col, colors_custom) {
+  
+  df <- df %>%
+  filter(Updated_Classification_ClinGen_repo != "VUS")
+
+  
+  # Fix clnsig_group naming
+  df$Updated_Classification_ClinGen_repo[df$Updated_Classification_ClinGen_repo == 'Pathogenic/Likely pathogenic'] <- "Likely pathogenic"
+  df$Updated_Classification_ClinGen_repo[df$Updated_Classification_ClinGen_repo == 'Benign/Likely benign'] <- "Likely benign"
+  
+  # Dynamically pick the points column using {{ }}
+  summary_data <- df %>%
+    group_by(Updated_Classification_ClinGen_repo, {{ points_col }}) %>%
+    summarise(count = n(), .groups = "drop")
+  
+  # Expand the dataframe
+  expanded_df <- summary_data[rep(1:nrow(summary_data), summary_data$count), -3]
+  rownames(expanded_df) <- NULL
+  
+  # Prepare for sankey
+  sankey_data <- expanded_df %>%
+    ggsankey::make_long(Updated_Classification_ClinGen_repo, {{ points_col }})
+  
+  # Factor levels
+  levels_order <- c(
+    'Benign', "Likely benign", "Likely Benign", 
+    'Uncertain', "No Classification", 
+    "Likely pathogenic", "Likely Pathogenic", "Pathogenic"
+  )
+  
+  sankey_data$node <- factor(sankey_data$node, levels = levels_order)
+  sankey_data$next_node <- factor(sankey_data$next_node, levels = levels_order)
+  
+  # Make the plot
+  gc <- ggplot(sankey_data, aes(
+    x = x,
+    next_x = next_x,
+    node = node,
+    next_node = next_node,
+    fill = node,
+    label = NA
+  )) +
+    geom_sankey(flow.alpha = 0.7, node.color = "black") +
+    geom_sankey_label(size = 3, color = "black") +
+    scale_fill_manual(values = colors_custom) +
+    theme_minimal() +
+    theme(
+      axis.text = element_blank(),
+      axis.title = element_blank(),
+      axis.ticks = element_blank(),
+      panel.grid = element_blank(),
+      legend.position = "none"
+    ) +
+    labs(
+      title = paste0("Sankey Diagram: ClinGen --> ", rlang::as_name(rlang::ensym(points_col))),
+      fill = "Node Category"
+    )
+  
+  return(gc)
+}
+
+##----- confusion matrix function clingen ----
+make_confusion_matrix_clingen <- function(df, points_col, clnsig_col, predictor, func_col, pred_col) {
+  
+  df <- df[df[[clnsig_col]] != "VUS", ]
+
+  
+  # ---- Collapse ClinGen ----
+  df[[clnsig_col]] <- dplyr::case_when(
+    df[[clnsig_col]] %in% c("Likely pathogenic", "Likely Pathogenic", "Pathogenic/Likely pathogenic") ~ "Pathogenic",
+    df[[clnsig_col]] %in% c("Likely benign", "Likely Benign", "Benign/Likely benign") ~ "Benign",
+    TRUE ~ df[[clnsig_col]]
+  )
+
+  # ---- Collapse POINTS the same way ----
+  df[[points_col]] <- dplyr::case_when(
+    df[[points_col]] %in% c("Likely pathogenic", "Likely Pathogenic", "Pathogenic/Likely pathogenic") ~ "Pathogenic",
+    df[[points_col]] %in% c("Likely benign", "Likely Benign", "Benign/Likely benign") ~ "Benign",
+    TRUE ~ df[[points_col]]
+  )
+
+  # ---- Only determinates ----
+  df_det <- df[df[[points_col]] %in% c("Pathogenic", "Benign"), ]
+
+  # ---- All possible combinations ----
+  all_levels <- tidyr::expand_grid(
+    clnsig = c("Benign", "Pathogenic"),
+    points = c("Benign", "Pathogenic")
+  )
+
+  # ---- Summary table ----
+  summary_data <- df_det %>%
+    dplyr::count(
+      clnsig = .data[[clnsig_col]],
+      points = .data[[points_col]],
+      name = "count"
+    ) %>%
+    dplyr::right_join(all_levels, by = c("clnsig", "points")) %>%
+    dplyr::mutate(
+      count = tidyr::replace_na(count, 0),
+      consistency = ifelse(clnsig == points, "Consistent", "Inconsistent"),
+      fill_status = ifelse(count == 0, "Zero", consistency)
+    )
+
+  # ---- Extract confusion matrix values ----
+  TP <- summary_data$count[summary_data$clnsig == "Pathogenic" & summary_data$points == "Pathogenic"]
+  TN <- summary_data$count[summary_data$clnsig == "Benign"     & summary_data$points == "Benign"]
+  FP <- summary_data$count[summary_data$clnsig == "Benign"     & summary_data$points == "Pathogenic"]
+  FN <- summary_data$count[summary_data$clnsig == "Pathogenic" & summary_data$points == "Benign"]
+
+  TP <- sum(TP); TN <- sum(TN); FP <- sum(FP); FN <- sum(FN)
+
+  # ---- Metrics ----
+  sensitivity  <- TP / (TP + FN)
+  specificity  <- TN / (TN + FP)
+  concordance  <- (TP + TN) / (TP + TN + FP + FN)
+  
+  denominator <- sqrt(
+  as.numeric(TP + FP) *
+  as.numeric(TP + FN) *
+  as.numeric(TN + FP) *
+  as.numeric(TN + FN)
+)
+  
+  mcc <- ((TP * TN) - (FP * FN)) / denominator
+  
+  mcc <- ((TP * TN) - (FP * FN)) / denominator
+
+  # convert NaN to 0
+  mcc <- ifelse(is.nan(mcc) | is.infinite(mcc), 0, mcc)
+
+  percent_classified <- (TP + TN + FP + FN) / nrow(df)
+
+  metrics_df <- data.frame(
+    TP = TP, TN = TN, FP = FP, FN = FN,
+    Sensitivity = round(sensitivity, 3),
+    Specificity = round(specificity, 3),
+    Concordance = round(concordance, 3),
+    MCC = round(mcc, 3),
+    Determinate_calls = round(percent_classified, 3)
+  )
+  
+  #----- FP,FN Stats ----
+  
+  # Identify row-level FP and FN
+  FP_rows <- df[df[[clnsig_col]] == "Benign"     & df[[points_col]] == "Pathogenic", ]
+  FN_rows <- df[df[[clnsig_col]] == "Pathogenic" & df[[points_col]] == "Benign", ]
+
+  
+  get_stats <- function(df, func_col, pred_col) {
+  
+  func_vals <- df[[func_col]]
+  pred_vals <- df[[pred_col]]
+  
+  has_func <- func_vals != 0 & !is.na(func_vals)
+  has_pred <- pred_vals != 0 & !is.na(pred_vals)
+  
+  both <- has_func & has_pred
+  
+  same_direction <- both & (sign(func_vals) == sign(pred_vals))
+  opp_direction  <- both & (sign(func_vals) != sign(pred_vals))
+  
+  # 4-way direction breakdown (only for opposite-direction variants)
+  opp <- opp_direction
+
+  opp_func_pos <- sum(opp & func_vals > 0, na.rm = TRUE)
+  opp_func_neg <- sum(opp & func_vals < 0, na.rm = TRUE)
+  opp_pred_pos <- sum(opp & pred_vals > 0, na.rm = TRUE)
+  opp_pred_neg <- sum(opp & pred_vals < 0, na.rm = TRUE)
+
+  data.frame(
+    total                = nrow(df),
+    func_nonzero         = sum(has_func),
+    pred_nonzero         = sum(has_pred),
+    both_nonzero         = sum(both),
+    same_direction       = sum(same_direction),
+    opposite_direction   = sum(opp_direction),
+    only_functional      = sum(has_func & !has_pred),
+    only_predictor       = sum(has_pred & !has_func),
+    
+    opp_func_positive     = opp_func_pos,
+    opp_func_negative     = opp_func_neg,
+    opp_pred_positive     = opp_pred_pos,
+    opp_pred_negative     = opp_pred_neg
+  )
+  }
+  
+  FP_stats <- get_stats(FP_rows, func_col, pred_col)
+  FN_stats <- get_stats(FN_rows, func_col, pred_col)
+  
+  FP_stats$predictor <- predictor
+  FN_stats$predictor <- predictor
+
+  # ---- Plot ----
+  p <- ggplot(summary_data, aes(x = clnsig, y = points, fill = fill_status)) +
+    geom_tile(color = "white") +
+    geom_text(aes(label = count), size = 6, fontface = "bold") +
+    scale_fill_manual(values = c(
+      "Consistent" = "#D8BFD8",
+      "Inconsistent" = "#F2F2F2",
+      "Zero" = "white"
+    )) +
+    labs(
+      x = "ClinGen",
+      y = paste0("Experimental + Predictive classification (", predictor, ")"),
+      title = paste0(
+        "(Determinates = ", nrow(df_det),
+        ", Total = ", nrow(df),
+        ", Error = ", round((FP + FN) / nrow(df) * 100, 2), "%)"
+      )
+    ) +
+    theme_classic(base_size = 10) +
+    theme(legend.position = "none")
+
+  list(plot = p, metrics = metrics_df, summary = summary_data,FP_stats = FP_stats,
+  FN_stats = FN_stats)
+}
+
+
+sankey_clingen_YP_AM = make_sankey_clingen(ClinGen_AM_YP, Class_AM, colors_custom)
+
+sankey_clingen_YP_MP2 = make_sankey_clingen(ClinGen_MP2_YP, Class_MP2, colors_custom)
+
+
+#OddsPath
+
+sankey_clingen_OP_REVEL = make_sankey_clingen(ClinGen_REVEL_OP, Class_OP_REVEL, colors_custom)
+
+sankey_clingen_OP_AM = make_sankey_clingen(ClinGen_AM_OP, Class_OP_AM, colors_custom)
+
+sankey_clingen_OP_MP2 = make_sankey_clingen(ClinGen_MP2_OP, Class_OP_MP2, colors_custom)
+
+#AM and MP2
+
+cm_ClinGen_AM_YP <- make_confusion_matrix_clingen(ClinGen_AM_YP, "Class_AM", "Updated_Classification_ClinGen_repo", "AM_GeneSpecific","Fxn_points","Points_AM_GeneSpecific_GenomeWide")
+
+
+cm_ClinGen_MP2_YP <- make_confusion_matrix_clingen(ClinGen_MP2_YP, "Class_MP2", "Updated_Classification_ClinGen_repo", "MP2_GeneSpecific","Fxn_points","Points_MP2_GeneSpecific_GenomeWide")
+
+#OddsPath
+
+cm_ClinGen_REVEL_OP <- make_confusion_matrix_clingen(ClinGen_REVEL_OP, "Class_OP_REVEL", "Updated_Classification_ClinGen_repo", "REVEL_OP","OP_points", "Points_REVEL_GenomeWide")
+
+cm_ClinGen_AM_OP <- make_confusion_matrix_clingen(ClinGen_AM_OP, "Class_OP_AM", "Updated_Classification_ClinGen_repo", "AM_OP","OP_points", "Points_AM_GenomeWide")
+
+cm_ClinGen_MP2_OP <- make_confusion_matrix_clingen(ClinGen_MP2_OP, "Class_OP_MP2", "Updated_Classification_ClinGen_repo", "MP2_OP","OP_points", "Points_MP2_GenomeWide")
+
+clingen_OP_pejaver <- list(
+   "cm_clingen_MP2_GeneSpecific.png" = cm_ClinGen_MP2_YP$plot,
+   "cm_clingen_AM_GeneSpecific.png" = cm_ClinGen_AM_YP$plot,
+
+  "sankey_clingen_AM_GeneSpecific.png" = sankey_clingen_YP_AM,
+  "sankey_clingen_MP2_GeneSpecific.png" = sankey_clingen_YP_MP2,
+  
+  "cm_clingen_MP2_OP.png" = cm_ClinGen_MP2_OP$plot,
+  "cm_clingen_AM_OP.png" = cm_ClinGen_AM_OP$plot,
+  "cm_clingen_REVEL_OP.png" = cm_ClinGen_REVEL_OP$plot,
+
+  "sankey_clingen_OP_REVEL.png" = sankey_clingen_OP_REVEL,
+  "sankey_clingen_OP_AM.png" = sankey_clingen_OP_AM,
+  "sankey_clingen_OP_MP2.png" = sankey_clingen_OP_MP2
+)
+
+square_plots_clingen_OP <- c(
+  "sankey_clingen_AM_GeneSpecific.png",
+  "sankey_clingen_MP2_GeneSpecific.png",
+
+  "sankey_clingen_OP_REVEL.png",
+  "sankey_clingen_OP_AM.png",
+  "sankey_clingen_OP_MP2.png"
+)
+
+square_plots_OP_clingen <- c(
+  "metrics_clingen_GeneSpecific_plot.png"
+)
+
+for (nm in names(clingen_OP_pejaver)) {
+  if (nm %in% square_plots_clingen_OP) {
+    w <- 7; h <- 7
+  } else if (nm %in% square_plots_OP_clingen) {
+    w <- 8; h <- 8
+  }
+  else {
+    w <- 7; h <- 6
+  }
+  save_my_plot(
+    plot = clingen_OP_pejaver[[nm]],
+    filename = nm,
+    folder = file.path(OUT_DIR, "Ext_Figure3_5"),
+    width = w,
+    height = h
+  )
+}
+```
+
+```{r}
+
+#Extended Data Figure 7 (VUS AM and MP2)
+
+VUS_AM_YP =read_excel(file.path(DATA_DIR, "Supplemental_Data/Supplementary_Data_5.xlsx"), sheet = "VUS_AM")
+
+VUS_MP2_YP = read_excel(file.path(DATA_DIR, "Supplemental_Data/Supplementary_Data_5.xlsx"), sheet = "VUS_MP2")
+
+
+make_sankey_VUS <- function(df, points_col, colors_custom) {
+  
+  # Dynamically pick the points column using {{ }}
+  summary_data <- df %>%
+    group_by(clinvar_sig_2025, {{ points_col }}) %>%
+    summarise(count = n(), .groups = "drop")
+  
+  # Expand the dataframe
+  expanded_df <- summary_data[rep(1:nrow(summary_data), summary_data$count), -3]
+  rownames(expanded_df) <- NULL
+  
+  # Prepare for sankey
+  sankey_data <- expanded_df %>%
+    ggsankey::make_long(clinvar_sig_2025, {{ points_col }})
+  
+  # Factor levels
+  levels_order <- c(
+    -12:-1, "Uncertain significance","No evidence", "Benign", "Likely benign", "Likely Benign", 
+    "Uncertain", "Likely pathogenic", "Likely Pathogenic", "Pathogenic",
+    0, "No Classification", "Conflicting evidence", 1:12
+  )
+  
+  sankey_data$node <- factor(sankey_data$node, levels = levels_order)
+  sankey_data$next_node <- factor(sankey_data$next_node, levels = levels_order)
+  
+  # Make the plot
+  gc <- ggplot(sankey_data, aes(
+    x = x,
+    next_x = next_x,
+    node = node,
+    next_node = next_node,
+    fill = node,
+    label = NA
+  )) +
+    geom_sankey(flow.alpha = 0.7, node.color = "black") +
+    geom_sankey_label(size = 3, color = "black") +
+    scale_fill_manual(values = colors_custom) +
+    theme_minimal() +
+    theme(
+      axis.text = element_blank(),
+      axis.title = element_blank(),
+      axis.ticks = element_blank(),
+      panel.grid = element_blank(),
+      legend.position = "none"
+    ) +
+    labs(
+      title = paste0("Sankey Diagram: VUS --> ", rlang::as_name(rlang::ensym(points_col))),
+      fill = "Node Category"
+    )
+  
+  return(gc)
+}
+
+
+
+make_uncertain_confusion <- function(df, points_col, xlabel) {
+  
+  points_col_name <- rlang::as_name(rlang::ensym(points_col))
+
+  # count predicted categories
+  summary_data <- df %>%
+    count(pred = .data[[points_col_name]], name = "count")
+
+  # ensure all 5 categories appear
+  all_levels <- c("Pathogenic", "Likely Pathogenic",
+                  "Benign", "Likely Benign", "Uncertain")
+
+  summary_data <- summary_data %>%
+    complete(pred = all_levels, fill = list(count = 0))
+
+  grand_total <- sum(summary_data$count)
+  uncertain_count <- summary_data$count[summary_data$pred == "Uncertain"]
+  reclass_prop <- round((1 - (uncertain_count / grand_total)) * 100, 2)
+
+  # single-row confusion matrix style plot
+  p <- ggplot(summary_data,
+              aes(x = pred,
+                  y = "ClinVar Uncertain",
+                  fill = pred)) +
+    geom_tile(color = "white") +
+    geom_text(aes(label = count), size = 5, fontface = "bold") +
+    scale_fill_manual(values = colors_custom
+    ) +
+    labs(
+      x = xlabel,
+      y = "",
+      title = paste0(
+        "VUS Reclassification",
+        "Total = ", nrow(df),
+        " | Reclassifciation = ", reclass_prop, "%"
+      )
+    ) +
+    theme_classic() +
+    theme(
+      legend.position = "none",
+      axis.text.y = element_blank(),
+      axis.ticks.y = element_blank()
+    )
+
+  return(p)
+}
+
+sankey_VUS_AM_YP <- make_sankey_VUS(VUS_AM_YP, Class_AM, colors_custom)
+
+sankey_VUS_MP2_YP <- make_sankey_VUS(VUS_MP2_YP, Class_MP2, colors_custom)
+
+VUS_REVEL_YP$Conflicting_REVEL <- as.integer(VUS_REVEL_YP$Conflicting_REVEL)
+
+cm_AM_VUS_YP <- make_uncertain_confusion(VUS_AM_YP, Class_AM, "AM_GeneSpecific")
+
+cm_MP2_VUS_YP <- make_uncertain_confusion(VUS_MP2_YP, Class_MP2, "MP2_GeneSpecific")
+
+ggsave("~/Downloads/outputs/Figure6/sankey_VUS_AM_GeneSpecific.png",sankey_VUS_AM_YP, dpi = 300, device = 'png', bg = 'transparent')
+
+ggsave("~/Downloads/outputs/Figure6/sankey_VUS_MP2_GeneSpecific.png",sankey_VUS_MP2_YP, dpi = 300, device = 'png', bg = 'transparent')
+
+
+sankey_VUS_REVEL_YP_points <- make_sankey_VUS(VUS_REVEL_YP, Conflicting_REVEL, colors_custom)
+
+ggsave("~/Downloads/sankey_VUS_REVEL_YP_final_points.png",sankey_VUS_REVEL_YP_points, dpi = 300, device = 'png', bg = 'transparent')       
+
+
+```
+
+```{r}
+
+#extended data fig 8
+
+library(dplyr)
+library(ggplot2)
+
+summ_gene_pct <- function(df, points_col, predictor_label) {
+  df %>%
+    filter(!is.na(Gene), !is.na(.data[[points_col]])) %>%
+    group_by(Gene) %>%
+    summarize(
+      n_total  = n(),
+      n_0to5   = sum(.data[[points_col]] >= 0 & .data[[points_col]] <= 5),
+      pct_vus_remaining = 100 * n_0to5 / n_total,
+      .groups = "drop"
+    ) %>%
+    mutate(Predictor = predictor_label)
+}
+
+# --- per predictor ---
+revel <- summ_gene_pct(VUS_REVEL_YP, "Total_Points_REVEL", "REVEL")
+am    <- summ_gene_pct(VUS_AM_YP,    "Total_Points_AM",    "AM")
+mp2   <- summ_gene_pct(VUS_MP2_YP,   "Total_Points_MP2",   "MP2")
+
+pred_df <- bind_rows(revel, am, mp2)
+
+# --- overall: mean across predictors (swap to max() if you want "worst-case") ---
+overall_df <- pred_df %>%
+  group_by(Gene) %>%
+  summarize(
+    n_total = sum(n_total),
+    pct_vus_remaining = mean(pct_vus_remaining, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(Predictor = "Overall")
+
+plot_df <- bind_rows(overall_df, pred_df) %>%
+  mutate(Predictor = factor(Predictor, levels = c("Overall", "REVEL", "AM", "MP2")))
+
+# --- gene order = ranked by Overall ---
+gene_order <- plot_df %>%
+  filter(Predictor == "Overall") %>%
+  arrange(desc(pct_vus_remaining)) %>%   # highest % remaining at top
+  pull(Gene)
+
+plot_df <- plot_df %>%
+  mutate(Gene = factor(Gene, levels = gene_order))
+
+# --- zoom x-axis to your data range ---
+x_min <- floor(min(plot_df$pct_vus_remaining, na.rm = TRUE) / 5) * 5
+x_max <- ceiling(max(plot_df$pct_vus_remaining, na.rm = TRUE) / 5) * 5
+
+xy = ggplot(plot_df, aes(x = pct_vus_remaining, y = Gene)) +
+  geom_segment(aes(x = x_min, xend = x_max, yend = Gene),
+               linewidth = 0.35, color = "grey90") +
+  geom_point(size = 2) +
+  facet_grid(. ~ Predictor) +
+  scale_x_continuous(
+    limits = c(x_min, x_max),
+    breaks = seq(x_min, x_max, by = 10),
+    expand = c(0.01, 0.01)
+  ) +
+  labs(x = "% VUS remaining", y = NULL) +
+  theme_classic() +
+  theme(
+    strip.background = element_blank(),
+    strip.text = element_text(face = "bold"),
+    axis.text.y = element_text(size = 9),
+    axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)
+  )
+
+ggsave('~/Downloads/rank_based_plot.png',xy, dpi = 300, device = 'png', bg = 'transparent')
+
+```
+
+
+```{r}
+#extended data fig 8
+
+library(dplyr)
+library(ggplot2)
+
+
+make_heat_df <- function(df, gene_col = "Gene", points_col, predictor_label) {
+  df %>%
+    filter(!is.na(.data[[gene_col]]), !is.na(.data[[points_col]])) %>%
+    count(.data[[gene_col]], .data[[points_col]], name = "n") %>%
+    group_by(.data[[gene_col]]) %>%
+    mutate(prop = n / sum(n)) %>%
+    ungroup() %>%
+    rename(
+      Gene = !!gene_col,
+      Points = !!points_col
+    ) %>%
+    mutate(Predictor = predictor_label)
+}
+
+heat_revel <- make_heat_df(
+  VUS_REVEL_YP,
+  points_col = "Total_Points_REVEL",
+  predictor_label = "REVEL"
+)
+
+heat_am <- make_heat_df(
+  VUS_AM_YP,
+  points_col = "Total_Points_AM",
+  predictor_label = "AM"
+)
+
+heat_mp2 <- make_heat_df(
+  VUS_MP2_YP,
+  points_col = "Total_Points_MP2",
+  predictor_label = "MP2"
+)
+
+heat_df_all <- bind_rows(heat_revel, heat_am, heat_mp2) %>%
+  mutate(Predictor = factor(Predictor, levels = c("REVEL", "AM", "MP2")))
+
+xx = ggplot(heat_df_all, aes(x = Points, y = Gene, fill = prop)) +
+  geom_tile(color = "white", linewidth = 0.2) +
+  facet_grid(. ~ Predictor) +
+  scale_fill_viridis_c(name = "Proportion") +
+  labs(
+    x = "Total points",
+    y = "Gene"
+  ) +
+  theme_classic() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    axis.text.y = element_text(size = 8),
+    strip.text = element_text(face = "bold")
+  )
+
+ggsave('~/Downloads/points_heatmap.png',xx, dpi = 300, device = 'png', bg = 'transparent')
+
+
+
+
+```
+
+```{r}
+#Extended Data Figure 9 
+
+VUS_REVEL_YP = read_excel(file.path(DATA_DIR, "Supplemental_Data/Supplementary_Data_5.xlsx"), sheet = "VUS_REVEL", col_types = 'text')
+
+x <- as.character(VUS_REVEL_YP$Conflicting_REVEL)
+
+VUS_REVEL_YP$Conflicting_REVEL <- ifelse(
+  grepl("^-?\\d+(\\.0+)?$", x),
+  as.character(as.integer(as.numeric(x))),
+  x
+)
+
+sankey_VUS_REVEL_YP_points <- make_sankey_VUS(VUS_REVEL_YP, Conflicting_REVEL, colors_custom)
+
+ggsave('~/Downloads/VUS_sankey_REVEL_YP_points.png',sankey_VUS_REVEL_YP_points, dpi = 300, device = 'png', bg = 'transparent')
+
+
+#gnomAD points sankey
+
+gnomad_REVEL_YP = read_excel(file.path(DATA_DIR, "Supplemental_Data/Supplementary_Data_5.xlsx"), sheet = "gnomAD_REVEL",col_types = 'text')
+
+make_sankey_gnomad <- function(df, points_col, colors_custom) {
+  
+  df$gnomad = 'Gnomad'
+  
+  # Dynamically pick the points column using {{ }}
+  summary_data <- df %>%
+    group_by(gnomad, {{ points_col }}) %>%
+    summarise(count = n(), .groups = "drop")
+  
+  # Expand the dataframe
+  expanded_df <- summary_data[rep(1:nrow(summary_data), summary_data$count), -3]
+  rownames(expanded_df) <- NULL
+  
+  # Prepare for sankey
+  sankey_data <- expanded_df %>%
+    ggsankey::make_long(gnomad, {{ points_col }})
+  
+  # Factor levels
+  levels_order <- c(
+    -12:-1, "Gnomad","No evidence", "Benign", "Likely benign", "Likely Benign", 
+    "Uncertain", "Likely pathogenic", "Likely Pathogenic", "Pathogenic",
+    0, "No Classification", "Conflicting evidence", 1:12 
+  )
+  
+  sankey_data$node <- factor(sankey_data$node, levels = levels_order)
+  sankey_data$next_node <- factor(sankey_data$next_node, levels = levels_order)
+  
+  # Make the plot
+  gc <- ggplot(sankey_data, aes(
+    x = x,
+    next_x = next_x,
+    node = node,
+    next_node = next_node,
+    fill = node,
+    label = node
+  )) +
+    geom_sankey(flow.alpha = 0.7, node.color = "black") +
+    geom_sankey_label(size = 3, color = "black") +
+    scale_fill_manual(values = colors_custom) +
+    theme_minimal() +
+    theme(
+      axis.text = element_blank(),
+      axis.title = element_blank(),
+      axis.ticks = element_blank(),
+      panel.grid = element_blank(),
+      legend.position = "none"
+    ) +
+    labs(
+      title = paste0("Sankey Diagram: gnomad --> ", rlang::as_name(rlang::ensym(points_col))),
+      fill = "Node Category"
+    )
+  
+  return(gc)
+}
+
+g <- as.character(gnomad_REVEL_YP$Conflicting_REVEL)
+
+gnomad_REVEL_YP$Conflicting_REVEL <- ifelse(
+  grepl("^-?\\d+(\\.0+)?$", g),
+  as.character(as.integer(as.numeric(g))),
+  g
+)
+
+sankey_gnomad_REVEL_YP_points = make_sankey_gnomad(gnomad_REVEL_YP, Conflicting_REVEL, colors_custom)
+
+ggsave('~/Downloads/gnomad_sankey_REVEL_points.png',sankey_gnomad_REVEL_YP_points, dpi = 300, device = 'png', bg = 'transparent')
+
+#unobserved
+
+preclass_REVEL_YP = read_excel(file.path(DATA_DIR, "Supplemental_Data/Supplementary_Data_5.xlsx"), sheet = "Unobserved_REVEL",col_types = 'text')
+
+make_sankey_preclass <- function(df, points_col, colors_custom) {
+  
+  df$preclass = 'No Classification'
+  
+  # Dynamically pick the points column using {{ }}
+  summary_data <- df %>%
+    group_by(preclass, {{ points_col }}) %>%
+    summarise(count = n(), .groups = "drop")
+  
+  # Expand the dataframe
+  expanded_df <- summary_data[rep(1:nrow(summary_data), summary_data$count), -3]
+  rownames(expanded_df) <- NULL
+  
+  # Prepare for sankey
+  sankey_data <- expanded_df %>%
+    ggsankey::make_long(preclass, {{ points_col }})
+  
+  # Factor levels
+  levels_order <- c(
+    -12:-1, "Preclass","No evidence", "Benign", "Likely benign", "Likely Benign", 
+    "Uncertain", "Likely pathogenic", "Likely Pathogenic", "Pathogenic",
+    0, "No Classification", "Conflicting evidence", 1:12 
+  )
+  
+  sankey_data$node <- factor(sankey_data$node, levels = levels_order)
+  sankey_data$next_node <- factor(sankey_data$next_node, levels = levels_order)
+  
+  # Make the plot
+  gc <- ggplot(sankey_data, aes(
+    x = x,
+    next_x = next_x,
+    node = node,
+    next_node = next_node,
+    fill = node,
+    label = node
+  )) +
+    geom_sankey(flow.alpha = 0.7, node.color = "black") +
+    geom_sankey_label(size = 3, color = "black") +
+    scale_fill_manual(values = colors_custom) +
+    theme_minimal() +
+    theme(
+      axis.text = element_blank(),
+      axis.title = element_blank(),
+      axis.ticks = element_blank(),
+      panel.grid = element_blank(),
+      legend.position = "none"
+    ) +
+    labs(
+      title = paste0("Sankey Diagram: Unobserved --> ", rlang::as_name(rlang::ensym(points_col))),
+      fill = "Node Category"
+    )
+  
+  return(gc)
+}
+
+u <- as.character(preclass_REVEL_YP$Conflicting_REVEL)
+
+preclass_REVEL_YP$Conflicting_REVEL <- ifelse(
+  grepl("^-?\\d+(\\.0+)?$", u),
+  as.character(as.integer(as.numeric(u))),
+  u
+)
+
+preclass_REVEL_YP_sankey_points = make_sankey_preclass(preclass_REVEL_YP, Conflicting_REVEL, colors_custom)
+
+ggsave('~/Downloads/preclass_sankey_REVEL_points.png',preclass_REVEL_YP_sankey_points, dpi = 300, device = 'png', bg = 'transparent')
+
+```
+
+```{r}
+
+#donut plots extended figure 9
+
+#Donut plots Figure
+
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(ggforce)
+
+
+###----- 1. Load and filter the dataset----
+
+gnomad_REVEL_YP$Total_Points_REVEL = as.integer(gnomad_REVEL_YP$Total_Points_REVEL)
+
+df_classified <- gnomad_REVEL_YP %>%
+  mutate(
+    point_source = case_when(
+      Fxn_points != 0 & Points_REVEL_GeneSpecific_GenomeWide == 0 ~ "Functional only",
+      Fxn_points == 0 & Points_REVEL_GeneSpecific_GenomeWide != 0 ~ "Predictive only",
+      Fxn_points != 0 & Points_REVEL_GeneSpecific_GenomeWide != 0 ~ "Both",
+      Fxn_points == 0 & Points_REVEL_GeneSpecific_GenomeWide == 0 ~ "No evidence",
+      TRUE ~ NA_character_
+    ),
+    conflict_status = ifelse(
+      Conflicting_REVEL == "Conflicting evidence",
+      "Conflicting",
+      "No conflict"
+    )
+  )
+
+
+# Remove rows that have no point source at all
+df_classified <- df_classified %>% filter(point_source != "None")
+
+###------------------------------------------------------------
+### 2. Summaries for classification bins
+###------------------------------------------------------------
+
+plot_summary <- df_classified %>%
+  count(Total_Points_REVEL, point_source, conflict_status) %>%
+  complete(
+    Total_Points_REVEL,
+    point_source = c("Functional only", "Predictive only", "Both"),
+    conflict_status = c("Conflicting", "No conflict"),
+    fill = list(n = 0))
+
+### Re-bin pathogenicity buckets
+plot_summary_2 <- plot_summary %>%
+  mutate(
+    Total_Points_REVEL = cut(
+      Total_Points_REVEL,
+      breaks = c(-Inf, -12, -5, -3, 0,0.000001,4, 6, 10, 13, Inf),
+      labels = c("< -12", "-12 to -6", "-5 to -4", "-3 to -1","0","1 to 3",
+                 "4 to 5", "6 to 9", "10 to 12", "> 12"),
+      right = FALSE
+    )
+  ) %>%
+  group_by(Total_Points_REVEL) %>%
+  mutate(total_variants = sum(n)) %>%
+  ungroup()
+
+
+###------------------------------------------------------------
+### 3. Compute the 3 rings
+###------------------------------------------------------------
+
+build_three_rings <- function(df_subset) {
+  
+  # ---- Ring 1: inner = Total_Points_REVEL bins ----
+  inner_ring <- df_subset %>%
+    distinct(Total_Points_REVEL, total_variants) %>%
+    arrange(Total_Points_REVEL) %>%
+    mutate(
+      cum = cumsum(total_variants),
+      start = lag(cum, default = 0),
+      end = cum
+    )
+  
+  total_sum <- sum(inner_ring$total_variants)
+  
+  inner_ring <- inner_ring %>%
+    mutate(
+      start = start / total_sum * 2*pi,
+      end   = end   / total_sum * 2*pi,
+      r0 = 0.3, 
+      r1 = 0.55
+    )
+  
+  # ---- Ring 2: middle = point_source ----
+  middle_ring <- df_subset %>%
+    group_by(Total_Points_REVEL, point_source) %>%
+    summarise(n_middle = sum(n), .groups = "drop") %>%
+    left_join(inner_ring, by = "Total_Points_REVEL") %>%
+    group_by(Total_Points_REVEL) %>%
+    mutate(
+      total_bin = sum(n_middle),
+      local_start = lag(cumsum(n_middle), default = 0),
+      local_end   = cumsum(n_middle),
+      start = start + (local_start / total_bin) * (end - start),
+      end   = start + (local_end   / total_bin) * (end - start),
+      r0 = 0.55,
+      r1 = 0.85
+    ) %>%
+    ungroup()
+  
+  # ---- Ring 3: outer = conflict_status ----
+  outer_ring <- df_subset %>%
+    group_by(Total_Points_REVEL, conflict_status) %>%
+    summarise(n_outer = sum(n), .groups = "drop") %>%
+    left_join(inner_ring, by = "Total_Points_REVEL") %>%
+    group_by(Total_Points_REVEL) %>%
+    mutate(
+      total_bin = sum(n_outer),
+      local_start = lag(cumsum(n_outer), default = 0),
+      local_end   = cumsum(n_outer),
+      start = start + (local_start / total_bin) * (end - start),
+      end   = start + (local_end   / total_bin) * (end - start),
+      r0 = 0.85,
+      r1 = 1.15
+    ) %>%
+    ungroup()
+  
+  list(inner = inner_ring, middle = middle_ring, outer = outer_ring)
+}
+
+
+###------------------------------------------------------------
+### 4. Plot function
+###------------------------------------------------------------
+
+make_three_ring_plot <- function(df_subset, title = NULL) {
+  
+  rings <- build_three_rings(df_subset)
+  inner_ring  <- rings$inner
+  middle_ring <- rings$middle
+  outer_ring  <- rings$outer
+  
+  inner_label <- inner_ring %>%
+  mutate(
+    mid = (start + end) / 2,
+    x = (r0 + r1)/2 * cos(mid - pi/2),
+    y = -(r0 + r1)/2 * sin(mid - pi/2),
+    label_text = as.character(Total_Points_REVEL)
+  )
+  
+  middle_label <- middle_ring %>%
+  mutate(
+    mid = (start + end)/2,
+    x = (r0 + r1)/2 * cos(mid - pi/2),
+    y = -(r0 + r1)/2 * sin(mid - pi/2),
+    label_text = n_middle
+  )
+  
+  outer_label <- outer_ring %>%
+  mutate(
+    mid = (start + end)/2,
+    x = (r0 + r1)/2 * cos(mid - pi/2),
+    y = -(r0 + r1)/2 * sin(mid - pi/2),
+    label_text = n_outer
+  )
+  
+  list(
+  inner = inner_ring,
+  middle = middle_ring,
+  outer = outer_ring,
+  inner_label = inner_label,
+  middle_label = middle_label,
+  outer_label = outer_label
+)
+
+
+  ggplot() +
+    geom_arc_bar(
+      data = inner_ring,
+      aes(x0 = 0, y0 = 0, r0 = r0, r = r1,
+          start = start, end = end, fill = Total_Points_REVEL)
+    ) +
+    geom_arc_bar(
+      data = middle_ring,
+      aes(x0 = 0, y0 = 0, r0 = r0, r = r1,
+          start = start, end = end, fill = point_source)
+    ) +
+    geom_arc_bar(
+      data = outer_ring,
+      aes(x0 = 0, y0 = 0, r0 = r0, r = r1,
+          start = start, end = end, fill = conflict_status)
+    ) + 
+    geom_text(
+    data = inner_label,
+    aes(x = x, y = y, label = label_text),
+    size = 3.8,
+    fontface = "bold",
+    color = "black"
+  ) +
+
+  # 🔹 Middle ring → NUMBER OF VARIANTS
+  geom_text(
+    data = middle_label,
+    aes(x = x, y = y, label = label_text),
+    size = 3.2,
+    fontface = "bold",
+    color = "black"
+  ) +
+
+  # 🔹 Outer ring → NUMBER OF VARIANTS
+  geom_text(
+    data = outer_label,
+    aes(x = x, y = y, label = label_text),
+    size = 2.7,
+    fontface = "bold",
+    color = "black"
+  ) +
+    coord_fixed() +
+    theme_void() +
+    scale_fill_manual(values = colors_custom) +
+    labs(title = title) +
+    theme(
+      legend.position = "right",
+      plot.title = element_text(hjust = 0.5, face = "bold")
+    )
+}
+
+make_three_ring_plot_no_labels =  function(df_subset, title = NULL) {
+  
+  rings <- build_three_rings(df_subset)
+  inner_ring  <- rings$inner
+  middle_ring <- rings$middle
+  outer_ring  <- rings$outer
+  
+  inner_label <- inner_ring %>%
+  mutate(
+    mid = (start + end) / 2,
+    x = (r0 + r1)/2 * cos(mid - pi/2),
+    y = -(r0 + r1)/2 * sin(mid - pi/2),
+    label_text = as.character(Total_Points_REVEL)
+  )
+  
+  middle_label <- middle_ring %>%
+  mutate(
+    mid = (start + end)/2,
+    x = (r0 + r1)/2 * cos(mid - pi/2),
+    y = -(r0 + r1)/2 * sin(mid - pi/2),
+    label_text = n_middle
+  )
+  
+  outer_label <- outer_ring %>%
+  mutate(
+    mid = (start + end)/2,
+    x = (r0 + r1)/2 * cos(mid - pi/2),
+    y = -(r0 + r1)/2 * sin(mid - pi/2),
+    label_text = n_outer
+  )
+  
+  list(
+  inner = inner_ring,
+  middle = middle_ring,
+  outer = outer_ring,
+  inner_label = inner_label,
+  middle_label = middle_label,
+  outer_label = outer_label
+)
+
+
+  ggplot() +
+    geom_arc_bar(
+      data = inner_ring,
+      aes(x0 = 0, y0 = 0, r0 = r0, r = r1,
+          start = start, end = end, fill = Total_Points_REVEL)
+    ) +
+    geom_arc_bar(
+      data = middle_ring,
+      aes(x0 = 0, y0 = 0, r0 = r0, r = r1,
+          start = start, end = end, fill = point_source)
+    ) +
+    geom_arc_bar(
+      data = outer_ring,
+      aes(x0 = 0, y0 = 0, r0 = r0, r = r1,
+          start = start, end = end, fill = conflict_status)
+    ) +
+    coord_fixed() +
+    theme_void() +
+    scale_fill_manual(values = colors_custom) +
+    labs(title = title) +
+    theme(
+      legend.position = "none",
+      plot.title = element_text(hjust = 0.5, face = "bold")
+    )
+  
+}
+
+###------------------------------------------------------------
+### 5. Build plots for bins (pathogenic / uncertain / benign)
+###------------------------------------------------------------
+#VUS_REVEL_YP$Total_Points_REVEL
+
+
+pathogenic <- plot_summary_2 %>%
+  filter(Total_Points_REVEL %in% c("6 to 9", "10 to 12"))
+
+uncertain <- plot_summary_2 %>%
+  filter(Total_Points_REVEL %in% c("0","1 to 3", "4 to 5"))
+
+benign <- plot_summary_2 %>%
+  filter(Total_Points_REVEL %in% c("< -12", "-12 to -6", "-5 to -4", "-3 to -1"))
+
+# Produce the plots with labels and without labels
+path_plot <- make_three_ring_plot(pathogenic, "Pathogenic range")
+unc_plot  <- make_three_ring_plot(uncertain, "Uncertain range")
+ben_plot  <- make_three_ring_plot(benign, "Benign range")
+
+path_plot_no_lab <- make_three_ring_plot_no_labels(pathogenic, "Pathogenic range")
+unc_plot_no_lab  <- make_three_ring_plot_no_labels(uncertain, "Uncertain range")
+ben_plot_no_lab  <- make_three_ring_plot_no_labels(benign, "Benign range")
+
+path_plot
+unc_plot
+ben_plot
+
+ggsave('~/Downloads/outputs/Figure6/pie_path_REVEL_gnomad_GeneSpecific_nolab.png',path_plot_no_lab, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7)
+ggsave('~/Downloads/outputs/Figure6/pie_ben_REVEL_gnomad_GeneSpecific_nolab.png',unc_plot_no_lab, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7)
+ggsave('~/Downloads/outputs/Figure6/pie_unc_REVEL_gnomad_GeneSpecific_nolab.png',ben_plot_no_lab, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7)
+
+
+```
+
+```{r}
+#Extended data fig 9 
+
+###----- 1. Load and filter the dataset----
+
+preclass_REVEL_YP$Total_Points_REVEL = as.integer(preclass_REVEL_YP$Total_Points_REVEL)
+
+df_classified_pc <- preclass_REVEL_YP %>%
+  mutate(
+    point_source = case_when(
+      Fxn_points != 0 & Points_REVEL_GeneSpecific_GenomeWide == 0 ~ "Functional only",
+      Fxn_points == 0 & Points_REVEL_GeneSpecific_GenomeWide != 0 ~ "Predictive only",
+      Fxn_points != 0 & Points_REVEL_GeneSpecific_GenomeWide != 0 ~ "Both",
+      Fxn_points == 0 & Points_REVEL_GeneSpecific_GenomeWide == 0 ~ "No evidence",
+      TRUE ~ NA_character_
+    ),
+    conflict_status = ifelse(
+      Conflicting_REVEL == "Conflicting evidence",
+      "Conflicting",
+      "No conflict"
+    )
+  )
+
+
+# Remove rows that have no point source at all
+df_classified_pc <- df_classified_pc %>% filter(point_source != "None")
+
+###------------------------------------------------------------
+### 2. Summaries for classification bins
+###------------------------------------------------------------
+
+plot_summary_pc <- df_classified_pc %>%
+  count(Total_Points_REVEL, point_source, conflict_status) %>%
+  complete(
+    Total_Points_REVEL,
+    point_source = c("Functional only", "Predictive only", "Both"),
+    conflict_status = c("Conflicting", "No conflict"),
+    fill = list(n = 0))
+
+### Re-bin pathogenicity buckets
+plot_summary_2_pc <- plot_summary_pc %>%
+  mutate(
+    Total_Points_REVEL = cut(
+      Total_Points_REVEL,
+      breaks = c(-Inf, -12, -5, -3, 0,0.000001,4, 6, 10, 13, Inf),
+      labels = c("< -12", "-12 to -6", "-5 to -4", "-3 to -1","0","1 to 3",
+                 "4 to 5", "6 to 9", "10 to 12", "> 12"),
+      right = FALSE
+    )
+  ) %>%
+  group_by(Total_Points_REVEL) %>%
+  mutate(total_variants = sum(n)) %>%
+  ungroup()
+
+pathogenic_pc <- plot_summary_2_pc %>%
+  filter(Total_Points_REVEL %in% c("6 to 9", "10 to 12"))
+
+uncertain_pc <- plot_summary_2_pc %>%
+  filter(Total_Points_REVEL %in% c("0","1 to 3", "4 to 5"))
+
+benign_pc <- plot_summary_2_pc %>%
+  filter(Total_Points_REVEL %in% c("< -12", "-12 to -6", "-5 to -4", "-3 to -1"))
+
+# Produce the plots with labels and without labels
+path_plot_pc <- make_three_ring_plot(pathogenic_pc, "Pathogenic range")
+unc_plot_pc  <- make_three_ring_plot(uncertain_pc, "Uncertain range")
+ben_plot_pc  <- make_three_ring_plot(benign_pc, "Benign range")
+
+path_plot_no_lab_pc <- make_three_ring_plot_no_labels(pathogenic_pc, "Pathogenic range")
+unc_plot_no_lab_pc  <- make_three_ring_plot_no_labels(uncertain_pc, "Uncertain range")
+ben_plot_no_lab_pc  <- make_three_ring_plot_no_labels(benign_pc, "Benign range")
+
+path_plot_pc
+unc_plot_pc
+ben_plot_pc
+
+
+ggsave('~/Downloads/outputs/Figure6/pie_path_REVEL_preclass_GeneSpecific_nolab.png',path_plot_no_lab_pc, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7)
+ggsave('~/Downloads/outputs/Figure6/pie_ben_REVEL_preclass_GeneSpecific_nolab.png',unc_plot_no_lab_pc, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7)
+ggsave('~/Downloads/outputs/Figure6/pie_unc_REVEL_preclass_GeneSpecific_nolab.png',ben_plot_no_lab_pc, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7)
+
+
+
+```
+
