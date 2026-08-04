@@ -29,3 +29,16 @@ services:
     command: []
     volumes:
       - .:/usr/src/app
+
+  # Reads the committed data/mave_calibration/ JSON files and overwrites the
+  # ExCALIBR_calibrations sheet of the committed Supplementary_Data_4.xlsx in
+  # place, so like mave-dataset-stats it only needs the repo bind mount --
+  # no /work staging mount.
+  load-excalibr-calibrations:
+    <<: *tools-image
+    profiles:
+      - tools
+    entrypoint: ["python", "-m", "src.load_excalibr_calibrations"]
+    command: []
+    volumes:
+      - .:/usr/src/app
