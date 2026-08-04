@@ -41,6 +41,9 @@ build-backend = "poetry.core.masonry.api"
 # planned migration to a `src/` layout that will flip this on.
 package-mode = false
 
+[tool.pytest.ini_options]
+pythonpath = ["."]
+
 [tool.ruff]
 line-length = 120
 target-version = "py311"

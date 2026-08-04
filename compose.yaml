@@ -15,3 +15,17 @@ services:
     volumes:
       - .:/usr/src/app
       - ${VARIANT_DATA_DIR:-./data}:/work
+
+  # Reads only the already-committed data/mave_data/ files, so it doesn't
+  # need the /work staging mount that flag-variants uses. Unlike
+  # flag-variants, every CLI arg is optional (defaults point at
+  # data/mave_data/), so the default command is empty -- not --help -- so a
+  # bare `docker compose run mave-dataset-stats` computes stats immediately.
+  mave-dataset-stats:
+    <<: *tools-image
+    profiles:
+      - tools
+    entrypoint: ["python", "-m", "src.mave_dataset_stats"]
+    command: []
+    volumes:
+      - .:/usr/src/app
