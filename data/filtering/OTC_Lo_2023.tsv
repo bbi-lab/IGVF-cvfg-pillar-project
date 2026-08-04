@@ -1,0 +1,1571 @@
+Human_AA_num	Human_Variant	Yeast_Variant	Growth Estimate	S_Error	Splice	No_Isolates	Functional_Class	Clinical_Prediction		ClinVar_Class	Female	Neonatal	Late	SNV
+33	Asn33Ile	Asn2Ile	0.735	0.010	FALSE	6	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+33	Asn33Tyr	Asn2Tyr	0.808	0.012	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+33	Asn33Thr	Asn2Thr	0.911	0.025	FALSE	1	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+33	Asn33His	Asn2His	1.010	0.018	FALSE	2	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+33	Asn33Lys	Asn2Lys	1.012	0.026	FALSE	1	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+33	Asn33Ser	Asn2Ser	1.020	0.013	FALSE	4	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+33	Asn33Asp	Asn2Asp	1.050	0.015	FALSE	3	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+34	Lys34Ile	Lys3Ile	0.753	0.014	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+34	Lys34Glu	Lys3Glu	0.767	0.014	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+34	Lys34Asn	Lys3Asn	0.776	0.017	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+34	Lys34Arg	Lys3Arg	0.947	0.010	FALSE	6	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+34	Lys34Gln	Lys3Gln	0.958	0.013	FALSE	4	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+35	Val35Glu	Val4Glu	0.596	0.023	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+35	Val35Gly	Val4Gly	0.752	0.012	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+35	Val35Ala	Val4Ala	0.798	0.012	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+35	Val35Leu	Val4Leu	0.868	0.010	FALSE	6	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+35	Val35Met	Val4Met	0.934	0.025	FALSE	1	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+36	Gln36Pro	Gln5Pro	0.689	0.017	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+36	Gln36Leu	Gln5Leu	0.776	0.014	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+36	Gln36Arg	Gln5Arg	0.881	0.018	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+36	Gln36His	Gln5His	0.938	0.025	FALSE	1	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+36	Gln36Glu	Gln5Glu	0.945	0.011	FALSE	5	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+36	Gln36Lys	Gln5Lys	1.012	0.013	FALSE	4	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+37	Leu37Gln	Leu6Gln	-0.010	0.007	FALSE	3	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+37	Leu37Pro	Leu6Pro	0.001	0.005	FALSE	6	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+37	Leu37Arg	Leu6Arg	0.002	0.006	FALSE	4	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+37	Leu37Val	Leu6Val	0.505	0.016	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+37	Leu37Met	Leu6Met	0.739	0.012	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+38	Lys38Glu	Lys7Glu	0.422	0.015	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+38	Lys38Met	Lys7Met	0.681	0.014	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+38	Lys38Thr	Lys7Thr	0.736	0.014	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+38	Lys38Gln	Lys7Gln	0.879	0.014	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+38	Lys38Arg	Lys7Arg	0.942	0.010	FALSE	7	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+39	Gly39Val	Gly8Val	-0.010	0.007	FALSE	3	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+39	Gly39Arg	Gly8Arg	0.275	0.019	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+39	Gly39Cys	Gly8Cys	0.332	0.020	FALSE	1	Hypomorphic	Deleterious		Pathogenic	FALSE	FALSE	TRUE	NM_000531.6(OTC):c.115G>T (p.Gly39Cys)
+39	Gly39Ala	Gly8Ala	0.392	0.012	FALSE	3	Hypomorphic	Deleterious		Pathogenic	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.116G>C (p.Gly39Ala)
+39	Gly39Ser	Gly8Ser	0.476	0.015	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+40	Arg40Pro	Arg9Pro	-0.003	0.008	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+40	Arg40Gly	Arg9Gly	0.065	0.011	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+40	Arg40His	Arg9His	0.268	0.019	FALSE	1	Hypomorphic	Deleterious		Pathogenic	FALSE	FALSE	TRUE	NM_000531.6(OTC):c.119G>A (p.Arg40His)
+40	Arg40Cys	Arg9Cys	0.311	0.007	FALSE	8	Hypomorphic	Deleterious		Pathogenic/Likely pathogenic	FALSE	FALSE	TRUE	NM_000531.6(OTC):c.118C>T (p.Arg40Cys)
+40	Arg40Leu	Arg9Leu	0.346	0.009	FALSE	5	Hypomorphic	Deleterious		NA	FALSE	FALSE	TRUE	NM_000531.6(OTC):c.119G>T (p.Arg40Leu)
+41	Asp41Glu	Asp10Glu	-0.022	0.011	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+41	Asp41Val	Asp10Val	-0.005	0.007	FALSE	3	Amorphic	Deleterious		Uncertain significance	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.122A>T (p.Asp41Val)
+41	Asp41Tyr	Asp10Tyr	-0.001	0.005	FALSE	5	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+41	Asp41Gly	Asp10Gly	0.028	0.007	FALSE	4	Amorphic	Deleterious		Likely pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.122A>G (p.Asp41Gly)
+41	Asp41His	Asp10His	0.852	0.012	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+41	Asp41Asn	Asp10Asn	0.977	0.013	FALSE	4	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+42	Leu42Arg	Leu11Arg	0.001	0.006	FALSE	4	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+42	Leu42His	Leu11His	0.001	0.007	FALSE	3	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+42	Leu42Pro	Leu11Pro	0.003	0.005	FALSE	5	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+42	Leu42Ile	Leu11Ile	0.377	0.021	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+42	Leu42Val	Leu11Val	0.509	0.008	FALSE	7	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+42	Leu42Phe	Leu11Phe	0.968	0.026	FALSE	1	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+43	Leu43His	Leu12His	-0.008	0.007	FALSE	3	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+43	Leu43Pro	Leu12Pro	-0.003	0.006	FALSE	4	Amorphic	Deleterious		Pathogenic	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.128T>C (p.Leu43Pro)
+43	Leu43Phe	Leu12Phe	0.001	0.005	FALSE	5	Amorphic	Deleterious		Pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.127C>T (p.Leu43Phe)
+43	Leu43Arg	Leu12Arg	0.002	0.004	FALSE	10	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+43	Leu43Val	Leu12Val	0.638	0.012	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+43	Leu43Ile	Leu12Ile	0.838	0.018	FALSE	2	Hypomorphic	Deleterious		Uncertain significance	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.127C>A (p.Leu43Ile)
+44	Thr44Pro	Thr13Pro	-0.008	0.007	FALSE	3	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+44	Thr44Ala	Thr13Ala	0.500	0.009	FALSE	6	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+44	Thr44Ser	Thr13Ser	1.047	0.011	FALSE	6	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+45	Leu45Val	Leu14Val	-0.008	0.012	FALSE	1	Amorphic	Deleterious		Pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.133C>G (p.Leu45Val)
+45	Leu45Gln	Leu14Gln	-0.007	0.012	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+45	Leu45Arg	Leu14Arg	-0.005	0.004	FALSE	10	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+45	Leu45Pro	Leu14Pro	0.001	0.009	FALSE	2	Amorphic	Deleterious		Pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.134T>C (p.Leu45Pro)
+45	Leu45Ile	Leu14Ile	0.018	0.013	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+46	Lys46Ile	Lys15Ile	0.221	0.009	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+46	Lys46Asn	Lys15Asn	0.574	0.013	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+46	Lys46Thr	Lys15Thr	0.752	0.024	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+46	Lys46Glu	Lys15Glu	0.852	0.009	FALSE	8	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+46	Lys46Gln	Lys15Gln	0.893	0.025	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+46	Lys46Arg	Lys15Arg	0.902	0.010	FALSE	6	Unimpaired	Non-Deleterious		Benign	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.137A>G (p.Lys46Arg)
+47	Asn47Ile	Asn16Ile	0.035	0.010	FALSE	2	Amorphic	Deleterious		Pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.140A>T (p.Asn47Ile)
+47	Asn47Tyr	Asn16Tyr	0.804	0.012	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+47	Asn47Thr	Asn16Thr	0.806	0.017	FALSE	2	Hypomorphic	Deleterious		Conflicting interpretations of pathogenicity	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.140A>C (p.Asn47Thr)
+47	Asn47Ser	Asn16Ser	0.930	0.025	FALSE	1	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+47	Asn47His	Asn16His	0.948	0.013	FALSE	4	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+47	Asn47Asp	Asn16Asp	1.078	0.019	FALSE	2	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+48	Phe48Ser	Phe17Ser	0.002	0.005	FALSE	7	Amorphic	Deleterious		Pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.143T>C (p.Phe48Ser)
+48	Phe48Val	Phe17Val	0.178	0.012	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	TRUE	NM_000531.6(OTC):c.142T>G  (p.Phe48Val )
+48	Phe48Cys	Phe17Cys	0.310	0.011	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+48	Phe48Tyr	Phe17Tyr	0.799	0.024	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+49	Thr49Pro	Thr18Pro	0.034	0.010	FALSE	2	Amorphic	Deleterious		Pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.145A>C (p.Thr49Pro)
+49	Thr49Ile	Thr18Ile	0.231	0.011	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+49	Thr49Ala	Thr18Ala	0.413	0.021	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+49	Thr49Asn	Thr18Asn	0.908	0.015	FALSE	3	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+49	Thr49Ser	Thr18Ser	1.010	0.018	FALSE	2	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+50	Gly50Arg	Gly19Arg	0.521	0.011	FALSE	4	Hypomorphic	Deleterious		Pathogenic	FALSE	FALSE	TRUE	NM_000531.6(OTC):c.148G>A (p.Gly50Arg)
+50	Gly50Glu	Gly19Glu	0.712	0.024	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+50	Gly50Val	Gly19Val	0.962	0.026	FALSE	1	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+50	Gly50Ala	Gly19Ala	1.056	0.013	FALSE	4	Unimpaired	Non-Deleterious		Likely benign	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.149G>C (p.Gly50Ala)
+51	Glu51Val	Glu20Val	0.344	0.009	FALSE	5	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+51	Glu51Gly	Glu20Gly	0.357	0.009	FALSE	5	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+51	Glu51Lys	Glu20Lys	0.481	0.015	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+51	Glu51Gln	Glu20Gln	0.591	0.013	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+51	Glu51Ala	Glu20Ala	0.706	0.024	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+51	Glu51Asp	Glu20Asp	1.026	0.018	FALSE	2	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+52	Glu52Val	Glu21Val	-0.004	0.006	FALSE	4	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+52	Glu52Gly	Glu21Gly	0.003	0.005	FALSE	6	Amorphic	Deleterious		Pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.155A>G (p.Glu52Gly)
+52	Glu52Lys	Glu21Lys	0.015	0.013	FALSE	1	Amorphic	Deleterious		Pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.154G>A (p.Glu52Lys)
+52	Glu52Ala	Glu21Ala	0.281	0.014	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+52	Glu52Asp	Glu21Asp	0.549	0.016	FALSE	2	Hypomorphic	Deleterious		Pathogenic	FALSE	FALSE	TRUE	NM_000531.6(OTC):c.156A>T (p.Glu52Asp)
+53	Ile53Asn	Ile22Asn	-0.002	0.012	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+53	Ile53Phe	Ile22Phe	0.005	0.009	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+53	Ile53Ser	Ile22Ser	0.006	0.007	FALSE	3	Amorphic	Deleterious		Pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.158T>G (p.Ile53Ser)
+53	Ile53Val	Ile22Val	0.403	0.015	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+53	Ile53Met	Ile22Met	1.159	0.010	FALSE	7	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+53	Ile53Leu	Ile22Leu	1.266	0.014	FALSE	4	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+54	Lys54Ile	Lys23Ile	0.216	0.013	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+54	Lys54Asn	Lys23Asn	0.319	0.010	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+54	Lys54Thr	Lys23Thr	0.518	0.016	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+54	Lys54Arg	Lys23Arg	0.801	0.017	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+54	Lys54Glu	Lys23Glu	1.013	0.012	FALSE	5	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+54	Lys54Gln	Lys23Gln	1.067	0.026	FALSE	1	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+55	Tyr55Asp	Tyr24Asp	0.132	0.012	FALSE	2	Hypomorphic	Deleterious		Pathogenic	FALSE	FALSE	TRUE	NM_000531.6(OTC):c.163T>G (p.Tyr55Asp)
+55	Tyr55Cys	Tyr24Cys	0.149	0.012	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	TRUE	NM_000531.6(OTC):c.164A>G (p.Tyr55Cys)
+55	Tyr55Ser	Tyr24Ser	0.334	0.009	FALSE	5	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+55	Tyr55Asn	Tyr24Asn	0.344	0.014	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+55	Tyr55Phe	Tyr24Phe	0.727	0.014	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+55	Tyr55His	Tyr24His	0.753	0.014	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+56	Met56Arg	Met25Arg	0.004	0.006	FALSE	4	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+56	Met56Lys	Met25Lys	0.006	0.004	FALSE	9	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+56	Met56Thr	Met25Thr	0.024	0.013	FALSE	1	Amorphic	Deleterious		Likely pathogenic	FALSE	FALSE	TRUE	NM_000531.6(OTC):c.167T>C (p.Met56Thr)
+56	Met56Leu	Met25Leu	1.195	0.027	FALSE	1	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+57	Leu57Pro	Leu26Pro	-0.004	0.005	FALSE	6	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+57	Leu57Arg	Leu26Arg	0.004	0.009	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+57	Leu57Val	Leu26Val	0.386	0.012	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+57	Leu57Ile	Leu26Ile	0.694	0.014	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+58	Trp58Cys	Trp27Cys	0.169	0.010	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+58	Trp58Leu	Trp27Leu	0.205	0.010	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+58	Trp58Arg	Trp27Arg	0.269	0.011	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+58	Trp58Gly	Trp27Gly	0.269	0.014	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+58	Trp58Ser	Trp27Ser	0.302	0.011	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+59	Leu59Pro	Leu28Pro	-0.004	0.006	FALSE	4	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+59	Leu59Arg	Leu28Arg	0.012	0.009	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	TRUE	NM_000531.6(OTC):c.176T>G (p.Leu59Arg)
+59	Leu59Gln	Leu28Gln	0.018	0.013	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+59	Leu59Ile	Leu28Ile	0.704	0.024	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+59	Leu59Val	Leu28Val	0.888	0.013	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+60	Ser60Pro	Ser29Pro	-0.008	0.005	FALSE	5	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+60	Ser60Leu	Ser29Leu	-0.006	0.006	FALSE	4	Amorphic	Deleterious		Pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.179C>T (p.Ser60Leu)
+60	Ser60Thr	Ser29Thr	0.579	0.016	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+61	Ala61Pro	Ala30Pro	-0.004	0.007	FALSE	3	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+61	Ala61Thr	Ala30Thr	0.372	0.012	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+61	Ala61Val	Ala30Val	0.403	0.021	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+61	Ala61Ser	Ala30Ser	0.624	0.013	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+62	Asp62Tyr	Asp31Tyr	-0.001	0.012	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+62	Asp62Ala	Asp31Ala	0.004	0.007	FALSE	3	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+62	Asp62Val	Asp31Val	0.005	0.006	FALSE	4	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+62	Asp62Gly	Asp31Gly	0.010	0.013	FALSE	1	Amorphic	Deleterious		NA	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.185A>G (p.Asp62Gly)
+62	Asp62Asn	Asp31Asn	0.014	0.009	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+62	Asp62His	Asp31His	0.113	0.011	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+62	Asp62Glu	Asp31Glu	0.331	0.009	FALSE	5	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+63	Leu63Gln	Leu32Gln	-0.013	0.011	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+63	Leu63Arg	Leu32Arg	0.003	0.012	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+63	Leu63Pro	Leu32Pro	0.005	0.007	FALSE	3	Amorphic	Deleterious		Uncertain significance	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.188T>C (p.Leu63Pro)
+63	Leu63Val	Leu32Val	0.053	0.005	FALSE	7	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+63	Leu63Met	Leu32Met	0.084	0.015	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+64	Lys64Ile	Lys33Ile	-0.009	0.012	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+64	Lys64Gln	Lys33Gln	-0.004	0.006	FALSE	4	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+64	Lys64Asn	Lys33Asn	-0.001	0.007	FALSE	3	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+64	Lys64Arg	Lys33Arg	0.001	0.006	FALSE	4	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+64	Lys64Thr	Lys33Thr	0.001	0.012	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+64	Lys64Glu	Lys33Glu	0.001	0.007	FALSE	3	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+65	Phe65Ile	Phe34Ile	0.427	0.015	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+65	Phe65Val	Phe34Val	0.554	0.016	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+65	Phe65Leu	Phe34Leu	0.589	0.010	FALSE	5	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+65	Phe65Ser	Phe34Ser	0.632	0.013	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+65	Phe65Cys	Phe34Cys	0.713	0.017	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+65	Phe65Tyr	Phe34Tyr	1.079	0.026	FALSE	1	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+66	Arg66Gly	Arg35Gly	-0.006	0.006	FALSE	4	Amorphic	Deleterious		NA	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.196A>G  (p.Arg66Gly )
+66	Arg66Thr	Arg35Thr	0.010	0.013	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+66	Arg66Met	Arg35Met	0.022	0.009	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+66	Arg66Lys	Arg35Lys	0.181	0.009	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+66	Arg66Trp	Arg35Trp	0.194	0.007	FALSE	7	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+67	Ile67Arg	Ile36Arg	0.030	0.010	FALSE	2	Amorphic	Deleterious		Pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.200T>G (p.Ile67Arg)
+67	Ile67Lys	Ile36Lys	0.047	0.010	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+67	Ile67Thr	Ile36Thr	0.115	0.011	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+67	Ile67Leu	Ile36Leu	0.435	0.011	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+67	Ile67Met	Ile36Met	0.545	0.022	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+67	Ile67Val	Ile36Val	0.625	0.013	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+68	Lys68Ile	Lys37Ile	0.320	0.014	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+68	Lys68Thr	Lys37Thr	0.473	0.008	FALSE	7	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+68	Lys68Arg	Lys37Arg	0.512	0.013	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+68	Lys68Asn	Lys37Asn	0.514	0.016	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+68	Lys68Glu	Lys37Glu	0.590	0.023	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+68	Lys68Gln	Lys37Gln	0.988	0.018	FALSE	2	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+69	Gln69Pro	Gln38Pro	0.017	0.009	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+69	Gln69Arg	Gln38Arg	0.689	0.024	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+69	Gln69Leu	Gln38Leu	0.809	0.025	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+69	Gln69His	Gln38His	1.066	0.015	FALSE	3	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+70	Lys70Ile	Lys39Ile	0.102	0.016	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+70	Lys70Thr	Lys39Thr	0.342	0.010	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+70	Lys70Glu	Lys39Glu	0.529	0.013	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+70	Lys70Gln	Lys39Gln	0.887	0.013	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+70	Lys70Arg	Lys39Arg	0.914	0.018	FALSE	2	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+70	Lys70Asn	Lys39Asn	0.923	0.015	FALSE	3	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+71	Gly71Val	Gly40Val	0.062	0.006	FALSE	7	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+71	Gly71Ala	Gly40Ala	0.450	0.015	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+71	Gly71Glu	Gly40Glu	0.539	0.022	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+71	Gly71Arg	Gly40Arg	0.767	0.024	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+72	Glu72Gly	Glu41Gly	0.054	0.006	FALSE	6	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+72	Glu72Val	Glu41Val	0.061	0.010	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+72	Glu72Lys	Glu41Lys	0.071	0.009	FALSE	3	Hypomorphic	Deleterious		Pathogenic	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.214G>A (p.Glu72Lys)
+72	Glu72Ala	Glu41Ala	0.142	0.017	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+72	Glu72Gln	Glu41Gln	0.427	0.015	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+72	Glu72Asp	Glu41Asp	0.571	0.011	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+73	Tyr73Cys	Tyr42Cys	0.674	0.017	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+73	Tyr73Asp	Tyr42Asp	0.677	0.017	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+73	Tyr73Phe	Tyr42Phe	0.838	0.018	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+73	Tyr73Ser	Tyr42Ser	0.855	0.025	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+73	Tyr73Asn	Tyr42Asn	0.883	0.018	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+73	Tyr73His	Tyr42His	0.976	0.009	FALSE	8	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+74	Leu74Trp	Leu43Trp	0.042	0.008	FALSE	3	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+74	Leu74Met	Leu43Met	0.604	0.013	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+74	Leu74Val	Leu43Val	0.618	0.023	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+75	Pro75Leu	Pro44Leu	0.006	0.012	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+75	Pro75Arg	Pro44Arg	0.253	0.009	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+75	Pro75His	Pro44His	0.269	0.009	FALSE	5	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+75	Pro75Thr	Pro44Thr	0.348	0.020	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+75	Pro75Ala	Pro44Ala	0.349	0.014	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+75	Pro75Ser	Pro44Ser	0.379	0.015	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+76	Leu76Ser	Leu45Ser	-0.003	0.012	FALSE	1	Amorphic	Deleterious		Pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.227T>C (p.Leu76Ser)
+76	Leu76Phe	Leu45Phe	0.268	0.019	FALSE	1	Hypomorphic	Deleterious		Likely pathogenic	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.228A>C (p.Leu76Phe)
+76	Leu76Val	Leu45Val	0.470	0.008	FALSE	7	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+76	Leu76Ile	Leu45Ile	0.798	0.014	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+77	Leu77Trp	Leu46Trp	-0.006	0.012	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+77	Leu77Ser	Leu46Ser	-0.002	0.005	FALSE	6	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+77	Leu77Val	Leu46Val	0.092	0.011	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+77	Leu77Met	Leu46Met	0.574	0.011	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+78	Gln78His	Gln47His	0.551	0.022	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+78	Gln78Leu	Gln47Leu	0.636	0.010	FALSE	5	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+78	Gln78Glu	Gln47Glu	0.966	0.015	FALSE	3	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+78	Gln78Arg	Gln47Arg	1.000	0.018	FALSE	2	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+78	Gln78Lys	Gln47Lys	1.053	0.015	FALSE	3	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+79	Gly79Val	Gly48Val	0.002	0.006	FALSE	4	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+79	Gly79Glu	Gly48Glu	0.089	0.007	FALSE	5	Hypomorphic	Deleterious		Pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.236G>A (p.Gly79Glu)
+79	Gly79Arg	Gly48Arg	0.138	0.012	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+79	Gly79Ala	Gly48Ala	0.234	0.013	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+80	Lys80Glu	Lys49Glu	0.011	0.009	FALSE	2	Amorphic	Deleterious		Pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.238A>G (p.Lys80Glu)
+80	Lys80Asn	Lys49Asn	0.070	0.011	FALSE	2	Hypomorphic	Deleterious		Pathogenic	FALSE	FALSE	TRUE	NM_000531.6(OTC):c.240G>T (p.Lys80Asn)
+80	Lys80Thr	Lys49Thr	0.197	0.006	FALSE	8	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+80	Lys80Gln	Lys49Gln	0.386	0.021	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+80	Lys80Arg	Lys49Arg	0.691	0.017	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+80	Lys80Met	Lys49Met	0.746	0.014	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+81	Ser81Tyr	Ser50Tyr	0.149	0.010	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+81	Ser81Phe	Ser50Phe	0.729	0.014	FALSE	3	Hypomorphic	Deleterious		Uncertain significance	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.242C>T (p.Ser81Phe)
+81	Ser81Ala	Ser50Ala	0.875	0.018	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+81	Ser81Cys	Ser50Cys	1.036	0.012	FALSE	5	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+81	Ser81Thr	Ser50Thr	1.122	0.013	FALSE	4	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+82	Leu82Ser	Leu51Ser	0.004	0.009	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+82	Leu82Phe	Leu51Phe	0.223	0.018	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+82	Leu82Val	Leu51Val	0.778	0.024	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+82	Leu82Ile	Leu51Ile	0.956	0.026	FALSE	1	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+83	Gly83Arg	Gly52Arg	-0.006	0.005	FALSE	5	Amorphic	Deleterious		Pathogenic	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.247G>C (p.Gly83Arg)
+83	Gly83Asp	Gly52Asp	0.129	0.012	FALSE	2	Hypomorphic	Deleterious		Pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.248G>A (p.Gly83Asp)
+83	Gly83Ser	Gly52Ser	0.751	0.011	FALSE	5	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+83	Gly83Val	Gly52Val	1.047	0.018	FALSE	2	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+83	Gly83Cys	Gly52Cys	1.100	0.019	FALSE	2	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+83	Gly83Ala	Gly52Ala	1.134	0.027	FALSE	1	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+84	Met84Lys	Met53Lys	-0.016	0.006	FALSE	4	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+84	Met84Arg	Met53Arg	-0.002	0.005	FALSE	6	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+84	Met84Thr	Met53Thr	0.238	0.019	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+84	Met84Val	Met53Val	0.664	0.012	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+84	Met84Ile	Met53Ile	0.741	0.017	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+84	Met84Leu	Met53Leu	1.078	0.026	FALSE	1	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+85	Ile85Asn	Ile54Asn	-0.001	0.012	FALSE	1	Amorphic	Deleterious		NA	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.254T>A  (p.Ile85Asn )
+85	Ile85Ser	Ile54Ser	0.055	0.008	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+85	Ile85Thr	Ile54Thr	0.180	0.012	FALSE	2	Hypomorphic	Deleterious		Likely pathogenic	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.254T>C (p.Ile85Thr)
+85	Ile85Leu	Ile54Leu	0.940	0.013	FALSE	4	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+85	Ile85Val	Ile54Val	0.983	0.026	FALSE	1	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+86	Phe86Ser	Phe55Ser	0.214	0.011	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+86	Phe86Val	Phe55Val	0.239	0.009	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+86	Phe86Ile	Phe55Ile	0.349	0.014	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+86	Phe86Leu	Phe55Leu	0.517	0.016	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+86	Phe86Cys	Phe55Cys	0.553	0.013	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+86	Phe86Tyr	Phe55Tyr	0.739	0.017	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+87	Glu87Lys	Glu56Lys	0.001	0.009	FALSE	2	Amorphic	Deleterious		Pathogenic	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.259G>A (p.Glu87Lys)
+87	Glu87Ala	Glu56Ala	0.189	0.007	FALSE	6	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+87	Glu87Asp	Glu56Asp	0.344	0.014	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+87	Glu87Val	Glu56Val	0.377	0.010	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+87	Glu87Gln	Glu56Gln	0.536	0.022	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+88	Lys88Ile	Lys57Ile	0.447	0.011	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+88	Lys88Asn	Lys57Asn	0.661	0.012	FALSE	4	Hypomorphic	Deleterious		Pathogenic	FALSE	FALSE	TRUE	NM_000531.6(OTC):c.264A>T (p.Lys88Asn)
+88	Lys88Thr	Lys57Thr	0.821	0.017	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+88	Lys88Glu	Lys57Glu	0.952	0.018	FALSE	2	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+88	Lys88Arg	Lys57Arg	0.952	0.018	FALSE	2	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+88	Lys88Gln	Lys57Gln	1.029	0.015	FALSE	3	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+89	Arg89Lys	Arg58Lys	0.563	0.023	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+89	Arg89Gly	Arg58Gly	1.014	0.013	FALSE	4	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+89	Arg89Ser	Arg58Ser	1.058	0.010	FALSE	7	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+89	Arg89Thr	Arg58Thr	1.089	0.015	FALSE	3	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+90	Ser90Arg	Ser59Arg	0.000	0.005	FALSE	6	Amorphic	Deleterious		Pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.270T>G (p.Ser90Arg)
+90	Ser90Gly	Ser59Gly	0.202	0.009	FALSE	4	Hypomorphic	Deleterious		Pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.268A>G (p.Ser90Gly)
+90	Ser90Thr	Ser59Thr	0.727	0.012	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+91	Thr91Ala	Thr60Ala	0.754	0.009	FALSE	7	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+91	Thr91Asn	Thr60Asn	0.894	0.018	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+91	Thr91Ser	Thr60Ser	1.017	0.015	FALSE	3	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+92	Arg92Pro	Arg61Pro	-0.001	0.012	FALSE	1	Amorphic	Deleterious		Pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.275G>C (p.Arg92Pro)
+92	Arg92Gln	Arg61Gln	0.001	0.006	FALSE	4	Amorphic	Deleterious		Pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.275G>A (p.Arg92Gln)
+92	Arg92Gly	Arg61Gly	0.004	0.009	FALSE	2	Amorphic	Deleterious		Pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.274C>G (p.Arg92Gly)
+93	Thr93Arg	Thr62Arg	-0.011	0.008	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+93	Thr93Lys	Thr62Lys	-0.007	0.012	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+93	Thr93Ile	Thr62Ile	0.010	0.009	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+93	Thr93Ala	Thr62Ala	0.133	0.012	FALSE	2	Hypomorphic	Deleterious		Pathogenic	FALSE	FALSE	TRUE	NM_000531.6(OTC):c.277A>G (p.Thr93Ala)
+93	Thr93Ser	Thr62Ser	0.745	0.017	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+94	Arg94Gly	Arg63Gly	0.167	0.017	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+94	Arg94Ile	Arg63Ile	0.274	0.010	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+94	Arg94Thr	Arg63Thr	0.642	0.013	FALSE	3	Hypomorphic	Deleterious		Pathogenic	FALSE	FALSE	TRUE	NM_000531.6(OTC):c.281G>C (p.Arg94Thr)
+94	Arg94Ser	Arg63Ser	0.650	0.012	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+94	Arg94Lys	Arg63Lys	0.899	0.015	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+95	Leu95Ser	Leu64Ser	0.166	0.012	FALSE	2	Hypomorphic	Deleterious		Pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.284T>C (p.Leu95Ser)
+95	Leu95Trp	Leu64Trp	0.476	0.013	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+95	Leu95Phe	Leu64Phe	0.616	0.013	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+95	Leu95Val	Leu64Val	0.636	0.010	FALSE	5	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+95	Leu95Met	Leu64Met	0.897	0.018	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+96	Ser96Pro	Ser65Pro	-0.001	0.007	FALSE	3	Amorphic	Deleterious		Uncertain significance	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.286T>C (p.Ser96Pro)
+96	Ser96Phe	Ser65Phe	0.017	0.005	FALSE	8	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+96	Ser96Tyr	Ser65Tyr	0.069	0.011	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+96	Ser96Thr	Ser65Thr	1.002	0.018	FALSE	2	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+96	Ser96Ala	Ser65Ala	1.114	0.019	FALSE	2	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+97	Thr97Lys	Thr66Lys	-0.004	0.007	FALSE	3	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+97	Thr97Pro	Thr66Pro	0.001	0.004	FALSE	8	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+97	Thr97Arg	Thr66Arg	0.004	0.007	FALSE	3	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+97	Thr97Ser	Thr66Ser	0.769	0.017	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+97	Thr97Ala	Thr66Ala	0.998	0.026	FALSE	1	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+97	Thr97Ile	Thr66Ile	1.111	0.026	FALSE	1	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+98	Glu98Lys	Glu67Lys	-0.005	0.006	FALSE	4	Amorphic	Deleterious		Uncertain significance	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.292G>A (p.Glu98Lys)
+98	Glu98Val	Glu67Val	0.026	0.009	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+98	Glu98Ala	Glu67Ala	0.345	0.012	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+98	Glu98Gly	Glu67Gly	0.384	0.008	FALSE	7	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+98	Glu98Gln	Glu67Gln	0.438	0.021	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+99	Thr99Lys	Thr68Lys	0.359	0.012	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+99	Thr99Arg	Thr68Arg	0.368	0.014	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+99	Thr99Ser	Thr68Ser	0.827	0.012	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+99	Thr99Ala	Thr68Ala	0.962	0.012	FALSE	5	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+99	Thr99Ile	Thr68Ile	0.963	0.013	FALSE	4	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+100	Gly100Arg	Gly69Arg	-0.007	0.012	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	TRUE	NM_000531.6(OTC):c.298G>C (p.Gly100Arg)
+100	Gly100Asp	Gly69Asp	-0.006	0.006	FALSE	4	Amorphic	Deleterious		Pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.299G>A (p.Gly100Asp)
+100	Gly100Val	Gly69Val	0.100	0.007	FALSE	5	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+100	Gly100Ser	Gly69Ser	0.603	0.023	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+100	Gly100Ala	Gly69Ala	1.121	0.011	FALSE	6	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+101	Phe101Tyr	Phe70Tyr	0.307	0.014	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+101	Phe101Ser	Phe70Ser	0.386	0.015	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+101	Phe101Leu	Phe70Leu	1.090	0.019	FALSE	2	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+101	Phe101Val	Phe70Val	1.094	0.013	FALSE	4	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+101	Phe101Cys	Phe70Cys	1.098	0.015	FALSE	3	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+101	Phe101Ile	Phe70Ile	1.176	0.014	FALSE	4	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+102	Ala102Pro	Ala71Pro	0.153	0.012	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.304G>C (p.Ala102Pro)
+102	Ala102Glu	Ala71Glu	0.438	0.012	FALSE	3	Hypomorphic	Deleterious		Pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.305C>A (p.Ala102Glu)
+102	Ala102Val	Ala71Val	0.477	0.015	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+102	Ala102Gly	Ala71Gly	0.676	0.017	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+102	Ala102Thr	Ala71Thr	0.861	0.014	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+102	Ala102Ser	Ala71Ser	0.948	0.011	FALSE	5	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+103	Leu103Pro	Leu72Pro	0.023	0.009	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+103	Leu103Phe	Leu72Phe	0.195	0.013	FALSE	2	Hypomorphic	Deleterious		Uncertain significance	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.307C>T (p.Leu103Phe)
+103	Leu103His	Leu72His	0.509	0.013	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+103	Leu103Arg	Leu72Arg	0.556	0.010	FALSE	5	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+103	Leu103Ile	Leu72Ile	0.866	0.014	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+104	Leu104Pro	Leu73Pro	-0.009	0.007	FALSE	3	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+104	Leu104Arg	Leu73Arg	-0.005	0.012	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+104	Leu104Gln	Leu73Gln	0.010	0.006	FALSE	5	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+104	Leu104Val	Leu73Val	0.334	0.014	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+104	Leu104Met	Leu73Met	0.572	0.011	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+105	Gly105Val	Gly74Val	0.000	0.007	FALSE	3	Amorphic	Deleterious		Pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.314G>T (p.Gly105Val)
+105	Gly105Glu	Gly74Glu	0.220	0.018	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	TRUE	NM_000531.6(OTC):c.314G>A (p.Gly105Glu)
+105	Gly105Arg	Gly74Arg	0.313	0.010	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+105	Gly105Ala	Gly74Ala	0.566	0.016	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+106	Gly106Arg	Gly75Arg	-0.028	0.007	FALSE	2	Amorphic	Deleterious		Pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.316G>A (p.Gly106Arg)
+106	Gly106Val	Gly75Val	-0.007	0.007	FALSE	3	Amorphic	Deleterious		Pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.317G>T (p.Gly106Val)
+106	Gly106Glu	Gly75Glu	0.000	0.009	FALSE	2	Amorphic	Deleterious		Pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.317G>A (p.Gly106Glu)
+106	Gly106Ala	Gly75Ala	0.378	0.010	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+107	His107Arg	His76Arg	0.411	0.012	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+107	His107Asp	His76Asp	0.501	0.010	FALSE	5	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+107	His107Gln	His76Gln	0.818	0.025	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+107	His107Asn	His76Asn	0.892	0.015	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+107	His107Tyr	His76Tyr	0.973	0.012	FALSE	5	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+108	Pro108Arg	Pro77Arg	0.003	0.009	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+108	Pro108Leu	Pro77Leu	0.552	0.022	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+108	Pro108Ser	Pro77Ser	0.995	0.013	FALSE	4	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+108	Pro108Ala	Pro77Ala	1.017	0.009	FALSE	9	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+108	Pro108Thr	Pro77Thr	1.086	0.019	FALSE	2	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+109	Cys109Arg	Cys78Arg	0.002	0.012	FALSE	1	Amorphic	Deleterious		NA	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.325T>C (p.Cys109Arg)
+109	Cys109Trp	Cys78Trp	0.652	0.023	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+109	Cys109Tyr	Cys78Tyr	0.769	0.012	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+109	Cys109Ser	Cys78Ser	0.933	0.013	FALSE	4	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+109	Cys109Phe	Cys78Phe	1.041	0.011	FALSE	6	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+110	Phe110Leu	Phe79Leu	1.040	0.018	FALSE	2	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+110	Phe110Ile	Phe79Ile	1.048	0.011	FALSE	6	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+110	Phe110Cys	Phe79Cys	1.056	0.011	FALSE	6	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+110	Phe110Val	Phe79Val	1.065	0.015	FALSE	3	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+111	Leu111Arg	Leu80Arg	0.018	0.008	FALSE	3	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+111	Leu111His	Leu80His	0.255	0.013	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+111	Leu111Pro	Leu80Pro	0.368	0.008	FALSE	6	Hypomorphic	Deleterious		Pathogenic	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.332T>C (p.Leu111Pro)
+111	Leu111Val	Leu80Val	0.461	0.015	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+111	Leu111Ile	Leu80Ile	0.690	0.024	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+112	Thr112Ala	Thr81Ala	0.053	0.010	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+112	Thr112Pro	Thr81Pro	0.063	0.007	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+112	Thr112Ser	Thr81Ser	0.285	0.019	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+112	Thr112Ile	Thr81Ile	0.444	0.021	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+112	Thr112Asn	Thr81Asn	0.699	0.017	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+113	Thr113Pro	Thr82Pro	0.252	0.019	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+113	Thr113Lys	Thr82Lys	0.598	0.023	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+113	Thr113Arg	Thr82Arg	0.616	0.009	FALSE	6	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+113	Thr113Ser	Thr82Ser	0.907	0.013	FALSE	4	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+113	Thr113Ala	Thr82Ala	1.004	0.012	FALSE	5	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+113	Thr113Ile	Thr82Ile	1.077	0.026	FALSE	1	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+114	Gln114Lys	Gln83Lys	0.208	0.009	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+114	Gln114His	Gln83His	0.657	0.009	FALSE	7	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+114	Gln114Leu	Gln83Leu	0.821	0.014	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+114	Gln114Glu	Gln83Glu	1.160	0.013	FALSE	4	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+115	Asp115Val	Asp84Val	-0.008	0.012	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+115	Asp115Ala	Asp84Ala	-0.003	0.012	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+115	Asp115Asn	Asp84Asn	0.006	0.005	FALSE	6	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+115	Asp115Tyr	Asp84Tyr	0.011	0.007	FALSE	3	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+115	Asp115Gly	Asp84Gly	0.109	0.007	FALSE	6	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+116	Ile116Thr	Ile85Thr	0.312	0.009	FALSE	5	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+116	Ile116Asn	Ile85Asn	0.415	0.012	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+116	Ile116Ser	Ile85Ser	0.504	0.013	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+116	Ile116Phe	Ile85Phe	0.888	0.018	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+116	Ile116Met	Ile85Met	0.997	0.026	FALSE	1	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+116	Ile116Leu	Ile85Leu	1.025	0.013	FALSE	4	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+116	Ile116Val	Ile85Val	1.063	0.015	FALSE	3	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+117	His117Asp	His86Asp	0.424	0.012	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+117	His117Arg	His86Arg	0.830	0.014	FALSE	3	Hypomorphic	Deleterious		Pathogenic	FALSE	FALSE	TRUE	NM_000531.6(OTC):c.350A>G (p.His117Arg)
+117	His117Pro	His86Pro	0.843	0.018	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	TRUE	NM_000531.6(OTC):c.350A>C  (p.His117Pro )
+117	His117Asn	His86Asn	0.899	0.015	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+117	His117Gln	His86Gln	1.127	0.027	FALSE	1	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+118	Leu118Trp	Leu87Trp	-0.001	0.007	FALSE	3	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+118	Leu118Ser	Leu87Ser	0.392	0.015	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+118	Leu118Met	Leu87Met	0.716	0.024	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+118	Leu118Val	Leu87Val	0.793	0.017	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+118	Leu118Phe	Leu87Phe	0.999	0.013	FALSE	4	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+119	Gly119Val	Gly88Val	0.597	0.016	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+119	Gly119Cys	Gly88Cys	0.793	0.008	FALSE	9	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+119	Gly119Ala	Gly88Ala	0.808	0.014	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+119	Gly119Asp	Gly88Asp	0.944	0.018	FALSE	2	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+120	Val120Leu	Val89Leu	1.119	0.015	FALSE	3	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+120	Val120Glu	Val89Glu	1.172	0.012	FALSE	5	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+120	Val120Ala	Val89Ala	1.175	0.011	FALSE	6	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+120	Val120Gly	Val89Gly	1.228	0.027	FALSE	1	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+121	Asn121Ile	Asn90Ile	0.586	0.013	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+121	Asn121Tyr	Asn90Tyr	0.699	0.024	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+121	Asn121Lys	Asn90Lys	1.004	0.011	FALSE	6	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+121	Asn121His	Asn90His	1.022	0.018	FALSE	2	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+121	Asn121Asp	Asn90Asp	1.067	0.013	FALSE	4	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+121	Asn121Ser	Asn90Ser	1.095	0.026	FALSE	1	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+122	Glu122Lys	Glu91Lys	0.357	0.008	FALSE	6	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+122	Glu122Val	Glu91Val	0.417	0.009	FALSE	5	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+122	Glu122Ala	Glu91Ala	0.527	0.010	FALSE	5	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+122	Glu122Gly	Glu91Gly	0.642	0.012	FALSE	4	Hypomorphic	Deleterious		Likely pathogenic	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.365A>G (p.Glu122Gly)
+123	Ser123Ile	Ser92Ile	0.437	0.015	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+123	Ser123Gly	Ser92Gly	0.752	0.012	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+123	Ser123Cys	Ser92Cys	0.884	0.018	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+123	Ser123Arg	Ser92Arg	0.926	0.013	FALSE	4	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+123	Ser123Asn	Ser92Asn	0.965	0.015	FALSE	3	Unimpaired	Non-Deleterious		Uncertain significance	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.368G>A (p.Ser123Asn)
+124	Leu124Arg	Leu93Arg	0.721	0.017	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+124	Leu124Pro	Leu93Pro	0.985	0.013	FALSE	4	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+124	Leu124Val	Leu93Val	1.089	0.007	FALSE	13	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+124	Leu124Phe	Leu93Phe	1.108	0.019	FALSE	2	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+124	Leu124Ile	Leu93Ile	1.157	0.013	FALSE	4	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+125	Thr125Met	Thr94Met	0.849	0.010	FALSE	6	Hypomorphic	Deleterious		Uncertain significance	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.374C>T (p.Thr125Met)
+125	Thr125Pro	Thr94Pro	0.920	0.025	FALSE	1	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+125	Thr125Arg	Thr94Arg	1.006	0.013	FALSE	4	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+125	Thr125Ala	Thr94Ala	1.049	0.026	FALSE	1	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+125	Thr125Ser	Thr94Ser	1.082	0.026	FALSE	1	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+125	Thr125Lys	Thr94Lys	1.146	0.019	FALSE	2	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+126	Asp126Tyr	Asp95Tyr	0.585	0.023	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+126	Asp126His	Asp95His	0.696	0.024	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+126	Asp126Gly	Asp95Gly	0.733	0.017	FALSE	2	Hypomorphic	Deleterious		Pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.377A>G (p.Asp126Gly)
+126	Asp126Asn	Asp95Asn	0.757	0.010	FALSE	6	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+126	Asp126Ala	Asp95Ala	0.770	0.014	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+126	Asp126Glu	Asp95Glu	1.072	0.015	FALSE	3	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+127	Thr127Pro	Thr96Pro	0.110	0.011	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+127	Thr127Arg	Thr96Arg	0.128	0.012	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+127	Thr127Lys	Thr96Lys	0.777	0.012	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+127	Thr127Ala	Thr96Ala	0.885	0.011	FALSE	5	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+127	Thr127Ser	Thr96Ser	1.047	0.018	FALSE	2	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+128	Ala128Asp	Ala97Asp	0.016	0.013	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+128	Ala128Pro	Ala97Pro	0.352	0.014	FALSE	2	Hypomorphic	Deleterious		Uncertain significance	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.382G>C (p.Ala128Pro)
+128	Ala128Thr	Ala97Thr	0.671	0.023	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+128	Ala128Ser	Ala97Ser	0.765	0.017	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+128	Ala128Val	Ala97Val	0.773	0.017	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+128	Ala128Gly	Ala97Gly	0.967	0.012	FALSE	5	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+129	Arg129Pro	Arg98Pro	0.642	0.012	TRUE	4	Hypomorphic	Deleterious		Pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.386G>C (p.Arg129Pro)
+129	Arg129Cys	Arg98Cys	0.741	0.017	FALSE	2	Hypomorphic	Deleterious		Uncertain significance	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.385C>T (p.Arg129Cys)
+129	Arg129Gly	Arg98Gly	0.800	0.010	FALSE	6	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+129	Arg129Leu	Arg98Leu	0.843	0.012	TRUE	4	Hypomorphic	Deleterious		Pathogenic	FALSE	FALSE	TRUE	NM_000531.6(OTC):c.386G>T (p.Arg129Leu)
+129	Arg129Ser	Arg98Ser	0.858	0.025	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+129	Arg129His	Arg98His	0.866	0.025	TRUE	1	Hypomorphic	Deleterious		Pathogenic	FALSE	FALSE	TRUE	NM_000531.6(OTC):c.386G>A (p.Arg129His)
+130	Val130Glu	Val99Glu	0.546	0.022	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+130	Val130Gly	Val99Gly	0.833	0.025	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+130	Val130Ala	Val99Ala	0.940	0.015	FALSE	3	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+130	Val130Ile	Val99Ile	0.953	0.018	FALSE	2	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+130	Val130Leu	Val99Leu	1.135	0.015	FALSE	3	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+131	Leu131Ser	Leu100Ser	0.117	0.016	FALSE	1	Hypomorphic	Deleterious		Pathogenic	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.392T>C (p.Leu131Ser)
+131	Leu131Trp	Leu100Trp	0.676	0.014	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+131	Leu131Val	Leu100Val	0.771	0.009	FALSE	7	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+131	Leu131Phe	Leu100Phe	0.806	0.017	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+131	Leu131Met	Leu100Met	0.861	0.018	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+132	Ser132Tyr	Ser101Tyr	0.361	0.020	FALSE	1	Hypomorphic	Deleterious		Pathogenic	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.395C>A (p.Ser132Tyr)
+132	Ser132Pro	Ser101Pro	0.376	0.010	FALSE	4	Hypomorphic	Deleterious		Pathogenic	FALSE	FALSE	TRUE	NM_000531.6(OTC):c.394T>C (p.Ser132Pro)
+132	Ser132Phe	Ser101Phe	0.415	0.008	FALSE	7	Hypomorphic	Deleterious		Pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.395C>T (p.Ser132Phe)
+132	Ser132Cys	Ser101Cys	0.549	0.013	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+132	Ser132Ala	Ser101Ala	0.651	0.016	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+133	Ser133Ile	Ser102Ile	0.525	0.022	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+133	Ser133Arg	Ser102Arg	0.784	0.017	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+133	Ser133Asn	Ser102Asn	0.861	0.025	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+133	Ser133Cys	Ser102Cys	0.883	0.015	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+133	Ser133Gly	Ser102Gly	0.997	0.026	FALSE	1	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+133	Ser133Thr	Ser102Thr	1.021	0.026	FALSE	1	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+134	Met134Arg	Met103Arg	-0.003	0.012	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+134	Met134Lys	Met103Lys	0.259	0.019	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+134	Met134Ile	Met103Ile	0.763	0.017	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+134	Met134Val	Met103Val	1.186	0.019	FALSE	2	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+135	Ala135Glu	Ala104Glu	0.326	0.020	FALSE	1	Hypomorphic	Deleterious		Pathogenic	FALSE	FALSE	TRUE	NM_000531.6(OTC):c.404C>A (p.Ala135Glu)
+135	Ala135Pro	Ala104Pro	0.469	0.008	FALSE	7	Hypomorphic	Deleterious		Likely pathogenic	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.403G>C (p.Ala135Pro)
+135	Ala135Gly	Ala104Gly	0.513	0.022	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+136	Asp136Val	Asp105Val	0.003	0.007	FALSE	3	Amorphic	Deleterious		Pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.407A>T (p.Asp136Val)
+136	Asp136Tyr	Asp105Tyr	0.004	0.012	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+136	Asp136Gly	Asp105Gly	0.020	0.006	FALSE	5	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+136	Asp136Ala	Asp105Ala	0.096	0.016	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+136	Asp136Glu	Asp105Glu	0.143	0.012	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+136	Asp136His	Asp105His	0.363	0.020	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+136	Asp136Asn	Asp105Asn	0.389	0.012	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+137	Ala137Glu	Ala106Glu	-0.020	0.008	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+137	Ala137Pro	Ala106Pro	0.002	0.005	FALSE	5	Amorphic	Deleterious		NA	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.409G>C (p.Ala137Pro)
+137	Ala137Thr	Ala106Thr	0.389	0.008	FALSE	6	Hypomorphic	Deleterious		Pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.409G>A (p.Ala137Thr)
+137	Ala137Gly	Ala106Gly	0.606	0.011	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+138	Val138Glu	Val107Glu	-0.012	0.003	FALSE	12	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+138	Val138Ala	Val107Ala	0.516	0.022	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+139	Leu139Ser	Leu108Ser	-0.048	0.004	FALSE	2	Amorphic	Deleterious		Pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.416T>C (p.Leu139Ser)
+139	Leu139Met	Leu108Met	0.619	0.010	FALSE	5	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+139	Leu139Val	Leu108Val	0.913	0.013	FALSE	4	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+140	Ala140Asp	Ala109Asp	-0.016	0.005	FALSE	6	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+140	Ala140Gly	Ala109Gly	0.352	0.020	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+140	Ala140Ser	Ala109Ser	0.604	0.023	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+140	Ala140Thr	Ala109Thr	0.813	0.025	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+141	Arg141Gln	Arg110Gln	-0.051	0.002	FALSE	2	Amorphic	Deleterious		Pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.422G>A (p.Arg141Gln)
+141	Arg141Leu	Arg110Leu	-0.026	0.005	FALSE	4	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+141	Arg141Gly	Arg110Gly	-0.018	0.005	FALSE	5	Amorphic	Deleterious		Pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.421C>G (p.Arg141Gly)
+141	Arg141Pro	Arg110Pro	-0.011	0.011	FALSE	1	Amorphic	Deleterious		Likely pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.422G>C (p.Arg141Pro)
+142	Val142Glu	Val111Glu	0.690	0.014	FALSE	3	Hypomorphic	Deleterious		Pathogenic	FALSE	FALSE	TRUE	NM_000531.6(OTC):c.425T>A (p.Val142Glu)
+142	Val142Leu	Val111Leu	0.887	0.008	FALSE	10	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+142	Val142Ala	Val111Ala	1.004	0.018	FALSE	2	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+143	Tyr143His	Tyr112His	1.187	0.027	FALSE	1	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+143	Tyr143Asp	Tyr112Asp	1.258	0.008	FALSE	13	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+143	Tyr143Ser	Tyr112Ser	1.349	0.016	FALSE	3	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+143	Tyr143Cys	Tyr112Cys	1.374	0.028	FALSE	1	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+144	Lys144Ile	Lys113Ile	0.315	0.020	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+144	Lys144Thr	Lys113Thr	0.829	0.017	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+144	Lys144Gln	Lys113Gln	0.869	0.013	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+144	Lys144Arg	Lys113Arg	0.958	0.011	FALSE	6	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+145	Gln145Lys	Gln114Lys	0.005	0.007	FALSE	3	Amorphic	Deleterious		Uncertain significance	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.433C>A (p.Gln145Lys)
+145	Gln145Arg	Gln114Arg	0.005	0.005	FALSE	7	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+145	Gln145Pro	Gln114Pro	0.016	0.013	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+145	Gln145Glu	Gln114Glu	0.236	0.019	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+145	Gln145His	Gln114His	0.912	0.013	FALSE	4	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+146	Ser146Leu	Ser115Leu	0.447	0.011	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+146	Ser146Pro	Ser115Pro	0.518	0.016	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+146	Ser146Thr	Ser115Thr	0.949	0.011	FALSE	5	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+146	Ser146Ala	Ser115Ala	1.056	0.026	FALSE	1	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+147	Asp147Gly	Asp116Gly	0.437	0.015	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+147	Asp147Asn	Asp116Asn	0.736	0.008	FALSE	9	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+147	Asp147Tyr	Asp116Tyr	0.737	0.014	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+147	Asp147His	Asp116His	0.806	0.017	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+147	Asp147Glu	Asp116Glu	0.825	0.012	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+147	Asp147Val	Asp116Val	1.006	0.026	FALSE	1	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+148	Leu148Trp	Leu117Trp	-0.003	0.012	FALSE	1	Amorphic	Deleterious		Pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.443T>G (p.Leu148Trp)
+148	Leu148Val	Leu117Val	0.392	0.012	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+148	Leu148Met	Leu117Met	0.471	0.007	FALSE	11	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+149	Asp149Gly	Asp118Gly	0.419	0.005	FALSE	16	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+149	Asp149Ala	Asp118Ala	0.705	0.012	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+150	Thr150Pro	Thr119Pro	0.017	0.006	FALSE	4	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+150	Thr150Ile	Thr119Ile	0.942	0.013	FALSE	4	Unimpaired	Non-Deleterious		Benign	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.449C>T (p.Thr150Ile)
+150	Thr150Asn	Thr119Asn	1.112	0.012	FALSE	5	Unimpaired	Non-Deleterious		Likely benign	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.449C>A (p.Thr150Asn)
+151	Leu151Gln	Leu120Gln	-0.019	0.005	FALSE	4	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+151	Leu151Arg	Leu120Arg	-0.013	0.005	FALSE	6	Amorphic	Deleterious		Pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.452T>G (p.Leu151Arg)
+151	Leu151Val	Leu120Val	0.487	0.022	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+151	Leu151Met	Leu120Met	0.544	0.011	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+152	Ala152Pro	Ala121Pro	-0.012	0.008	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+152	Ala152Asp	Ala121Asp	0.003	0.006	FALSE	4	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+152	Ala152Val	Ala121Val	0.221	0.011	FALSE	3	Hypomorphic	Deleterious		Pathogenic	FALSE	FALSE	TRUE	NM_000531.6(OTC):c.455C>T (p.Ala152Val)
+152	Ala152Thr	Ala121Thr	0.236	0.013	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+152	Ala152Gly	Ala121Gly	0.458	0.012	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+153	Lys153Asn	Lys122Asn	0.895	0.025	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+153	Lys153Arg	Lys122Arg	0.932	0.025	FALSE	1	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+153	Lys153Glu	Lys122Glu	0.996	0.007	FALSE	16	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+154	Glu154Gln	Glu123Gln	0.750	0.008	FALSE	10	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+154	Glu154Lys	Glu123Lys	0.750	0.017	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+154	Glu154Gly	Glu123Gly	0.797	0.014	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+154	Glu154Asp	Glu123Asp	0.866	0.025	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+155	Ala155Gly	Ala124Gly	0.278	0.011	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+155	Ala155Val	Ala124Val	0.631	0.013	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+155	Ala155Ser	Ala124Ser	0.852	0.008	FALSE	10	Hypomorphic	Deleterious		Pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.463G>T (p.Ala155Ser)
+156	Ser156Tyr	Ser125Tyr	0.398	0.010	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+156	Ser156Cys	Ser125Cys	0.537	0.022	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+156	Ser156Ala	Ser125Ala	0.631	0.009	FALSE	7	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+156	Ser156Thr	Ser125Thr	0.904	0.010	FALSE	6	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+157	Ile157Leu	Ile126Leu	0.158	0.010	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+157	Ile157Phe	Ile126Phe	0.161	0.005	FALSE	11	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+157	Ile157Met	Ile126Met	0.420	0.015	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+157	Ile157Val	Ile126Val	0.831	0.014	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+158	Pro158Arg	Pro127Arg	0.004	0.009	FALSE	2	Amorphic	Deleterious		Uncertain significance	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.473C>G (p.Pro158Arg)
+158	Pro158Thr	Pro127Thr	0.007	0.009	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+158	Pro158Ser	Pro127Ser	0.028	0.007	FALSE	4	Amorphic	Deleterious		NA	FALSE	FALSE	TRUE	NM_000531.6(OTC):c.472C>T (p.Pro158Ser)
+159	Ile159Ser	Ile128Ser	0.014	0.013	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+159	Ile159Thr	Ile128Thr	0.063	0.010	FALSE	2	Hypomorphic	Deleterious		Pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.476T>C (p.Ile159Thr)
+159	Ile159Met	Ile128Met	0.299	0.005	FALSE	14	Hypomorphic	Deleterious		NA	FALSE	FALSE	TRUE	NM_000531.6(OTC):c.477T>G (p.Ile159Met)
+160	Ile160Met	Ile129Met	0.137	0.017	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+160	Ile160Val	Ile129Val	0.893	0.006	FALSE	20	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+161	Asn161Ile	Asn130Ile	-0.006	0.006	FALSE	4	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+161	Asn161Asp	Asn130Asp	-0.001	0.012	FALSE	1	Amorphic	Deleterious		Pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.481A>G (p.Asn161Asp)
+161	Asn161Lys	Asn130Lys	0.001	0.012	FALSE	1	Amorphic	Deleterious		NA	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.483T>A  (p.Asn161Lys ), NM_000531.6(OTC):c.483T>G  (p.Asn161Lys )
+161	Asn161Tyr	Asn130Tyr	0.005	0.012	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+161	Asn161Thr	Asn130Thr	0.006	0.006	FALSE	5	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+161	Asn161Ser	Asn130Ser	0.148	0.006	FALSE	9	Hypomorphic	Deleterious		Pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.482A>G (p.Asn161Ser)
+162	Gly162Trp	Gly131Trp	0.000	0.012	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+162	Gly162Val	Gly131Val	0.003	0.012	FALSE	1	Amorphic	Deleterious		Uncertain significance	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.485G>T (p.Gly162Val)
+162	Gly162Glu	Gly131Glu	0.024	0.013	FALSE	1	Amorphic	Deleterious		Pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.485G>A (p.Gly162Glu)
+162	Gly162Ala	Gly131Ala	0.760	0.017	FALSE	2	Hypomorphic	Deleterious		Uncertain significance	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.485G>C (p.Gly162Ala)
+163	Leu163Arg	Leu132Arg	0.081	0.015	FALSE	1	Hypomorphic	Deleterious		Pathogenic	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.488T>G (p.Leu163Arg)
+163	Leu163Gln	Leu132Gln	0.196	0.013	FALSE	2	Hypomorphic	Deleterious		Likely pathogenic	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.488T>A (p.Leu163Gln)
+163	Leu163Val	Leu132Val	0.826	0.011	FALSE	5	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+163	Leu163Met	Leu132Met	1.150	0.019	FALSE	2	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+164	Ser164Pro	Ser133Pro	-0.004	0.012	FALSE	1	Amorphic	Deleterious		Pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.490T>C (p.Ser164Pro)
+164	Ser164Leu	Ser133Leu	-0.003	0.004	FALSE	8	Amorphic	Deleterious		Likely pathogenic	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.491C>T (p.Ser164Leu)
+164	Ser164Ala	Ser133Ala	0.006	0.009	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+165	Asp165Val	Asp134Val	0.087	0.016	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+165	Asp165Tyr	Asp134Tyr	0.218	0.013	FALSE	2	Hypomorphic	Deleterious		Pathogenic	FALSE	FALSE	TRUE	NM_000531.6(OTC):c.493G>T (p.Asp165Tyr)
+165	Asp165Ala	Asp134Ala	0.288	0.009	FALSE	5	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+165	Asp165Gly	Asp134Gly	0.385	0.007	FALSE	8	Hypomorphic	Deleterious		Likely pathogenic	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.494A>G (p.Asp165Gly)
+165	Asp165Asn	Asp134Asn	0.685	0.012	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+166	Leu166Trp	Leu135Trp	0.536	0.011	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+166	Leu166Ser	Leu135Ser	0.555	0.009	FALSE	6	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+166	Leu166Phe	Leu135Phe	0.715	0.014	FALSE	3	Hypomorphic	Deleterious		Benign	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.498G>T (p.Leu166Phe)
+166	Leu166Met	Leu135Met	0.953	0.018	FALSE	2	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+167	Tyr167Asn	Tyr136Asn	0.329	0.006	FALSE	11	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+167	Tyr167Ser	Tyr136Ser	0.468	0.009	FALSE	6	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+167	Tyr167Phe	Tyr136Phe	0.921	0.025	FALSE	1	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+168	His168Arg	His137Arg	-0.008	0.012	FALSE	1	Amorphic	Deleterious		Pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.503A>G (p.His168Arg)
+168	His168Asp	His137Asp	-0.002	0.004	FALSE	9	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+168	His168Leu	His137Leu	-0.001	0.007	FALSE	3	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+168	His168Tyr	His137Tyr	0.002	0.007	FALSE	3	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+168	His168Pro	His137Pro	0.005	0.009	FALSE	2	Amorphic	Deleterious		Pathogenic	FALSE	FALSE	TRUE	NM_000531.6(OTC):c.503A>C (p.His168Pro)
+168	His168Asn	His137Asn	0.051	0.014	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+169	Pro169Thr	Pro138Thr	-0.012	0.007	FALSE	3	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+169	Pro169Ser	Pro138Ser	-0.004	0.007	FALSE	3	Amorphic	Deleterious		Pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.505C>T (p.Pro169Ser)
+169	Pro169Arg	Pro138Arg	-0.003	0.005	FALSE	5	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+169	Pro169His	Pro138His	-0.003	0.006	FALSE	4	Amorphic	Deleterious		NA	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.506C>A (p.Pro169His)
+169	Pro169Ala	Pro138Ala	0.000	0.012	FALSE	1	Amorphic	Deleterious		Likely pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.505C>G (p.Pro169Ala)
+170	Ile170Asn	Ile139Asn	0.333	0.014	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+170	Ile170Ser	Ile139Ser	0.513	0.010	FALSE	5	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+170	Ile170Val	Ile139Val	0.865	0.025	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+170	Ile170Met	Ile139Met	0.911	0.025	FALSE	1	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+170	Ile170Leu	Ile139Leu	0.983	0.009	FALSE	8	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+171	Gln171Arg	Gln140Arg	-0.011	0.008	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+171	Gln171Pro	Gln140Pro	0.005	0.004	FALSE	10	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+171	Gln171Lys	Gln140Lys	0.007	0.012	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+171	Gln171Leu	Gln140Leu	0.010	0.009	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+171	Gln171Glu	Gln140Glu	0.399	0.012	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+172	Ile172Phe	Ile141Phe	0.011	0.009	FALSE	2	Amorphic	Deleterious		Pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.514A>T (p.Ile172Phe)
+172	Ile172Met	Ile141Met	0.034	0.014	FALSE	1	Amorphic	Deleterious		Pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.516C>G (p.Ile172Met)
+172	Ile172Ser	Ile141Ser	0.050	0.010	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+172	Ile172Asn	Ile141Asn	0.097	0.016	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	TRUE	NM_000531.6(OTC):c.515T>A (p.Ile172Asn)
+172	Ile172Leu	Ile141Leu	0.330	0.008	FALSE	7	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+172	Ile172Thr	Ile141Thr	0.654	0.013	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+172	Ile172Val	Ile141Val	1.144	0.013	FALSE	4	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+173	Leu173Pro	Leu142Pro	-0.007	0.008	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+173	Leu173Arg	Leu142Arg	-0.001	0.006	FALSE	4	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+173	Leu173Gln	Leu142Gln	0.003	0.007	FALSE	3	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+173	Leu173Met	Leu142Met	0.618	0.010	FALSE	5	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+174	Ala174Pro	Ala143Pro	0.008	0.007	FALSE	3	Amorphic	Deleterious		Pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.520G>C (p.Ala174Pro)
+174	Ala174Asp	Ala143Asp	0.026	0.013	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+174	Ala174Gly	Ala143Gly	0.385	0.008	FALSE	7	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+174	Ala174Ser	Ala143Ser	0.897	0.013	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+175	Asp175Tyr	Asp144Tyr	0.487	0.007	FALSE	9	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+175	Asp175Val	Asp144Val	0.621	0.007	FALSE	12	Hypomorphic	Deleterious		Pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.524A>T (p.Asp175Val)
+176	Tyr176Ser	Tyr145Ser	-0.028	0.010	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+176	Tyr176Asp	Tyr145Asp	-0.004	0.003	FALSE	12	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+176	Tyr176Cys	Tyr145Cys	0.021	0.006	FALSE	5	Amorphic	Deleterious		Pathogenic	FALSE	FALSE	TRUE	NM_000531.6(OTC):c.527A>G (p.Tyr176Cys)
+177	Leu177Arg	Leu146Arg	-0.003	0.007	FALSE	3	Amorphic	Deleterious		Uncertain significance	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.530T>G (p.Leu177Arg)
+177	Leu177Val	Leu146Val	0.093	0.005	FALSE	11	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+177	Leu177Ile	Leu146Ile	0.129	0.017	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+177	Leu177His	Leu146His	0.168	0.017	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+177	Leu177Phe	Leu146Phe	0.525	0.016	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+178	Thr178Arg	Thr147Arg	-0.004	0.007	FALSE	3	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+178	Thr178Met	Thr147Met	0.007	0.004	FALSE	8	Amorphic	Deleterious		Pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.533C>T (p.Thr178Met)
+178	Thr178Ser	Thr147Ser	0.147	0.012	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+178	Thr178Ala	Thr147Ala	0.194	0.009	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+179	Leu179Arg	Leu148Arg	-0.004	0.012	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+179	Leu179Pro	Leu148Pro	0.023	0.013	FALSE	1	Amorphic	Deleterious		Pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.536T>C (p.Leu179Pro)
+179	Leu179Val	Leu148Val	0.393	0.012	FALSE	3	Hypomorphic	Deleterious		Likely pathogenic	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.535C>G (p.Leu179Val)
+179	Leu179Ile	Leu148Ile	1.016	0.008	FALSE	10	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+180	Gln180Pro	Gln149Pro	-0.016	0.006	FALSE	3	Amorphic	Deleterious		Likely pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.539A>C (p.Gln180Pro)
+180	Gln180Arg	Gln149Arg	0.342	0.014	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+180	Gln180Lys	Gln149Lys	0.481	0.007	FALSE	9	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+180	Gln180His	Gln149His	0.896	0.025	TRUE	1	Hypomorphic	Deleterious		Pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.540G>C (p.Gln180His)
+180	Gln180Leu	Gln149Leu	1.082	0.026	FALSE	1	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+181	Glu181Val	Glu150Val	-0.011	0.007	FALSE	3	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+181	Glu181Gly	Glu150Gly	0.002	0.012	FALSE	1	Amorphic	Deleterious		Pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.542A>G (p.Glu181Gly)
+181	Glu181Ala	Glu150Ala	0.017	0.013	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+181	Glu181Asp	Glu150Asp	0.126	0.017	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+181	Glu181Gln	Glu150Gln	0.171	0.010	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+182	His182Asp	His151Asp	-0.015	0.011	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+182	His182Pro	His151Pro	-0.005	0.004	FALSE	7	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+182	His182Leu	His151Leu	0.007	0.007	FALSE	3	Amorphic	Deleterious		Pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.545A>T (p.His182Leu)
+182	His182Arg	His151Arg	0.487	0.011	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+183	Tyr183Asp	Tyr152Asp	-0.013	0.011	FALSE	1	Amorphic	Deleterious		Pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.547T>G (p.Tyr183Asp)
+183	Tyr183Ser	Tyr152Ser	-0.003	0.005	FALSE	6	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+183	Tyr183Asn	Tyr152Asn	0.010	0.013	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+183	Tyr183His	Tyr152His	0.011	0.004	FALSE	10	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+184	Ser184Cys	Ser153Cys	0.760	0.009	FALSE	7	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+184	Ser184Thr	Ser153Thr	0.872	0.025	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+184	Ser184Asn	Ser153Asn	0.962	0.008	FALSE	10	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+185	Ser185Ala	Ser154Ala	0.599	0.023	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+185	Ser185Phe	Ser154Phe	0.679	0.017	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+185	Ser185Cys	Ser154Cys	0.924	0.018	FALSE	2	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+185	Ser185Thr	Ser154Thr	0.962	0.009	FALSE	9	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+186	Leu186Pro	Leu155Pro	-0.015	0.006	FALSE	3	Amorphic	Deleterious		NA	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.557T>C (p.Leu186Pro)
+186	Leu186Gln	Leu155Gln	-0.004	0.012	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+186	Leu186Val	Leu155Val	0.179	0.018	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+186	Leu186Met	Leu155Met	0.396	0.009	FALSE	5	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+187	Lys187Ile	Lys156Ile	0.329	0.009	FALSE	5	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+187	Lys187Thr	Lys156Thr	0.650	0.010	FALSE	5	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+187	Lys187Gln	Lys156Gln	0.838	0.014	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+188	Gly188Val	Gly157Val	-0.007	0.007	FALSE	3	Amorphic	Deleterious		Pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.563G>T (p.Gly188Val)
+188	Gly188Cys	Gly157Cys	0.005	0.007	FALSE	3	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+188	Gly188Arg	Gly157Arg	0.017	0.013	FALSE	1	Amorphic	Deleterious		Pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.562G>C (p.Gly188Arg)
+188	Gly188Ser	Gly157Ser	0.119	0.016	FALSE	1	Hypomorphic	Deleterious		Likely pathogenic	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.562G>A (p.Gly188Ser)
+188	Gly188Asp	Gly157Asp	0.593	0.016	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+189	Leu189Phe	Leu158Phe	-0.002	0.012	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+189	Leu189His	Leu158His	0.000	0.012	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+189	Leu189Arg	Leu158Arg	0.049	0.005	FALSE	10	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+189	Leu189Val	Leu158Val	0.231	0.011	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+190	Thr190Pro	Thr159Pro	-0.003	0.004	FALSE	11	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+190	Thr190Ala	Thr159Ala	0.031	0.014	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+190	Thr190Asn	Thr159Asn	0.039	0.010	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+190	Thr190Ser	Thr159Ser	0.073	0.015	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+191	Leu191Arg	Leu160Arg	-0.022	0.011	FALSE	1	Amorphic	Deleterious		Uncertain significance	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.572T>G (p.Leu191Arg)
+191	Leu191Phe	Leu160Phe	-0.001	0.012	FALSE	1	Amorphic	Deleterious		Pathogenic	FALSE	FALSE	TRUE	NM_000531.6(OTC):c.571C>T (p.Leu191Phe)
+191	Leu191Val	Leu160Val	0.421	0.012	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+191	Leu191Ile	Leu160Ile	0.953	0.009	FALSE	8	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+192	Ser192Asn	Ser161Asn	-0.011	0.011	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+192	Ser192Gly	Ser161Gly	0.145	0.017	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+192	Ser192Ile	Ser161Ile	0.235	0.019	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+192	Ser192Cys	Ser161Cys	0.979	0.007	FALSE	14	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+193	Trp193Arg	Trp162Arg	-0.014	0.011	FALSE	1	Amorphic	Deleterious		Likely pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.577T>C (p.Trp193Arg)
+193	Trp193Gly	Trp162Gly	0.002	0.004	FALSE	10	Amorphic	Deleterious		Pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.577T>G (p.Trp193Gly)
+193	Trp193Leu	Trp162Leu	0.058	0.010	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+193	Trp193Cys	Trp162Cys	0.061	0.010	FALSE	2	Hypomorphic	Deleterious		Pathogenic	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.579G>T (p.Trp193Cys)
+194	Ile194Asn	Ile163Asn	0.005	0.012	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+194	Ile194Thr	Ile163Thr	0.076	0.008	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	TRUE	NM_000531.6(OTC):c.581T>C (p.Ile194Thr)
+194	Ile194Met	Ile163Met	0.603	0.007	FALSE	12	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+195	Gly195Glu	Gly164Glu	-0.008	0.012	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+195	Gly195Arg	Gly164Arg	0.003	0.012	FALSE	1	Amorphic	Deleterious		Pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.583G>A (p.Gly195Arg)
+195	Gly195Trp	Gly164Trp	0.006	0.004	FALSE	8	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+195	Gly195Ala	Gly164Ala	0.049	0.008	FALSE	3	Amorphic	Deleterious		Pathogenic	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.584G>C (p.Gly195Ala)
+196	Asp196Tyr	Asp165Tyr	0.229	0.009	FALSE	4	Hypomorphic	Deleterious		Pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.586G>T (p.Asp196Tyr)
+196	Asp196Val	Asp165Val	0.616	0.009	FALSE	6	Hypomorphic	Deleterious		Pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.587A>T (p.Asp196Val)
+196	Asp196His	Asp165His	0.646	0.012	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+196	Asp196Asn	Asp165Asn	0.758	0.024	FALSE	1	Hypomorphic	Deleterious		Pathogenic	FALSE	FALSE	TRUE	NM_000531.6(OTC):c.586G>A (p.Asp196Asn)
+196	Asp196Gly	Asp165Gly	0.777	0.017	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+196	Asp196Glu	Asp165Glu	0.855	0.018	FALSE	2	Hypomorphic	Deleterious		Uncertain significance	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.588T>A (p.Asp196Glu)
+196	Asp196Ala	Asp165Ala	0.885	0.018	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+197	Gly197Val	Gly166Val	-0.003	0.008	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+197	Gly197Glu	Gly166Glu	0.005	0.006	FALSE	5	Amorphic	Deleterious		Pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.590G>A (p.Gly197Glu)
+197	Gly197Trp	Gly166Trp	0.016	0.013	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+197	Gly197Ala	Gly166Ala	0.508	0.013	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+198	Asn198Tyr	Asn167Tyr	0.011	0.013	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+198	Asn198His	Asn167His	0.336	0.007	FALSE	8	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+198	Asn198Ile	Asn167Ile	0.421	0.012	FALSE	3	Hypomorphic	Deleterious		Pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.593A>T (p.Asn198Ile)
+198	Asn198Asp	Asn167Asp	0.706	0.012	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+198	Asn198Lys	Asn167Lys	0.780	0.024	FALSE	1	Hypomorphic	Deleterious		Pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.594C>A (p.Asn198Lys)
+198	Asn198Thr	Asn167Thr	0.906	0.025	FALSE	1	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+198	Asn198Ser	Asn167Ser	1.148	0.019	FALSE	2	Unimpaired	Non-Deleterious		Uncertain significance	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.593A>G (p.Asn198Ser)
+199	Asn199Ile	Asn168Ile	0.120	0.004	FALSE	16	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+199	Asn199Thr	Asn168Thr	0.480	0.022	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+199	Asn199Ser	Asn168Ser	0.793	0.024	FALSE	1	Hypomorphic	Deleterious		Pathogenic/Likely pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.596A>G (p.Asn199Ser)
+200	Ile200Phe	Ile169Phe	-0.014	0.006	FALSE	4	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+200	Ile200Ser	Ile169Ser	0.395	0.012	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+200	Ile200Leu	Ile169Leu	0.840	0.018	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+200	Ile200Asn	Ile169Asn	0.906	0.025	FALSE	1	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+200	Ile200Thr	Ile169Thr	0.939	0.018	FALSE	2	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+200	Ile200Val	Ile169Val	1.013	0.015	FALSE	3	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+200	Ile200Met	Ile169Met	1.032	0.015	FALSE	3	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+201	Leu201Gln	Leu170Gln	-0.020	0.004	FALSE	6	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+201	Leu201Pro	Leu170Pro	0.002	0.007	FALSE	3	Amorphic	Deleterious		Pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.602T>C (p.Leu201Pro)
+201	Leu201Val	Leu170Val	0.067	0.011	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+201	Leu201Met	Leu170Met	0.096	0.008	FALSE	4	Hypomorphic	Deleterious		NA	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.601C>A (p.Leu201Met)
+202	His202Leu	His171Leu	-0.021	0.003	FALSE	10	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+202	His202Asp	His171Asp	0.109	0.011	FALSE	2	Hypomorphic	Deleterious		Uncertain significance	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.604C>G (p.His202Asp)
+202	His202Tyr	His171Tyr	0.126	0.010	FALSE	3	Hypomorphic	Deleterious		Pathogenic	FALSE	FALSE	TRUE	NM_000531.6(OTC):c.604C>T (p.His202Tyr)
+202	His202Arg	His171Arg	0.205	0.018	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+202	His202Gln	His171Gln	0.427	0.015	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+202	His202Asn	His171Asn	0.582	0.016	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+203	Ser203Phe	Ser172Phe	-0.034	0.007	FALSE	2	Amorphic	Deleterious		Conflicting interpretations of pathogenicity	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.608C>T (p.Ser203Phe)
+203	Ser203Pro	Ser172Pro	-0.014	0.006	FALSE	3	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+203	Ser203Ala	Ser172Ala	0.176	0.018	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+203	Ser203Cys	Ser172Cys	0.385	0.010	FALSE	4	Hypomorphic	Deleterious		Pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.608C>G (p.Ser203Cys)
+203	Ser203Thr	Ser172Thr	0.412	0.015	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+204	Ile204Ser	Ile173Ser	-0.015	0.011	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+204	Ile204Thr	Ile173Thr	0.009	0.006	FALSE	4	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+204	Ile204Asn	Ile173Asn	0.031	0.014	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+204	Ile204Leu	Ile173Leu	1.067	0.026	FALSE	1	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+204	Ile204Phe	Ile173Phe	1.106	0.008	FALSE	11	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+205	Met205Val	Met174Val	-0.010	0.008	FALSE	2	Amorphic	Deleterious		Likely pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.613A>G (p.Met205Val)
+205	Met205Lys	Met174Lys	-0.002	0.008	FALSE	2	Amorphic	Deleterious		Uncertain significance	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.614T>A (p.Met205Lys)
+205	Met205Ile	Met174Ile	0.000	0.009	FALSE	2	Amorphic	Deleterious		Pathogenic	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.615G>C (p.Met205Ile)
+205	Met205Arg	Met174Arg	0.005	0.012	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+205	Met205Thr	Met174Thr	0.008	0.007	FALSE	3	Amorphic	Deleterious		Pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.614T>C (p.Met205Thr)
+205	Met205Leu	Met174Leu	0.390	0.008	FALSE	6	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+206	Met206Lys	Met175Lys	-0.010	0.008	FALSE	2	Amorphic	Deleterious		Likely pathogenic	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.617T>A (p.Met206Lys)
+206	Met206Arg	Met175Arg	0.000	0.009	FALSE	2	Amorphic	Deleterious		Pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.617T>G (p.Met206Arg)
+206	Met206Ile	Met175Ile	0.648	0.010	FALSE	6	Hypomorphic	Deleterious		Pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.618G>A (p.Met206Ile);NM_000531.6(OTC):c.618G>C (p.Met206Ile)
+206	Met206Val	Met175Val	0.951	0.025	FALSE	1	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+206	Met206Leu	Met175Leu	1.011	0.015	FALSE	3	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+207	Ser207Arg	Ser176Arg	0.000	0.003	FALSE	15	Amorphic	Deleterious		Pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.621C>A (p.Ser207Arg)
+207	Ser207Cys	Ser176Cys	0.006	0.012	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+207	Ser207Asn	Ser176Asn	0.012	0.013	FALSE	1	Amorphic	Deleterious		Pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.620G>A (p.Ser207Asn)
+207	Ser207Thr	Ser176Thr	0.854	0.025	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+208	Ala208Pro	Ala177Pro	-0.022	0.011	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+208	Ala208Thr	Ala177Thr	-0.005	0.008	FALSE	2	Amorphic	Deleterious		Pathogenic	FALSE	FALSE	TRUE	NM_000531.6(OTC):c.622G>A (p.Ala208Thr)
+208	Ala208Ser	Ala177Ser	0.643	0.007	FALSE	13	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+209	Ala209Val	Ala178Val	-0.007	0.012	FALSE	1	Amorphic	Deleterious		Pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.626C>T (p.Ala209Val)
+209	Ala209Gly	Ala178Gly	0.317	0.014	FALSE	2	Hypomorphic	Deleterious		Uncertain significance	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.626C>G (p.Ala209Gly)
+209	Ala209Ser	Ala178Ser	0.751	0.007	FALSE	11	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+209	Ala209Pro	Ala178Pro	1.038	0.015	FALSE	3	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+210	Lys210Ile	Lys179Ile	-0.007	0.007	FALSE	3	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+210	Lys210Thr	Lys179Thr	0.006	0.004	FALSE	10	Amorphic	Deleterious		Uncertain significance	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.629A>C (p.Lys210Thr)
+210	Lys210Asn	Lys179Asn	0.023	0.013	FALSE	1	Amorphic	Deleterious		NA	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.630A>C (p.Lys210Asn)
+210	Lys210Gln	Lys179Gln	0.118	0.009	FALSE	3	Hypomorphic	Deleterious		Pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.628A>C (p.Lys210Gln)
+211	Phe211Tyr	Phe180Tyr	-0.001	0.005	FALSE	5	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+211	Phe211Ser	Phe180Ser	0.108	0.016	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+211	Phe211Leu	Phe180Leu	1.184	0.014	FALSE	4	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+211	Phe211Val	Phe180Val	1.228	0.012	FALSE	5	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+212	Gly212Val	Gly181Val	0.001	0.004	FALSE	8	Amorphic	Deleterious		Pathogenic	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.635G>T (p.Gly212Val)
+212	Gly212Ala	Gly181Ala	0.011	0.007	FALSE	3	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+213	Met213Lys	Met182Lys	0.003	0.009	FALSE	2	Amorphic	Deleterious		NA	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.637T>A  (p.Met213Lys )
+213	Met213Thr	Met182Thr	0.019	0.007	FALSE	4	Amorphic	Deleterious		NA	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.637T>C (p.Met213Thr)
+213	Met213Val	Met182Val	0.038	0.010	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+213	Met213Leu	Met182Leu	0.051	0.005	FALSE	10	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+214	His214Tyr	His183Tyr	-0.006	0.012	FALSE	1	Amorphic	Deleterious		Pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.640C>T (p.His214Tyr)
+214	His214Arg	His183Arg	0.013	0.005	FALSE	6	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+214	His214Leu	His183Leu	0.019	0.009	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+214	His214Asp	His183Asp	0.445	0.009	FALSE	6	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+214	His214Asn	His183Asn	0.833	0.010	FALSE	6	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+215	Leu215His	Leu184His	0.001	0.007	FALSE	3	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+215	Leu215Ile	Leu184Ile	0.916	0.018	FALSE	2	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+215	Leu215Val	Leu184Val	0.950	0.009	FALSE	8	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+216	Gln216Pro	Gln185Pro	0.000	0.007	FALSE	3	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+216	Gln216Glu	Gln185Glu	0.011	0.005	FALSE	7	Amorphic	Deleterious		Pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.646C>G (p.Gln216Glu)
+216	Gln216Lys	Gln185Lys	0.696	0.017	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+216	Gln216Arg	Gln185Arg	0.979	0.011	FALSE	6	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+217	Ala217Glu	Ala186Glu	-0.003	0.008	FALSE	2	Amorphic	Deleterious		Pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.650C>A (p.Ala217Glu)
+217	Ala217Gly	Ala186Gly	0.002	0.012	FALSE	1	Amorphic	Deleterious		Uncertain significance	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.650C>G (p.Ala217Gly)
+217	Ala217Pro	Ala186Pro	0.009	0.006	FALSE	5	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+217	Ala217Thr	Ala186Thr	0.118	0.016	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+217	Ala217Ser	Ala186Ser	0.131	0.007	FALSE	5	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+217	Ala217Val	Ala186Val	1.153	0.013	FALSE	4	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+218	Ala218Val	Ala187Val	0.004	0.012	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+218	Ala218Asp	Ala187Asp	0.009	0.004	FALSE	8	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+218	Ala218Thr	Ala187Thr	0.020	0.009	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+218	Ala218Gly	Ala187Gly	0.066	0.015	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+218	Ala218Ser	Ala187Ser	0.454	0.012	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+219	Thr219Pro	Thr188Pro	-0.002	0.008	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+219	Thr219Asn	Thr188Asn	0.099	0.006	FALSE	7	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+219	Thr219Ala	Thr188Ala	0.128	0.017	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+219	Thr219Ile	Thr188Ile	0.357	0.014	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+219	Thr219Ser	Thr188Ser	0.407	0.012	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+220	Pro220Ser	Pro189Ser	-0.003	0.012	FALSE	1	Amorphic	Deleterious		NA	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.658C>T (p.Pro220Ser)
+220	Pro220Thr	Pro189Thr	0.004	0.004	FALSE	8	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+220	Pro220Arg	Pro189Arg	0.008	0.006	FALSE	5	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+220	Pro220Gln	Pro189Gln	0.012	0.007	FALSE	3	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+220	Pro220Ala	Pro189Ala	0.026	0.013	FALSE	1	Amorphic	Deleterious		Pathogenic	FALSE	FALSE	TRUE	NM_000531.6(OTC):c.658C>G (p.Pro220Ala)
+221	Lys221Asn	Lys190Asn	0.640	0.023	TRUE	1	Hypomorphic	Deleterious		Pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.663G>C (p.Lys221Asn)
+221	Lys221Thr	Lys190Thr	0.675	0.024	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+221	Lys221Met	Lys190Met	0.724	0.017	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+221	Lys221Glu	Lys190Glu	0.842	0.008	FALSE	11	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+221	Lys221Arg	Lys190Arg	0.871	0.014	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+222	Gly222Cys	Gly191Cys	0.252	0.008	FALSE	5	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+222	Gly222Ser	Gly191Ser	0.277	0.005	FALSE	13	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+223	Tyr223Asp	Tyr192Asp	0.004	0.006	FALSE	4	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+223	Tyr223Ser	Tyr192Ser	0.297	0.008	FALSE	6	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+223	Tyr223Asn	Tyr192Asn	0.307	0.020	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+223	Tyr223Cys	Tyr192Cys	0.481	0.022	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+223	Tyr223His	Tyr192His	0.608	0.010	FALSE	5	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+223	Tyr223Phe	Tyr192Phe	0.890	0.025	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+224	Glu224Val	Glu193Val	0.066	0.015	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+224	Glu224Gly	Glu193Gly	0.764	0.008	FALSE	9	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+225	Pro225Arg	Pro194Arg	0.003	0.007	FALSE	3	Amorphic	Deleterious		Pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.674C>G (p.Pro225Arg)
+225	Pro225Leu	Pro194Leu	0.016	0.009	FALSE	2	Amorphic	Deleterious		Pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.674C>T (p.Pro225Leu)
+225	Pro225Gln	Pro194Gln	0.023	0.008	FALSE	3	Amorphic	Deleterious		Likely pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.674C>A (p.Pro225Gln)
+225	Pro225Ser	Pro194Ser	0.099	0.009	FALSE	3	Hypomorphic	Deleterious		Likely pathogenic	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.673C>T (p.Pro225Ser)
+225	Pro225Thr	Pro194Thr	0.121	0.016	FALSE	1	Hypomorphic	Deleterious		Pathogenic	FALSE	FALSE	TRUE	NM_000531.6(OTC):c.673C>A (p.Pro225Thr)
+225	Pro225Ala	Pro194Ala	0.605	0.009	FALSE	6	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+226	Asp226Gly	Asp195Gly	0.312	0.014	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+226	Asp226Tyr	Asp195Tyr	0.363	0.008	FALSE	7	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+226	Asp226Val	Asp195Val	0.572	0.013	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+226	Asp226His	Asp195His	0.710	0.017	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+226	Asp226Ala	Asp195Ala	0.759	0.024	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+226	Asp226Glu	Asp195Glu	0.792	0.014	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+226	Asp226Asn	Asp195Asn	0.857	0.014	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+227	Ala227Thr	Ala196Thr	0.852	0.018	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+227	Ala227Asp	Ala196Asp	0.866	0.011	FALSE	5	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+227	Ala227Ser	Ala196Ser	0.895	0.015	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+227	Ala227Val	Ala196Val	0.973	0.018	FALSE	2	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+227	Ala227Pro	Ala196Pro	1.089	0.019	FALSE	2	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+228	Ser228Ile	Ser197Ile	0.827	0.025	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+228	Ser228Cys	Ser197Cys	0.899	0.013	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+228	Ser228Arg	Ser197Arg	0.975	0.018	FALSE	2	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+228	Ser228Thr	Ser197Thr	0.991	0.011	FALSE	6	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+228	Ser228Gly	Ser197Gly	1.034	0.018	FALSE	2	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+229	Val229Gly	Val198Gly	0.007	0.007	FALSE	3	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+229	Val229Ala	Val198Ala	0.528	0.016	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+229	Val229Leu	Val198Leu	0.594	0.011	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+229	Val229Ile	Val198Ile	0.951	0.025	FALSE	1	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+230	Thr230Pro	Thr199Pro	-0.002	0.007	FALSE	3	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+230	Thr230Asn	Thr199Asn	0.189	0.013	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+230	Thr230Ala	Thr199Ala	0.883	0.015	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+230	Thr230Ile	Thr199Ile	1.095	0.011	FALSE	6	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+231	Lys231Asn	Lys200Asn	0.723	0.017	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+231	Lys231Thr	Lys200Thr	0.860	0.018	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+231	Lys231Met	Lys200Met	0.877	0.018	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+231	Lys231Glu	Lys200Glu	0.921	0.025	FALSE	1	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+231	Lys231Gln	Lys200Gln	0.962	0.010	FALSE	7	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+231	Lys231Arg	Lys200Arg	1.019	0.013	FALSE	4	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+232	Leu232Ser	Leu201Ser	0.413	0.021	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+232	Leu232Trp	Leu201Trp	0.623	0.023	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+232	Leu232Phe	Leu201Phe	0.627	0.016	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+232	Leu232Val	Leu201Val	0.772	0.014	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+232	Leu232Met	Leu201Met	0.895	0.010	FALSE	7	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+233	Ala233Glu	Ala202Glu	-0.013	0.005	FALSE	5	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+233	Ala233Val	Ala202Val	-0.009	0.007	FALSE	3	Amorphic	Deleterious		Pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.698C>T (p.Ala233Val)
+233	Ala233Pro	Ala202Pro	-0.005	0.008	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+233	Ala233Gly	Ala202Gly	0.366	0.020	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+233	Ala233Ser	Ala202Ser	0.532	0.009	FALSE	6	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+234	Glu234Gly	Glu203Gly	0.763	0.024	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+234	Glu234Ala	Glu203Ala	0.839	0.018	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+234	Glu234Val	Glu203Val	0.874	0.013	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+234	Glu234Gln	Glu203Gln	0.997	0.012	FALSE	5	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+234	Glu234Lys	Glu203Lys	1.014	0.015	FALSE	3	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+235	Gln235Pro	Gln204Pro	-0.012	0.007	FALSE	3	Amorphic	Deleterious		NA	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.704A>C  (p.Gln235Pro )
+235	Gln235His	Gln204His	0.711	0.017	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+235	Gln235Leu	Gln204Leu	0.793	0.011	FALSE	5	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+235	Gln235Arg	Gln204Arg	0.818	0.025	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+235	Gln235Lys	Gln204Lys	0.894	0.013	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+235	Gln235Glu	Gln204Glu	0.946	0.018	FALSE	2	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+236	Tyr236Asn	Tyr205Asn	0.313	0.011	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+236	Tyr236Asp	Tyr205Asp	0.340	0.012	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+236	Tyr236His	Tyr205His	0.417	0.012	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+236	Tyr236Ser	Tyr205Ser	0.477	0.013	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+236	Tyr236Cys	Tyr205Cys	0.504	0.016	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+237	Ala237Val	Ala206Val	-0.013	0.008	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+237	Ala237Pro	Ala206Pro	-0.003	0.007	FALSE	3	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+237	Ala237Asp	Ala206Asp	0.002	0.005	FALSE	5	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+237	Ala237Thr	Ala206Thr	0.125	0.016	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+237	Ala237Gly	Ala206Gly	0.248	0.009	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+237	Ala237Ser	Ala206Ser	0.646	0.023	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+238	Lys238Thr	Lys207Thr	0.764	0.014	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+238	Lys238Asn	Lys207Asn	0.821	0.017	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+238	Lys238Ile	Lys207Ile	0.870	0.014	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+238	Lys238Glu	Lys207Glu	0.889	0.015	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+238	Lys238Gln	Lys207Gln	1.019	0.018	FALSE	2	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+238	Lys238Arg	Lys207Arg	1.021	0.015	FALSE	3	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+239	Glu239Gly	Glu208Gly	0.184	0.013	TRUE	2	Hypomorphic	Deleterious		Pathogenic	FALSE	FALSE	TRUE	NM_000531.6(OTC):c.716A>G (p.Glu239Gly)
+239	Glu239Val	Glu208Val	0.532	0.010	TRUE	5	Hypomorphic	Deleterious		Pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.716A>T (p.Glu239Val)
+239	Glu239Ala	Glu208Ala	0.685	0.008	FALSE	8	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+239	Glu239Gln	Glu208Gln	0.787	0.014	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+240	Asn240Asp	Asn209Asp	-0.003	0.012	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+240	Asn240Lys	Asn209Lys	0.224	0.018	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+240	Asn240Ser	Asn209Ser	0.561	0.016	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+240	Asn240His	Asn209His	0.886	0.011	FALSE	5	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+240	Asn240Tyr	Asn209Tyr	1.026	0.010	FALSE	7	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+241	Gly241Val	Gly210Val	0.058	0.008	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+241	Gly241Ala	Gly210Ala	0.472	0.013	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+241	Gly241Ser	Gly210Ser	0.514	0.022	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+241	Gly241Arg	Gly210Arg	0.552	0.011	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+241	Gly241Cys	Gly210Cys	0.607	0.013	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+241	Gly241Asp	Gly210Asp	0.662	0.017	FALSE	2	Hypomorphic	Deleterious		Uncertain significance	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.722G>A (p.Gly241Asp)
+242	Thr242Ile	Thr211Ile	-0.025	0.007	FALSE	2	Amorphic	Deleterious		Pathogenic	FALSE	FALSE	TRUE	NM_000531.6(OTC):c.725C>T (p.Thr242Ile)
+242	Thr242Pro	Thr211Pro	-0.023	0.007	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+242	Thr242Ser	Thr211Ser	0.098	0.008	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+242	Thr242Ala	Thr211Ala	0.115	0.007	FALSE	5	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+243	Lys243Glu	Lys212Glu	0.618	0.016	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+243	Lys243Met	Lys212Met	0.645	0.012	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+243	Lys243Gln	Lys212Gln	0.760	0.012	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+243	Lys243Asn	Lys212Asn	0.841	0.025	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+243	Lys243Thr	Lys212Thr	0.896	0.015	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+243	Lys243Arg	Lys212Arg	1.129	0.027	FALSE	1	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+244	Leu244Pro	Leu213Pro	-0.035	0.009	FALSE	1	Amorphic	Deleterious		Uncertain significance	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.731T>C (p.Leu244Pro)
+244	Leu244Arg	Leu213Arg	0.016	0.006	FALSE	5	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+244	Leu244Gln	Leu213Gln	0.026	0.008	FALSE	3	Amorphic	Deleterious		Pathogenic	FALSE	FALSE	TRUE	NM_000531.6(OTC):c.731T>A (p.Leu244Gln)
+244	Leu244Met	Leu213Met	0.824	0.014	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+245	Leu245Trp	Leu214Trp	0.335	0.010	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+245	Leu245Ser	Leu214Ser	0.434	0.011	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+245	Leu245Phe	Leu214Phe	0.794	0.012	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+245	Leu245Met	Leu214Met	0.802	0.014	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+246	Leu246Pro	Leu215Pro	-0.002	0.007	FALSE	3	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+246	Leu246Arg	Leu215Arg	0.017	0.008	FALSE	3	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+246	Leu246Gln	Leu215Gln	0.095	0.009	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+246	Leu246Met	Leu215Met	0.791	0.011	FALSE	5	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+247	Thr247Ile	Thr216Ile	-0.005	0.012	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+247	Thr247Pro	Thr216Pro	-0.001	0.012	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+247	Thr247Lys	Thr216Lys	0.000	0.005	FALSE	5	Amorphic	Deleterious		Pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.740C>A (p.Thr247Lys)
+247	Thr247Arg	Thr216Arg	0.004	0.005	FALSE	7	Amorphic	Deleterious		Pathogenic	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.740C>G (p.Thr247Arg)
+247	Thr247Ala	Thr216Ala	0.022	0.009	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+247	Thr247Ser	Thr216Ser	0.560	0.016	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+248	Asn248Ile	Asn217Ile	0.230	0.013	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+248	Asn248Lys	Asn217Lys	0.468	0.015	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+248	Asn248Tyr	Asn217Tyr	0.571	0.011	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+248	Asn248Ser	Asn217Ser	0.748	0.012	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+248	Asn248Thr	Asn217Thr	0.783	0.017	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+248	Asn248Asp	Asn217Asp	0.816	0.014	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+248	Asn248His	Asn217His	0.947	0.018	FALSE	2	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+249	Asp249Gly	Asp218Gly	-0.002	0.008	FALSE	2	Amorphic	Deleterious		NA	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.746A>G (p.Asp249Gly)
+249	Asp249Ala	Asp218Ala	0.273	0.010	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+249	Asp249Val	Asp218Val	0.288	0.014	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+249	Asp249Tyr	Asp218Tyr	0.295	0.020	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+249	Asp249His	Asp218His	0.443	0.015	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+249	Asp249Glu	Asp218Glu	0.684	0.011	FALSE	5	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+249	Asp249Asn	Asp218Asn	0.818	0.014	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+250	Pro250Arg	Pro219Arg	-0.013	0.006	FALSE	4	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+250	Pro250Thr	Pro219Thr	0.020	0.007	FALSE	4	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+250	Pro250Gln	Pro219Gln	0.025	0.008	FALSE	3	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+250	Pro250Ser	Pro219Ser	0.055	0.008	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+251	Leu251Ser	Leu220Ser	0.477	0.015	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+251	Leu251Trp	Leu220Trp	0.507	0.013	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+251	Leu251Val	Leu220Val	0.606	0.016	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+251	Leu251Phe	Leu220Phe	0.724	0.017	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+251	Leu251Met	Leu220Met	1.063	0.015	FALSE	3	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+252	Glu252Gly	Glu221Gly	0.123	0.012	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+252	Glu252Asp	Glu221Asp	0.385	0.009	FALSE	5	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+252	Glu252Ala	Glu221Ala	0.650	0.010	FALSE	6	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+252	Glu252Gln	Glu221Gln	0.739	0.024	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+252	Glu252Val	Glu221Val	0.923	0.025	FALSE	1	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+253	Ala253Glu	Ala222Glu	-0.037	0.006	FALSE	2	Amorphic	Deleterious		Likely pathogenic	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.758C>A (p.Ala253Glu)
+253	Ala253Thr	Ala222Thr	-0.015	0.008	FALSE	2	Amorphic	Deleterious		Pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.757G>A (p.Ala253Thr)
+253	Ala253Pro	Ala222Pro	-0.013	0.008	FALSE	2	Amorphic	Deleterious		Pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.757G>C (p.Ala253Pro)
+253	Ala253Val	Ala222Val	0.015	0.007	FALSE	3	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+253	Ala253Gly	Ala222Gly	0.090	0.009	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+253	Ala253Ser	Ala222Ser	0.248	0.011	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+254	Ala254Glu	Ala223Glu	-0.021	0.008	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+254	Ala254Pro	Ala223Pro	-0.007	0.007	FALSE	3	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+254	Ala254Gly	Ala223Gly	0.090	0.008	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+254	Ala254Val	Ala223Val	0.256	0.011	FALSE	3	Hypomorphic	Deleterious		Uncertain significance	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.761C>T (p.Ala254Val)
+254	Ala254Ser	Ala223Ser	0.305	0.010	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+255	His255Leu	His224Leu	0.802	0.014	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+255	His255Asp	His224Asp	0.824	0.025	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+255	His255Tyr	His224Tyr	0.867	0.018	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+255	His255Asn	His224Asn	0.934	0.025	FALSE	1	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+255	His255Gln	His224Gln	0.987	0.013	FALSE	4	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+255	His255Arg	His224Arg	1.165	0.013	FALSE	4	Unimpaired	Non-Deleterious		Likely benign	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.764A>G (p.His255Arg)
+256	Gly256Val	Gly225Val	-0.003	0.005	FALSE	7	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+256	Gly256Ala	Gly225Ala	0.572	0.016	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+256	Gly256Arg	Gly225Arg	0.590	0.023	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+256	Gly256Glu	Gly225Glu	0.700	0.024	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+257	Gly257Arg	Gly226Arg	-0.005	0.012	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+257	Gly257Asp	Gly226Asp	0.009	0.006	FALSE	5	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+257	Gly257Val	Gly226Val	0.125	0.008	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+257	Gly257Cys	Gly226Cys	0.559	0.022	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+257	Gly257Ser	Gly226Ser	0.594	0.023	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+257	Gly257Ala	Gly226Ala	1.150	0.012	FALSE	5	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+258	Asn258Lys	Asn227Lys	0.009	0.009	FALSE	2	Amorphic	Deleterious		Uncertain significance	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.774T>A (p.Asn258Lys)
+258	Asn258Tyr	Asn227Tyr	0.012	0.007	FALSE	3	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+258	Asn258Ile	Asn227Ile	0.028	0.013	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+258	Asn258Ser	Asn227Ser	0.311	0.020	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+258	Asn258Thr	Asn227Thr	0.349	0.008	FALSE	6	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+258	Asn258His	Asn227His	0.373	0.015	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+258	Asn258Asp	Asn227Asp	0.395	0.009	FALSE	5	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+259	Val259Glu	Val228Glu	-0.012	0.008	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+259	Val259Gly	Val228Gly	-0.004	0.012	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+259	Val259Leu	Val228Leu	0.017	0.009	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+259	Val259Ile	Val228Ile	0.126	0.006	FALSE	7	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+259	Val259Ala	Val228Ala	0.441	0.010	FALSE	5	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+260	Leu260Ser	Leu229Ser	-0.001	0.005	FALSE	7	Amorphic	Deleterious		Pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.779T>C (p.Leu260Ser)
+260	Leu260Phe	Leu229Phe	0.266	0.014	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+260	Leu260Val	Leu229Val	0.310	0.014	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+260	Leu260Ile	Leu229Ile	1.016	0.015	FALSE	3	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+261	Ile261Asn	Ile230Asn	0.000	0.006	FALSE	4	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+261	Ile261Ser	Ile230Ser	0.015	0.013	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+261	Ile261Thr	Ile230Thr	0.038	0.014	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+261	Ile261Phe	Ile230Phe	0.371	0.015	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+261	Ile261Leu	Ile230Leu	0.518	0.009	FALSE	6	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+261	Ile261Val	Ile230Val	0.522	0.016	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+261	Ile261Met	Ile230Met	0.943	0.015	FALSE	3	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+262	Thr262Arg	Thr231Arg	-0.009	0.012	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+262	Thr262Pro	Thr231Pro	0.002	0.005	FALSE	7	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+262	Thr262Ala	Thr231Ala	1.064	0.015	FALSE	3	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+262	Thr262Ser	Thr231Ser	1.134	0.012	FALSE	5	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+263	Asp263Val	Asp232Val	-0.007	0.005	FALSE	5	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+263	Asp263Ala	Asp232Ala	-0.006	0.006	FALSE	4	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+263	Asp263Tyr	Asp232Tyr	-0.005	0.008	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+263	Asp263His	Asp232His	0.002	0.009	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+263	Asp263Asn	Asp232Asn	0.187	0.008	FALSE	5	Hypomorphic	Deleterious		Pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.787G>A (p.Asp263Asn)
+263	Asp263Glu	Asp232Glu	0.256	0.013	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+264	Thr264Pro	Thr233Pro	0.045	0.010	FALSE	2	SMG Loop	SMG Loop		NA	FALSE	FALSE	FALSE	NA
+264	Thr264Ile	Thr233Ile	0.221	0.008	FALSE	5	SMG Loop	SMG Loop		Uncertain significance	FALSE	FALSE	TRUE	NM_000531.6(OTC):c.791C>T (p.Thr264Ile)
+264	Thr264Asn	Thr233Asn	1.042	0.018	FALSE	2	SMG Loop	SMG Loop		Pathogenic	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.791C>A (p.Thr264Asn)
+264	Thr264Ser	Thr233Ser	1.245	0.019	FALSE	2	SMG Loop	SMG Loop		NA	FALSE	FALSE	FALSE	NA
+265	Trp265Arg	Trp234Arg	0.529	0.022	FALSE	1	SMG Loop	SMG Loop		Pathogenic	FALSE	FALSE	TRUE	NM_000531.6(OTC):c.793T>C (p.Trp265Arg)
+265	Trp265Cys	Trp234Cys	0.564	0.023	FALSE	1	SMG Loop	SMG Loop		NA	FALSE	FALSE	FALSE	NA
+265	Trp265Gly	Trp234Gly	0.636	0.010	FALSE	5	SMG Loop	SMG Loop		NA	FALSE	FALSE	FALSE	NA
+265	Trp265Ser	Trp234Ser	0.641	0.016	FALSE	2	SMG Loop	SMG Loop		NA	FALSE	FALSE	FALSE	NA
+265	Trp265Leu	Trp234Leu	0.648	0.012	FALSE	4	SMG Loop	SMG Loop		Pathogenic	FALSE	FALSE	TRUE	NM_000531.6(OTC):c.794G>T (p.Trp265Leu)
+266	Ile266Lys	Ile235Lys	0.760	0.024	FALSE	1	SMG Loop	SMG Loop		NA	FALSE	FALSE	FALSE	NA
+266	Ile266Arg	Ile235Arg	0.863	0.013	FALSE	4	SMG Loop	SMG Loop		NA	FALSE	FALSE	FALSE	NA
+266	Ile266Thr	Ile235Thr	0.881	0.014	FALSE	3	SMG Loop	SMG Loop		NA	FALSE	FALSE	FALSE	NA
+266	Ile266Val	Ile235Val	1.097	0.026	FALSE	1	SMG Loop	SMG Loop		NA	FALSE	FALSE	FALSE	NA
+266	Ile266Leu	Ile235Leu	1.169	0.019	FALSE	2	SMG Loop	SMG Loop		NA	FALSE	FALSE	FALSE	NA
+266	Ile266Met	Ile235Met	1.275	0.012	FALSE	5	SMG Loop	SMG Loop		NA	FALSE	FALSE	FALSE	NA
+267	Ser267Arg	Ser236Arg	0.771	0.024	FALSE	1	SMG Loop	SMG Loop		Pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.799A>C (p.Ser267Arg)
+267	Ser267Thr	Ser236Thr	0.800	0.011	FALSE	5	SMG Loop	SMG Loop		NA	FALSE	FALSE	FALSE	NA
+267	Ser267Cys	Ser236Cys	0.806	0.017	FALSE	2	SMG Loop	SMG Loop		NA	FALSE	FALSE	FALSE	NA
+267	Ser267Asn	Ser236Asn	0.953	0.015	FALSE	3	SMG Loop	SMG Loop		NA	FALSE	FALSE	FALSE	NA
+267	Ser267Gly	Ser236Gly	1.153	0.019	FALSE	2	SMG Loop	SMG Loop		NA	FALSE	FALSE	FALSE	NA
+268	Met268Arg	Met237Arg	0.452	0.015	FALSE	2	SMG Loop	SMG Loop		NA	FALSE	FALSE	FALSE	NA
+268	Met268Lys	Met237Lys	0.693	0.012	FALSE	4	SMG Loop	SMG Loop		NA	FALSE	FALSE	FALSE	NA
+268	Met268Leu	Met237Leu	0.938	0.018	FALSE	2	SMG Loop	SMG Loop		NA	FALSE	FALSE	FALSE	NA
+268	Met268Thr	Met237Thr	0.997	0.026	FALSE	1	SMG Loop	SMG Loop		Pathogenic	FALSE	FALSE	TRUE	NM_000531.6(OTC):c.803T>C (p.Met268Thr)
+268	Met268Ile	Met237Ile	1.067	0.026	FALSE	1	SMG Loop	SMG Loop		NA	FALSE	FALSE	FALSE	NA
+269	Gly269Val	Gly238Val	0.531	0.016	FALSE	2	SMG Loop	SMG Loop		NA	FALSE	FALSE	FALSE	NA
+269	Gly269Arg	Gly238Arg	0.745	0.024	FALSE	1	SMG Loop	SMG Loop		NA	FALSE	FALSE	TRUE	NM_000531.6(OTC):c.805G>A (p.Gly269Arg)
+269	Gly269Glu	Gly238Glu	0.834	0.011	FALSE	5	SMG Loop	SMG Loop		Likely pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.806G>A (p.Gly269Glu)
+269	Gly269Ala	Gly238Ala	0.882	0.014	FALSE	3	SMG Loop	SMG Loop		NA	FALSE	FALSE	FALSE	NA
+270	Gln270Pro	Gln239Pro	0.735	0.010	FALSE	6	SMG Loop	SMG Loop		Pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.809A>C (p.Gln270Pro)
+270	Gln270Arg	Gln239Arg	0.956	0.015	FALSE	3	SMG Loop	SMG Loop		Benign/Likely benign	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.809A>G (p.Gln270Arg)
+270	Gln270His	Gln239His	1.019	0.013	FALSE	4	SMG Loop	SMG Loop		NA	FALSE	FALSE	FALSE	NA
+270	Gln270Lys	Gln239Lys	1.077	0.026	FALSE	1	SMG Loop	SMG Loop		NA	FALSE	FALSE	FALSE	NA
+270	Gln270Glu	Gln239Glu	1.128	0.027	FALSE	1	SMG Loop	SMG Loop		Uncertain significance	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.808C>G (p.Gln270Glu)
+271	Glu271Val	Glu240Val	0.783	0.010	FALSE	6	SMG Loop	SMG Loop		NA	FALSE	FALSE	FALSE	NA
+271	Glu271Gln	Glu240Gln	0.885	0.018	FALSE	2	SMG Loop	SMG Loop		NA	FALSE	FALSE	FALSE	NA
+271	Glu271Ala	Glu240Ala	0.929	0.013	FALSE	4	SMG Loop	SMG Loop		NA	FALSE	FALSE	FALSE	NA
+271	Glu271Asp	Glu240Asp	0.994	0.013	FALSE	4	SMG Loop	SMG Loop		NA	FALSE	FALSE	FALSE	NA
+271	Glu271Gly	Glu240Gly	1.044	0.026	FALSE	1	SMG Loop	SMG Loop		NA	FALSE	FALSE	FALSE	NA
+272	Glu272Val	Glu241Val	0.775	0.017	FALSE	2	SMG Loop	SMG Loop		NA	FALSE	FALSE	FALSE	NA
+272	Glu272Lys	Glu241Lys	0.780	0.010	FALSE	6	SMG Loop	SMG Loop		Uncertain significance	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.814G>A (p.Glu272Lys)
+272	Glu272Gly	Glu241Gly	0.826	0.014	FALSE	3	SMG Loop	SMG Loop		NA	FALSE	FALSE	FALSE	NA
+272	Glu272Gln	Glu241Gln	0.836	0.025	FALSE	1	SMG Loop	SMG Loop		NA	FALSE	FALSE	FALSE	NA
+272	Glu272Ala	Glu241Ala	0.847	0.011	FALSE	5	SMG Loop	SMG Loop		NA	FALSE	FALSE	FALSE	NA
+272	Glu272Asp	Glu241Asp	0.912	0.025	FALSE	1	SMG Loop	SMG Loop		NA	FALSE	FALSE	FALSE	NA
+273	Glu273Lys	Glu242Lys	0.514	0.016	FALSE	2	SMG Loop	SMG Loop		NA	FALSE	FALSE	FALSE	NA
+273	Glu273Val	Glu242Val	0.640	0.016	FALSE	2	SMG Loop	SMG Loop		NA	FALSE	FALSE	FALSE	NA
+273	Glu273Ala	Glu242Ala	0.681	0.011	FALSE	5	SMG Loop	SMG Loop		NA	FALSE	FALSE	FALSE	NA
+273	Glu273Gly	Glu242Gly	0.713	0.014	FALSE	3	SMG Loop	SMG Loop		NA	FALSE	FALSE	FALSE	NA
+273	Glu273Asp	Glu242Asp	1.007	0.026	FALSE	1	SMG Loop	SMG Loop		NA	FALSE	FALSE	FALSE	NA
+274	Lys274Glu	Lys243Glu	0.867	0.011	FALSE	5	SMG Loop	SMG Loop		NA	FALSE	FALSE	FALSE	NA
+274	Lys274Thr	Lys243Thr	0.902	0.018	FALSE	2	SMG Loop	SMG Loop		NA	FALSE	FALSE	FALSE	NA
+274	Lys274Met	Lys243Met	0.904	0.013	FALSE	4	SMG Loop	SMG Loop		NA	FALSE	FALSE	FALSE	NA
+274	Lys274Asn	Lys243Asn	0.996	0.026	FALSE	1	SMG Loop	SMG Loop		NA	FALSE	FALSE	FALSE	NA
+274	Lys274Gln	Lys243Gln	1.029	0.015	FALSE	3	SMG Loop	SMG Loop		NA	FALSE	FALSE	FALSE	NA
+274	Lys274Arg	Lys243Arg	1.104	0.019	FALSE	2	SMG Loop	SMG Loop		NA	FALSE	FALSE	FALSE	NA
+275	Lys275Thr	Lys244Thr	0.928	0.025	FALSE	1	SMG Loop	SMG Loop		NA	FALSE	FALSE	FALSE	NA
+275	Lys275Asn	Lys244Asn	0.934	0.013	FALSE	4	SMG Loop	SMG Loop		NA	FALSE	FALSE	FALSE	NA
+275	Lys275Arg	Lys244Arg	0.956	0.018	FALSE	2	SMG Loop	SMG Loop		NA	FALSE	FALSE	FALSE	NA
+275	Lys275Ile	Lys244Ile	1.000	0.018	FALSE	2	SMG Loop	SMG Loop		NA	FALSE	FALSE	FALSE	NA
+275	Lys275Glu	Lys244Glu	1.054	0.012	FALSE	5	SMG Loop	SMG Loop		NA	FALSE	FALSE	FALSE	NA
+275	Lys275Gln	Lys244Gln	1.055	0.013	FALSE	4	SMG Loop	SMG Loop		NA	FALSE	FALSE	FALSE	NA
+276	Lys276Met	Lys245Met	0.748	0.009	FALSE	8	SMG Loop	SMG Loop		NA	FALSE	FALSE	FALSE	NA
+276	Lys276Thr	Lys245Thr	0.771	0.017	FALSE	2	SMG Loop	SMG Loop		NA	FALSE	FALSE	FALSE	NA
+276	Lys276Glu	Lys245Glu	0.867	0.025	FALSE	1	SMG Loop	SMG Loop		NA	FALSE	FALSE	FALSE	NA
+276	Lys276Asn	Lys245Asn	0.875	0.018	FALSE	2	SMG Loop	SMG Loop		NA	FALSE	FALSE	FALSE	NA
+276	Lys276Gln	Lys245Gln	0.889	0.018	FALSE	2	SMG Loop	SMG Loop		NA	FALSE	FALSE	FALSE	NA
+276	Lys276Arg	Lys245Arg	0.918	0.018	FALSE	2	SMG Loop	SMG Loop		NA	FALSE	FALSE	FALSE	NA
+277	Arg277Trp	Arg246Trp	0.423	0.009	FALSE	5	Hypomorphic	Deleterious		Pathogenic	FALSE	FALSE	TRUE	NM_000531.6(OTC):c.829C>T (p.Arg277Trp)
+277	Arg277Gly	Arg246Gly	0.431	0.011	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+277	Arg277Leu	Arg246Leu	0.609	0.010	FALSE	5	Hypomorphic	Deleterious		Pathogenic	FALSE	FALSE	TRUE	NM_000531.6(OTC):c.830G>T (p.Arg277Leu)
+278	Leu278Pro	Leu247Pro	0.458	0.015	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+278	Leu278His	Leu247His	0.735	0.017	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+278	Leu278Phe	Leu247Phe	0.774	0.017	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+278	Leu278Val	Leu247Val	0.824	0.010	FALSE	6	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+278	Leu278Arg	Leu247Arg	0.936	0.013	FALSE	4	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+278	Leu278Ile	Leu247Ile	0.957	0.026	FALSE	1	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+279	Gln279Pro	Gln248Pro	0.347	0.012	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+279	Gln279His	Gln248His	0.701	0.024	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+279	Gln279Leu	Gln248Leu	0.848	0.014	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+279	Gln279Lys	Gln248Lys	1.082	0.015	FALSE	3	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+279	Gln279Glu	Gln248Glu	1.090	0.019	FALSE	2	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+280	Ala280Gly	Ala249Gly	0.250	0.009	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+280	Ala280Pro	Ala249Pro	0.354	0.014	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+280	Ala280Val	Ala249Val	0.578	0.011	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+280	Ala280Ser	Ala249Ser	0.695	0.024	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+280	Ala280Asp	Ala249Asp	1.012	0.018	FALSE	2	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+281	Phe281Val	Phe250Val	0.001	0.009	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+281	Phe281Ile	Phe250Ile	0.020	0.013	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+281	Phe281Cys	Phe250Cys	0.157	0.010	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+281	Phe281Ser	Phe250Ser	0.322	0.020	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.842T>C (p.Phe281Ser)
+281	Phe281Tyr	Phe250Tyr	0.368	0.012	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+281	Phe281Leu	Phe250Leu	0.438	0.011	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+282	Gln282Pro	Gln251Pro	0.197	0.010	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+282	Gln282Leu	Gln251Leu	0.567	0.016	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+282	Gln282His	Gln251His	0.869	0.011	FALSE	5	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+282	Gln282Glu	Gln251Glu	0.961	0.026	FALSE	1	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+282	Gln282Arg	Gln251Arg	0.964	0.018	FALSE	2	Unimpaired	Non-Deleterious		Uncertain significance	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.845A>G (p.Gln282Arg)
+282	Gln282Lys	Gln251Lys	1.016	0.013	FALSE	4	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+283	Gly283Val	Gly252Val	0.025	0.007	FALSE	4	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+283	Gly283Cys	Gly252Cys	0.236	0.011	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+283	Gly283Ala	Gly252Ala	0.415	0.012	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+283	Gly283Asp	Gly252Asp	0.737	0.017	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+284	Tyr284Ser	Tyr253Ser	-0.009	0.008	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+284	Tyr284Asp	Tyr253Asp	-0.008	0.008	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+284	Tyr284Asn	Tyr253Asn	0.012	0.009	FALSE	2	Amorphic	Deleterious		NA	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.850T>A (p.Tyr284Asn)
+284	Tyr284Cys	Tyr253Cys	0.097	0.006	FALSE	7	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+284	Tyr284His	Tyr253His	0.103	0.009	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+284	Tyr284Phe	Tyr253Phe	1.127	0.019	FALSE	2	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+285	Gln285Pro	Gln254Pro	0.200	0.010	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+285	Gln285Leu	Gln254Leu	0.303	0.014	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+285	Gln285Glu	Gln254Glu	0.368	0.010	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+285	Gln285His	Gln254His	0.390	0.021	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+285	Gln285Arg	Gln254Arg	1.048	0.013	FALSE	4	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+285	Gln285Lys	Gln254Lys	1.201	0.027	FALSE	1	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+286	Val286Gly	Val255Gly	-0.010	0.011	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+286	Val286Ala	Val255Ala	-0.006	0.006	FALSE	4	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+286	Val286Asp	Val255Asp	0.003	0.005	FALSE	6	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+286	Val286Phe	Val255Phe	0.033	0.007	FALSE	4	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+286	Val286Leu	Val255Leu	0.573	0.023	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+286	Val286Ile	Val255Ile	1.152	0.019	FALSE	2	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+287	Thr287Ile	Thr256Ile	0.011	0.007	FALSE	3	Amorphic	Deleterious		NA	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.860C>T  (p.Thr287Ile)
+287	Thr287Pro	Thr256Pro	0.030	0.014	FALSE	1	Amorphic	Deleterious		NA	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.859A>C (p.Thr287Pro)
+287	Thr287Ala	Thr256Ala	0.137	0.007	FALSE	5	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+287	Thr287Lys	Thr256Lys	0.185	0.018	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+287	Thr287Arg	Thr256Arg	0.188	0.009	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+287	Thr287Ser	Thr256Ser	0.618	0.016	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+288	Met288Val	Met257Val	0.289	0.019	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+288	Met288Ile	Met257Ile	0.297	0.011	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+288	Met288Thr	Met257Thr	0.394	0.021	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+288	Met288Arg	Met257Arg	0.417	0.015	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+288	Met288Lys	Met257Lys	0.469	0.012	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+288	Met288Leu	Met257Leu	0.675	0.014	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+289	Lys289Met	Lys258Met	0.600	0.016	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+289	Lys289Thr	Lys258Thr	0.627	0.016	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+289	Lys289Arg	Lys258Arg	0.858	0.010	FALSE	6	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+289	Lys289Asn	Lys258Asn	0.939	0.015	TRUE	3	Unimpaired	Non-Deleterious		Pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.867G>T (p.Lys289Asn)
+289	Lys289Gln	Lys258Gln	1.038	0.015	FALSE	3	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+289	Lys289Glu	Lys258Glu	1.133	0.019	FALSE	2	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+290	Thr290Pro	Thr259Pro	-0.005	0.006	FALSE	4	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+290	Thr290Asn	Thr259Asn	0.306	0.014	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+290	Thr290Ser	Thr259Ser	0.322	0.014	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+290	Thr290Ala	Thr259Ala	0.383	0.015	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+290	Thr290Ile	Thr259Ile	1.032	0.015	FALSE	3	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+291	Ala291Asp	Ala260Asp	-0.034	0.005	FALSE	4	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+291	Ala291Pro	Ala260Pro	-0.010	0.011	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+291	Ala291Ser	Ala260Ser	0.407	0.015	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+291	Ala291Gly	Ala260Gly	0.661	0.012	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+291	Ala291Thr	Ala260Thr	0.977	0.012	FALSE	5	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+292	Lys292Ile	Lys261Ile	0.406	0.012	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+292	Lys292Thr	Lys261Thr	0.784	0.009	FALSE	7	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+292	Lys292Asn	Lys261Asn	0.890	0.015	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+292	Lys292Glu	Lys261Glu	1.144	0.015	FALSE	3	Unimpaired	Non-Deleterious		Uncertain significance	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.874A>G (p.Lys292Glu)
+293	Val293Gly	Val262Gly	0.538	0.009	FALSE	6	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+293	Val293Asp	Val262Asp	0.548	0.022	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+293	Val293Ile	Val262Ile	0.583	0.016	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+293	Val293Ala	Val262Ala	0.748	0.010	FALSE	6	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+293	Val293Phe	Val262Phe	0.761	0.024	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+293	Val293Leu	Val262Leu	0.811	0.017	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+294	Ala294Pro	Ala263Pro	-0.014	0.005	FALSE	6	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+294	Ala294Asp	Ala263Asp	0.002	0.009	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+294	Ala294Gly	Ala263Gly	0.025	0.009	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+294	Ala294Val	Ala263Val	0.099	0.011	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+294	Ala294Thr	Ala263Thr	0.160	0.010	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+294	Ala294Ser	Ala263Ser	0.285	0.011	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+295	Ala295Pro	Ala264Pro	0.007	0.013	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+295	Ala295Gly	Ala264Gly	0.142	0.006	FALSE	7	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+295	Ala295Val	Ala264Val	0.159	0.010	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+295	Ala295Thr	Ala264Thr	0.308	0.020	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+295	Ala295Asp	Ala264Asp	0.468	0.012	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+295	Ala295Ser	Ala264Ser	0.828	0.017	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+296	Ser296Tyr	Ser265Tyr	0.505	0.011	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+296	Ser296Cys	Ser265Cys	0.582	0.023	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+296	Ser296Thr	Ser265Thr	0.738	0.009	FALSE	7	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+296	Ser296Ala	Ser265Ala	0.960	0.012	FALSE	5	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+297	Asp297Ala	Asp266Ala	-0.039	0.008	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+297	Asp297Val	Asp266Val	-0.014	0.008	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+297	Asp297Tyr	Asp266Tyr	-0.013	0.005	FALSE	6	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+297	Asp297His	Asp266His	-0.004	0.012	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+297	Asp297Glu	Asp266Glu	0.058	0.008	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+297	Asp297Gly	Asp266Gly	0.088	0.008	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+297	Asp297Asn	Asp266Asn	1.064	0.026	FALSE	1	Unimpaired	Non-Deleterious		Uncertain significance	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.889G>A (p.Asp297Asn)
+298	Trp298Leu	Trp267Leu	-0.018	0.008	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+298	Trp298Gly	Trp267Gly	-0.014	0.008	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+298	Trp298Ser	Trp267Ser	-0.005	0.007	FALSE	3	Amorphic	Deleterious		Pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.893G>C (p.Trp298Ser)
+298	Trp298Arg	Trp267Arg	0.001	0.007	FALSE	3	Amorphic	Deleterious		NA	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.892T>C (p.Trp298Arg)
+298	Trp298Cys	Trp267Cys	0.230	0.009	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+299	Thr299Pro	Thr268Pro	-0.009	0.005	FALSE	5	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+299	Thr299Lys	Thr268Lys	0.078	0.015	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+299	Thr299Ile	Thr268Ile	0.173	0.010	FALSE	3	Hypomorphic	Deleterious		Conflicting interpretations of pathogenicity	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.896C>T (p.Thr299Ile)
+299	Thr299Arg	Thr268Arg	0.200	0.009	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+299	Thr299Ala	Thr268Ala	0.262	0.013	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+299	Thr299Ser	Thr268Ser	0.634	0.013	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+300	Phe300Ser	Phe269Ser	0.045	0.010	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+300	Phe300Ile	Phe269Ile	0.340	0.012	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+300	Phe300Cys	Phe269Cys	0.346	0.010	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+300	Phe300Val	Phe269Val	0.405	0.009	FALSE	5	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+300	Phe300Leu	Phe269Leu	0.656	0.017	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+301	Leu301Ser	Leu270Ser	0.007	0.013	FALSE	1	Amorphic	Deleterious		NA	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.902T>C (p.Leu301Ser)
+301	Leu301Phe	Leu270Phe	0.029	0.014	FALSE	1	Amorphic	Deleterious		Pathogenic/Likely pathogenic	FALSE	FALSE	TRUE	NM_000531.6(OTC):c.903A>T (p.Leu301Phe)
+301	Leu301Val	Leu270Val	0.037	0.007	FALSE	4	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+301	Leu301Ile	Leu270Ile	0.330	0.010	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+302	His302Asp	His271Asp	-0.049	0.004	FALSE	2	Amorphic	Deleterious		Likely pathogenic	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.904C>G (p.His302Asp)
+302	His302Leu	His271Leu	-0.031	0.005	FALSE	4	Amorphic	Deleterious		Pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.905A>T (p.His302Leu)
+302	His302Pro	His271Pro	-0.028	0.004	FALSE	5	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+302	His302Tyr	His271Tyr	-0.003	0.012	FALSE	1	Amorphic	Deleterious		Pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.904C>T (p.His302Tyr)
+302	His302Asn	His271Asn	0.281	0.019	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+302	His302Gln	His271Gln	0.348	0.009	FALSE	5	Hypomorphic	Deleterious		Pathogenic	FALSE	FALSE	TRUE	NM_000531.6(OTC):c.906C>G (p.His302Gln)
+303	Cys303Tyr	Cys272Tyr	-0.047	0.005	FALSE	2	Amorphic	Deleterious		Pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.908G>A (p.Cys303Tyr)
+303	Cys303Trp	Cys272Trp	-0.037	0.004	FALSE	5	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+303	Cys303Phe	Cys272Phe	-0.025	0.005	FALSE	5	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+303	Cys303Gly	Cys272Gly	0.768	0.012	FALSE	4	Hypomorphic	Deleterious		Pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.907T>G (p.Cys303Gly)
+303	Cys303Ser	Cys272Ser	0.910	0.025	FALSE	1	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+304	Leu304Val	Leu273Val	-0.009	0.006	FALSE	4	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+304	Leu304Met	Leu273Met	0.595	0.016	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+304	Leu304Ser	Leu273Ser	0.740	0.017	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+305	Pro305Leu	Pro274Leu	-0.048	0.004	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+305	Pro305His	Pro274His	0.004	0.007	FALSE	3	Amorphic	Deleterious		Pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.914C>A (p.Pro305His)
+305	Pro305Arg	Pro274Arg	0.132	0.007	FALSE	6	Hypomorphic	Deleterious		Pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.914C>G (p.Pro305Arg)
+305	Pro305Ala	Pro274Ala	0.284	0.014	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+305	Pro305Ser	Pro274Ser	0.301	0.014	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	TRUE	NM_000531.6(OTC):c.913C>T  (p.Pro305Ser )
+305	Pro305Thr	Pro274Thr	0.338	0.014	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+306	Arg306Ile	Arg275Ile	0.026	0.009	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+306	Arg306Thr	Arg275Thr	0.170	0.012	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+306	Arg306Gly	Arg275Gly	0.218	0.011	FALSE	3	Hypomorphic	Deleterious		Uncertain significance	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.916A>G (p.Arg306Gly)
+306	Arg306Ser	Arg275Ser	0.310	0.011	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+306	Arg306Lys	Arg275Lys	0.475	0.015	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+307	Lys307Glu	Lys276Glu	0.841	0.014	FALSE	3	Hypomorphic	Deleterious		Conflicting interpretations of pathogenicity	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.919A>G (p.Lys307Glu)
+307	Lys307Met	Lys276Met	0.876	0.014	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+307	Lys307Gln	Lys276Gln	0.965	0.013	FALSE	4	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+307	Lys307Arg	Lys276Arg	1.013	0.026	FALSE	1	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+307	Lys307Asn	Lys276Asn	1.026	0.018	FALSE	2	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+307	Lys307Thr	Lys276Thr	1.174	0.016	FALSE	3	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+308	Pro308Arg	Pro277Arg	0.788	0.024	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+308	Pro308Leu	Pro277Leu	0.868	0.025	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+308	Pro308Ala	Pro277Ala	0.878	0.014	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+308	Pro308Ser	Pro277Ser	0.962	0.018	FALSE	2	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+309	Glu309Lys	Glu278Lys	0.304	0.020	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+309	Glu309Val	Glu278Val	0.455	0.021	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+309	Glu309Gly	Glu278Gly	0.488	0.015	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+309	Glu309Ala	Glu278Ala	0.682	0.012	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+309	Glu309Gln	Glu278Gln	0.731	0.012	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+309	Glu309Asp	Glu278Asp	0.751	0.011	FALSE	5	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+310	Glu310Lys	Glu279Lys	0.004	0.012	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+310	Glu310Ala	Glu279Ala	0.375	0.015	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+310	Glu310Gly	Glu279Gly	0.414	0.015	FALSE	2	Hypomorphic	Deleterious		Pathogenic	FALSE	FALSE	TRUE	NM_000531.6(OTC):c.929A>G (p.Glu310Gly)
+310	Glu310Gln	Glu279Gln	0.447	0.008	FALSE	8	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+310	Glu310Val	Glu279Val	0.507	0.022	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+310	Glu310Asp	Glu279Asp	0.574	0.013	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+311	Val311Gly	Val280Gly	-0.017	0.005	FALSE	5	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+311	Val311Leu	Val280Leu	-0.005	0.006	FALSE	4	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+311	Val311Met	Val280Met	0.070	0.008	FALSE	4	Hypomorphic	Deleterious		Pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.931G>A (p.Val311Met)
+311	Val311Glu	Val280Glu	0.361	0.020	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+312	Asp312Tyr	Asp281Tyr	0.073	0.011	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+312	Asp312Gly	Asp281Gly	0.227	0.008	FALSE	5	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+312	Asp312His	Asp281His	0.363	0.012	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+312	Asp312Asn	Asp281Asn	0.500	0.022	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+312	Asp312Val	Asp281Val	0.527	0.016	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+312	Asp312Glu	Asp281Glu	0.574	0.016	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+312	Asp312Ala	Asp281Ala	0.617	0.009	FALSE	6	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+313	Asp313Val	Asp282Val	0.152	0.017	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+313	Asp313Tyr	Asp282Tyr	0.290	0.009	FALSE	5	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+313	Asp313Gly	Asp282Gly	0.354	0.012	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+313	Asp313His	Asp282His	0.357	0.008	FALSE	6	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+313	Asp313Glu	Asp282Glu	0.383	0.021	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+313	Asp313Ala	Asp282Ala	0.407	0.010	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+313	Asp313Asn	Asp282Asn	0.493	0.022	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+314	Glu314Val	Glu283Val	0.310	0.011	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+314	Glu314Lys	Glu283Lys	0.404	0.010	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+314	Glu314Gln	Glu283Gln	0.619	0.023	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+314	Glu314Asp	Glu283Asp	0.710	0.024	FALSE	1	Hypomorphic	Deleterious		NA	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.940G>T  (p.Glu314Asp )
+314	Glu314Ala	Glu283Ala	0.711	0.012	FALSE	4	Hypomorphic	Deleterious		Conflicting interpretations of pathogenicity	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.941A>C (p.Glu314Ala)
+315	Val315Asp	Val284Asp	-0.008	0.004	FALSE	7	Amorphic	Deleterious		Pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.944T>A (p.Val315Asp)
+315	Val315Ala	Val284Ala	0.023	0.009	FALSE	2	Amorphic	Deleterious		Pathogenic	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.944T>C (p.Val315Ala)
+315	Val315Phe	Val284Phe	0.024	0.008	FALSE	3	Amorphic	Deleterious		Likely pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.943G>T (p.Val315Phe)
+315	Val315Leu	Val284Leu	0.212	0.018	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+316	Phe316Ser	Phe285Ser	0.004	0.009	FALSE	2	Amorphic	Deleterious		Pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.947T>C (p.Phe316Ser)
+316	Phe316Cys	Phe285Cys	0.017	0.007	FALSE	4	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+316	Phe316Val	Phe285Val	0.140	0.008	FALSE	4	Hypomorphic	Deleterious		Pathogenic	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.946T>G (p.Phe316Val)
+316	Phe316Ile	Phe285Ile	0.224	0.009	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+316	Phe316Leu	Phe285Leu	0.359	0.014	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+316	Phe316Tyr	Phe285Tyr	0.697	0.024	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+317	Tyr317Asp	Tyr286Asp	0.217	0.008	FALSE	5	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+317	Tyr317Ser	Tyr286Ser	0.286	0.019	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+317	Tyr317Cys	Tyr286Cys	0.346	0.012	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+317	Tyr317His	Tyr286His	0.522	0.013	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+317	Tyr317Asn	Tyr286Asn	0.552	0.013	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+317	Tyr317Phe	Tyr286Phe	0.741	0.014	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+318	Ser318Thr	Ser287Thr	0.000	0.007	FALSE	3	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+318	Ser318Tyr	Ser287Tyr	0.022	0.007	FALSE	4	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+318	Ser318Phe	Ser287Phe	0.047	0.007	FALSE	4	Amorphic	Deleterious		Pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.953C>T (p.Ser318Phe)
+318	Ser318Ala	Ser287Ala	0.224	0.009	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+318	Ser318Cys	Ser287Cys	0.629	0.016	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+319	Pro319Leu	Pro288Leu	0.299	0.020	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+319	Pro319Arg	Pro288Arg	0.774	0.017	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+319	Pro319Thr	Pro288Thr	0.848	0.025	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+319	Pro319Ala	Pro288Ala	0.861	0.011	FALSE	5	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+319	Pro319His	Pro288His	0.929	0.025	FALSE	1	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+319	Pro319Ser	Pro288Ser	0.962	0.013	FALSE	4	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+320	Arg320Leu	Arg289Leu	-0.014	0.008	FALSE	2	Amorphic	Deleterious		Likely pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.959G>T (p.Arg320Leu)
+320	Arg320Pro	Arg289Pro	-0.008	0.006	FALSE	4	Amorphic	Deleterious		Pathogenic	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.959G>C (p.Arg320Pro)
+320	Arg320Gly	Arg289Gly	0.277	0.010	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+320	Arg320Gln	Arg289Gln	0.809	0.017	FALSE	2	Hypomorphic	Deleterious		Uncertain significance	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.959G>A (p.Arg320Gln)
+321	Ser321Leu	Ser290Leu	-0.007	0.007	FALSE	3	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+321	Ser321Pro	Ser290Pro	0.005	0.012	FALSE	1	Amorphic	Deleterious		Likely pathogenic	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.961T>C (p.Ser321Pro)
+321	Ser321Thr	Ser290Thr	0.042	0.007	FALSE	4	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+321	Ser321Ala	Ser290Ala	0.253	0.011	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+322	Leu322Val	Leu291Val	-0.007	0.008	FALSE	2	Amorphic	Deleterious		NA	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.964C>G (p.Leu322Val)
+322	Leu322Pro	Leu291Pro	-0.003	0.006	FALSE	4	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+322	Leu322Gln	Leu291Gln	0.039	0.005	FALSE	7	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+322	Leu322Ile	Leu291Ile	0.048	0.010	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+323	Val323Glu	Val292Glu	-0.023	0.004	FALSE	6	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+323	Val323Leu	Val292Leu	-0.006	0.012	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+323	Val323Gly	Val292Gly	0.026	0.009	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+323	Val323Met	Val292Met	0.219	0.013	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	TRUE	NM_000531.6(OTC):c.967G>A (p.Val323Met)
+323	Val323Ala	Val292Ala	0.520	0.011	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+324	Phe324Cys	Phe293Cys	0.944	0.013	FALSE	4	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+324	Phe324Leu	Phe293Leu	1.003	0.015	FALSE	3	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+324	Phe324Ser	Phe293Ser	1.022	0.015	FALSE	3	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+324	Phe324Ile	Phe293Ile	1.228	0.012	FALSE	5	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+324	Phe324Val	Phe293Val	1.268	0.016	FALSE	3	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+325	Pro325Leu	Pro294Leu	1.009	0.026	FALSE	1	Unimpaired	Non-Deleterious		Uncertain significance	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.974C>T (p.Pro325Leu)
+325	Pro325Ser	Pro294Ser	1.179	0.014	FALSE	4	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+325	Pro325Thr	Pro294Thr	1.191	0.016	FALSE	3	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+325	Pro325Ala	Pro294Ala	1.333	0.013	FALSE	5	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+326	Glu326Lys	Glu295Lys	-0.015	0.011	FALSE	1	Amorphic	Deleterious		Uncertain significance	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.976G>A (p.Glu326Lys)
+326	Glu326Asp	Glu295Asp	0.386	0.010	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+326	Glu326Gly	Glu295Gly	0.757	0.014	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+326	Glu326Val	Glu295Val	0.856	0.018	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+326	Glu326Gln	Glu295Gln	1.191	0.027	FALSE	1	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+326	Glu326Ala	Glu295Ala	1.283	0.027	FALSE	1	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+327	Ala327Pro	Ala296Pro	-0.012	0.006	FALSE	4	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+327	Ala327Gly	Ala296Gly	0.531	0.010	FALSE	5	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+327	Ala327Thr	Ala296Thr	0.690	0.024	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+327	Ala327Ser	Ala296Ser	0.818	0.025	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+327	Ala327Glu	Ala296Glu	0.840	0.014	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+328	Glu328Gly	Glu297Gly	0.068	0.009	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+328	Glu328Lys	Glu297Lys	0.149	0.012	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+328	Glu328Val	Glu297Val	0.222	0.008	FALSE	5	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+328	Glu328Gln	Glu297Gln	0.357	0.020	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+328	Glu328Asp	Glu297Asp	0.481	0.013	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+329	Asn329Tyr	Asn298Tyr	-0.005	0.012	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+329	Asn329Ser	Asn298Ser	-0.003	0.006	FALSE	4	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+329	Asn329Thr	Asn298Thr	-0.003	0.012	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+329	Asn329Asp	Asn298Asp	0.003	0.012	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+329	Asn329Ile	Asn298Ile	0.005	0.006	FALSE	5	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+329	Asn329His	Asn298His	0.006	0.006	FALSE	4	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+330	Arg330Ser	Arg299Ser	-0.027	0.010	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+330	Arg330Ile	Arg299Ile	-0.004	0.007	FALSE	3	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+330	Arg330Gly	Arg299Gly	0.003	0.006	FALSE	4	Amorphic	Deleterious		Pathogenic/Likely pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.988A>G (p.Arg330Gly)
+330	Arg330Thr	Arg299Thr	0.003	0.009	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+330	Arg330Lys	Arg299Lys	0.529	0.013	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+331	Lys331Glu	Lys300Glu	0.024	0.009	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+331	Lys331Thr	Lys300Thr	0.361	0.014	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+331	Lys331Gln	Lys300Gln	0.593	0.010	FALSE	5	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+331	Lys331Met	Lys300Met	0.877	0.013	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+332	Trp332Leu	Trp301Leu	-0.011	0.008	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+332	Trp332Arg	Trp301Arg	-0.008	0.012	FALSE	1	Amorphic	Deleterious		Pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.994T>A (p.Trp332Arg)
+332	Trp332Ser	Trp301Ser	-0.007	0.007	FALSE	3	Amorphic	Deleterious		NA	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.995G>C (p.Trp332Ser)
+332	Trp332Gly	Trp301Gly	-0.004	0.008	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+332	Trp332Cys	Trp301Cys	-0.003	0.008	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+333	Thr333Arg	Thr302Arg	-0.003	0.012	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+333	Thr333Lys	Thr302Lys	0.000	0.009	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+333	Thr333Pro	Thr302Pro	0.008	0.006	FALSE	5	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+333	Thr333Ser	Thr302Ser	0.700	0.014	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+333	Thr333Ile	Thr302Ile	0.969	0.013	FALSE	4	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+333	Thr333Ala	Thr302Ala	1.223	0.019	FALSE	2	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+334	Ile334Asn	Ile303Asn	0.394	0.015	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+334	Ile334Phe	Ile303Phe	0.788	0.014	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+334	Ile334Leu	Ile303Leu	0.836	0.011	FALSE	5	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+334	Ile334Val	Ile303Val	0.874	0.018	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+334	Ile334Ser	Ile303Ser	0.896	0.018	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+334	Ile334Met	Ile303Met	0.980	0.015	FALSE	3	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+334	Ile334Thr	Ile303Thr	1.110	0.019	FALSE	2	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+335	Met335Lys	Met304Lys	-0.003	0.007	FALSE	3	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+335	Met335Val	Met304Val	0.079	0.006	FALSE	6	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+335	Met335Thr	Met304Thr	0.169	0.008	FALSE	5	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+335	Met335Ile	Met304Ile	0.195	0.010	TRUE	3	Hypomorphic	Deleterious		Pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.1005G>A (p.Met335Ile)
+335	Met335Leu	Met304Leu	0.354	0.020	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+336	Ala336Thr	Ala305Thr	-0.011	0.008	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+336	Ala336Asp	Ala305Asp	-0.007	0.012	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+336	Ala336Val	Ala305Val	0.002	0.012	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+336	Ala336Ser	Ala305Ser	0.356	0.008	FALSE	7	Hypomorphic	Deleterious		Pathogenic	FALSE	FALSE	TRUE	NM_000531.6(OTC):c.1006G>T (p.Ala336Ser)
+336	Ala336Gly	Ala305Gly	0.681	0.024	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+337	Val337Asp	Val306Asp	0.006	0.006	FALSE	5	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+337	Val337Gly	Val306Gly	0.031	0.010	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+337	Val337Leu	Val306Leu	0.345	0.010	FALSE	4	Hypomorphic	Deleterious		Pathogenic	FALSE	FALSE	TRUE	NM_000531.6(OTC):c.1009G>C (p.Val337Leu)
+337	Val337Ala	Val306Ala	0.418	0.011	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+337	Val337Ile	Val306Ile	0.794	0.024	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+338	Met338Arg	Met307Arg	-0.003	0.005	FALSE	5	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+338	Met338Thr	Met307Thr	0.223	0.009	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+338	Met338Ile	Met307Ile	0.507	0.013	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+338	Met338Val	Met307Val	0.542	0.013	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+338	Met338Leu	Met307Leu	0.995	0.015	FALSE	3	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+339	Val339Gly	Val308Gly	-0.001	0.012	FALSE	1	Amorphic	Deleterious		NA	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.1016T>G (p.Val339Gly)
+339	Val339Met	Val308Met	0.030	0.005	FALSE	7	Amorphic	Deleterious		Pathogenic	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.1015G>A (p.Val339Met)
+339	Val339Leu	Val308Leu	0.050	0.010	FALSE	2	Hypomorphic	Deleterious		Pathogenic	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.1015G>C (p.Val339Leu)
+339	Val339Glu	Val308Glu	0.059	0.008	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+339	Val339Ala	Val308Ala	0.364	0.020	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+340	Ser340Pro	Ser309Pro	-0.010	0.008	FALSE	2	Amorphic	Deleterious		Pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.1018T>C (p.Ser340Pro)
+340	Ser340Tyr	Ser309Tyr	-0.005	0.008	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+340	Ser340Phe	Ser309Phe	0.353	0.009	FALSE	5	Hypomorphic	Deleterious		Conflicting interpretations of pathogenicity	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.1019C>T (p.Ser340Phe)
+340	Ser340Thr	Ser309Thr	0.678	0.024	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+340	Ser340Cys	Ser309Cys	0.973	0.012	FALSE	5	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+340	Ser340Ala	Ser309Ala	1.199	0.019	FALSE	2	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+341	Leu341Pro	Leu310Pro	-0.006	0.007	FALSE	3	Amorphic	Deleterious		Pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.1022T>C (p.Leu341Pro)
+341	Leu341Arg	Leu310Arg	0.043	0.014	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+341	Leu341Gln	Leu310Gln	0.088	0.016	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+341	Leu341Met	Leu310Met	0.601	0.011	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+341	Leu341Val	Leu310Val	0.750	0.014	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+342	Leu342Arg	Leu311Arg	-0.014	0.006	FALSE	3	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+342	Leu342Pro	Leu311Pro	-0.006	0.007	FALSE	3	Amorphic	Deleterious		Uncertain significance	FALSE	FALSE	FALSE	NM_000531.6(OTC):c.1025T>C (p.Leu342Pro)
+342	Leu342Val	Leu311Val	0.214	0.011	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+342	Leu342Met	Leu311Met	0.819	0.014	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+343	Thr343Arg	Thr312Arg	-0.010	0.011	FALSE	1	Amorphic	Deleterious		Uncertain significance	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.1028C>G (p.Thr343Arg)
+343	Thr343Pro	Thr312Pro	-0.002	0.006	FALSE	4	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+343	Thr343Lys	Thr312Lys	0.008	0.009	FALSE	2	Amorphic	Deleterious		Pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.1028C>A (p.Thr343Lys)
+343	Thr343Ile	Thr312Ile	0.072	0.008	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+343	Thr343Ala	Thr312Ala	0.265	0.019	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+343	Thr343Ser	Thr312Ser	0.634	0.023	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+344	Asp344Tyr	Asp313Tyr	0.081	0.011	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+344	Asp344Ala	Asp313Ala	0.266	0.007	FALSE	7	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+344	Asp344His	Asp313His	0.298	0.011	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+344	Asp344Gly	Asp313Gly	0.304	0.011	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+344	Asp344Glu	Asp313Glu	0.601	0.023	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+345	Tyr345Cys	Tyr314Cys	0.001	0.012	FALSE	1	Amorphic	Deleterious		Pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.1034A>G (p.Tyr345Cys)
+345	Tyr345Asp	Tyr314Asp	0.003	0.009	FALSE	2	Amorphic	Deleterious		Pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.1033T>G (p.Tyr345Asp)
+345	Tyr345Ser	Tyr314Ser	0.004	0.006	FALSE	5	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+345	Tyr345His	Tyr314His	0.034	0.007	FALSE	4	Amorphic	Deleterious		Uncertain significance	FALSE	FALSE	TRUE	NM_000531.6(OTC):c.1033T>C (p.Tyr345His)
+345	Tyr345Phe	Tyr314Phe	0.047	0.006	FALSE	6	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+346	Ser346Pro	Ser315Pro	0.219	0.009	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+346	Ser346Leu	Ser315Leu	0.473	0.011	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+346	Ser346Ala	Ser315Ala	0.864	0.013	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+347	Pro347Arg	Pro316Arg	-0.025	0.010	FALSE	1	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+347	Pro347Ser	Pro316Ser	-0.014	0.006	FALSE	4	Amorphic	Deleterious		NA	FALSE	TRUE	FALSE	NM_000531.6(OTC):c.1039C>T  (p.Pro347Ser)
+347	Pro347Leu	Pro316Leu	-0.004	0.012	FALSE	1	Amorphic	Deleterious		NA	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.1040C>T (p.Pro347Leu)
+347	Pro347His	Pro316His	-0.002	0.008	FALSE	2	Amorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+347	Pro347Thr	Pro316Thr	0.003	0.007	FALSE	3	Amorphic	Deleterious		Pathogenic	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.1039C>A (p.Pro347Thr)
+348	Gln348Pro	Gln317Pro	0.108	0.011	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+348	Gln348Leu	Gln317Leu	0.649	0.013	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+348	Gln348His	Gln317His	0.680	0.011	FALSE	5	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+348	Gln348Arg	Gln317Arg	0.786	0.017	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+349	Leu349Pro	Leu318Pro	0.118	0.008	FALSE	4	Hypomorphic	Deleterious		NA	TRUE	FALSE	FALSE	NM_000531.6(OTC):c.1046T>C (p.Leu349Pro)
+349	Leu349Arg	Leu318Arg	0.438	0.012	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+349	Leu349His	Leu318His	0.560	0.023	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+349	Leu349Phe	Leu318Phe	0.606	0.016	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+349	Leu349Val	Leu318Val	0.854	0.011	FALSE	5	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+349	Leu349Ile	Leu318Ile	1.273	0.027	FALSE	1	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+350	Gln350His	Gln319His	0.718	0.017	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+350	Gln350Arg	Gln319Arg	0.969	0.015	FALSE	3	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+350	Gln350Pro	Gln319Pro	1.245	0.016	FALSE	3	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+350	Gln350Glu	Gln319Glu	1.255	0.014	FALSE	4	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+351	Lys351Asn	Lys320Asn	0.597	0.016	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+351	Lys351Thr	Lys320Thr	0.815	0.017	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+351	Lys351Arg	Lys320Arg	1.020	0.012	FALSE	5	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+351	Lys351Met	Lys320Met	1.087	0.012	FALSE	5	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+351	Lys351Gln	Lys320Gln	1.092	0.019	FALSE	2	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+352	Pro352Arg	Pro321Arg	0.157	0.009	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+352	Pro352Leu	Pro321Leu	0.178	0.012	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+352	Pro352His	Pro321His	0.195	0.009	FALSE	4	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+352	Pro352Ala	Pro321Ala	0.199	0.013	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+352	Pro352Thr	Pro321Thr	0.343	0.014	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+353	Lys353Ile	Lys322Ile	0.684	0.024	FALSE	1	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+353	Lys353Arg	Lys322Arg	0.793	0.014	FALSE	3	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+353	Lys353Thr	Lys322Thr	0.960	0.018	FALSE	2	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+353	Lys353Gln	Lys322Gln	0.994	0.011	FALSE	6	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+353	Lys353Glu	Lys322Glu	1.009	0.013	FALSE	4	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+353	Lys353Asn	Lys322Asn	1.036	0.018	FALSE	2	Unimpaired	Non-Deleterious		NA	FALSE	FALSE	FALSE	NA
+354	Phe354Ser	Phe323Ser	0.263	0.013	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+354	Phe354Val	Phe323Val	0.265	0.008	FALSE	6	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
+354	Phe354Cys	Phe323Cys	0.326	0.020	FALSE	1	Hypomorphic	Deleterious		Likely pathogenic	FALSE	FALSE	TRUE	NM_000531.6(OTC):c.1061T>G (p.Phe354Cys)
+354	Phe354Leu	Phe323Leu	0.389	0.015	FALSE	2	Hypomorphic	Deleterious		NA	FALSE	FALSE	FALSE	NA
