@@ -4,3 +4,16 @@
 .ipynb_checkpoints/
 .Rhistory
 .DS_store
+
+.venv
+
+# =========================
+# Python / Poetry / Ruff
+# =========================
+__pycache__/
+*.py[cod]
+.ruff_cache/
+.pytest_cache/
+.mypy_cache/
+dist/
+*.egg-info/
