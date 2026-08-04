@@ -23,17 +23,12 @@ than one underlying DNA change). This script uses `hgvs_c` as that DNA-level
 key, so "distinct variants assayed" counts distinct (hgvs_c, hgvs_p) pairs in
 the condensed file.
 
-CLI usage:
-
-    python -m src.mave_dataset_stats \\
-        data/mave_data/integrated_variant_effect_dataset.condensed.tsv.gz \\
-        data/mave_data/Supplementary_Data_3.xlsx \\
-        [--output stats.csv]
+Both file arguments are optional and default to the paths above.
 """
 
-import argparse
 from pathlib import Path
 
+import click
 import pandas as pd
 
 DEFAULT_CONDENSED_FILE = Path("data/mave_data/integrated_variant_effect_dataset.condensed.tsv.gz")
@@ -138,41 +133,37 @@ def stats_to_dataframe(stats):
     return table.astype("Int64")
 
 
-def main():
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument(
-        "condensed_file",
-        type=Path,
-        nargs="?",
-        default=DEFAULT_CONDENSED_FILE,
-        help=f"Condensed variant effect dataset TSV (default: {DEFAULT_CONDENSED_FILE})",
-    )
-    parser.add_argument(
-        "metadata_file",
-        type=Path,
-        nargs="?",
-        default=DEFAULT_METADATA_FILE,
-        help=f"Supplementary Data 3 metadata workbook (default: {DEFAULT_METADATA_FILE})",
-    )
-    parser.add_argument(
-        "--output",
-        type=Path,
-        default=None,
-        help="Optional path to also write the summary table as CSV",
-    )
-    args = parser.parse_args()
-
+@click.command(help=__doc__)
+@click.argument(
+    "condensed_file",
+    required=False,
+    default=DEFAULT_CONDENSED_FILE,
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.argument(
+    "metadata_file",
+    required=False,
+    default=DEFAULT_METADATA_FILE,
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option(
+    "--output",
+    type=click.Path(dir_okay=False, path_type=Path),
+    default=None,
+    help="Optional path to also write the summary table as CSV",
+)
+def main(condensed_file, metadata_file, output):
     try:
-        stats = compute_all_stats(args.condensed_file, args.metadata_file)
+        stats = compute_all_stats(condensed_file, metadata_file)
     except ValueError as exc:
-        parser.error(str(exc))
+        raise click.ClickException(str(exc)) from exc
 
     table = stats_to_dataframe(stats)
-    print(table.to_string())
+    click.echo(table.to_string())
 
-    if args.output:
-        table.to_csv(args.output)
-        print(f"\nWrote summary table to {args.output}")
+    if output:
+        table.to_csv(output)
+        click.echo(f"\nWrote summary table to {output}")
 
 
 if __name__ == "__main__":

@@ -1,7 +1,8 @@
 import pandas as pd
 import pytest
+from click.testing import CliRunner
 
-from src.mave_dataset_stats import compute_all_stats, split_genes
+from src.mave_dataset_stats import compute_all_stats, main, split_genes
 
 
 def _write_condensed(path, rows):
@@ -83,3 +84,27 @@ def test_compute_all_stats_raises_on_missing_metadata(dataset_files):
     )
     with pytest.raises(ValueError, match="DS_UNKNOWN"):
         compute_all_stats(condensed_path, metadata_path)
+
+
+def test_cli_prints_table_and_writes_output(dataset_files, tmp_path):
+    condensed_path, metadata_path = dataset_files
+    output_path = tmp_path / "stats.csv"
+
+    result = CliRunner().invoke(main, [str(condensed_path), str(metadata_path), "--output", str(output_path)])
+
+    assert result.exit_code == 0
+    assert "Community (IGVF)" in result.output
+    assert output_path.exists()
+
+
+def test_cli_reports_missing_metadata_as_click_error(dataset_files):
+    condensed_path, metadata_path = dataset_files
+    _write_condensed(
+        condensed_path,
+        [("DS_UNKNOWN", "GENEX", "c5", "p5")],
+    )
+
+    result = CliRunner().invoke(main, [str(condensed_path), str(metadata_path)])
+
+    assert result.exit_code == 1
+    assert "DS_UNKNOWN" in result.output

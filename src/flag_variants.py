@@ -9,6 +9,7 @@ candidates.
 
 Three kinds of datasets are handled, selected by the `dataset_name` column:
 
+\b
 1. MAVE-join datasets (BAP1_Waters_2024, CHEK2_Gebbia_2024, OTC_Lo_2023,
    RAD51C_Olvera-Leon_2024): rows are joined against the investigator's
    original assay file in
@@ -20,9 +21,9 @@ Three kinds of datasets are handled, selected by the `dataset_name` column:
 3. Everything else: Flag is a list of empty strings.
 """
 
-import argparse
 from pathlib import Path
 
+import click
 import pandas as pd
 
 DEFAULT_FILTERING_DIR = Path("data/filtering")
@@ -206,24 +207,23 @@ def compute_flags(df, filtering_dir):
     return flag
 
 
-def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("input", type=Path, help="Input variants TSV, e.g. work/cvfg_variants.14.tsv")
-    parser.add_argument("output", type=Path, help="Path to write the output TSV with the Flag column added")
-    parser.add_argument(
-        "--filtering-dir",
-        type=Path,
-        default=DEFAULT_FILTERING_DIR,
-        help=f"Directory containing per-dataset assay files (default: {DEFAULT_FILTERING_DIR})",
-    )
-    args = parser.parse_args()
-
-    df = pd.read_csv(args.input, sep="\t", dtype=str, keep_default_na=False, engine="c")
-    df["Flag"] = compute_flags(df, args.filtering_dir)
+@click.command(help=__doc__)
+@click.argument("input", type=click.Path(exists=True, dir_okay=False, path_type=Path))
+@click.argument("output", type=click.Path(dir_okay=False, path_type=Path))
+@click.option(
+    "--filtering-dir",
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    default=DEFAULT_FILTERING_DIR,
+    show_default=True,
+    help="Directory containing per-dataset assay files",
+)
+def main(input, output, filtering_dir):
+    df = pd.read_csv(input, sep="\t", dtype=str, keep_default_na=False, engine="c")
+    df["Flag"] = compute_flags(df, filtering_dir)
 
     n_flagged_variants = df["Flag"].apply(lambda f: f.count("*")).sum()
     n_flagged_rows = (df["Flag"].apply(lambda f: "*" in f)).sum()
-    print(f"Flagged {n_flagged_variants} DNA variant(s) across {n_flagged_rows} row(s) of {len(df)}.")
+    click.echo(f"Flagged {n_flagged_variants} DNA variant(s) across {n_flagged_rows} row(s) of {len(df)}.")
 
     per_dataset = pd.DataFrame(
         {
@@ -233,9 +233,9 @@ def main():
     ).groupby(df["dataset_name"]).sum()
     per_dataset = per_dataset[per_dataset["flagged_variants"] > 0].sort_index()
     for dataset_name, row in per_dataset.iterrows():
-        print(f"  {dataset_name}: {int(row['flagged_rows'])} row(s), {int(row['flagged_variants'])} variant(s)")
+        click.echo(f"  {dataset_name}: {int(row['flagged_rows'])} row(s), {int(row['flagged_variants'])} variant(s)")
 
-    df.to_csv(args.output, sep="\t", index=False)
+    df.to_csv(output, sep="\t", index=False)
 
 
 if __name__ == "__main__":
