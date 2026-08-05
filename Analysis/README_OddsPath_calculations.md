@@ -33,7 +33,7 @@ openpyxl
 | File | Location | Description |
 |------|----------|-------------|
 | `integrated_variant_effect_dataset.tsv.gz` | `outputs/` | Output from the Integrated Variant Effect Dataset pipeline |
-| `CHK2_Gebbia_2024.xlsx` | `data/Variant_score_files/` | CHEK2 variant filtering annotations |
+| `CHEK2_Gebbia_2024.xlsx` | `data/raw_mave_data/` | CHEK2 variant filtering annotations |
 | `Supplementary_Data_3.xlsx` | `data/Supplemental_Data/` | Dataset curation sheet with score intervals |
 
 ### ClinVar Data
