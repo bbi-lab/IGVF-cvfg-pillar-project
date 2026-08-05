@@ -34,13 +34,17 @@ the run itself and should not be pre-populated.
 cvfg_variants.0.tsv                              # REQUIRED -- Step 1 input:
                                                   #   harmonized variant list across
                                                   #   the 83 MAVE datasets
-Supplementary_Data_3.xlsx                        # REQUIRED -- Step 14 assay metadata
-                                                  #   (Curation worksheet)
-score_sets.tsv                                    # REQUIRED -- Steps 11, 13, 14
-                                                  #   (dataset name / score-set mapping)
 data_frame_missense_variants_MP2_properties.csv.gz # REQUIRED -- Step 12 (MutPred2 scores)
 extended_ensembl_consequence.csv.gz               # REQUIRED -- simplified-consequence step
 ```
+
+`score_sets.tsv` (dataset name / score-set mapping, read by Steps 11 and 14)
+and `Supplementary_Data_3.xlsx` (assay metadata, read by Step 15) are **not**
+expected here -- they live in `data/input/maves/` instead, alongside
+`data/input/predictors/` (see `docs/build_training_variant_files.md`).
+`scripts/run_variant_annotation_pipeline.sh` copies both into the staged
+directory directly, the same way it rsyncs this directory in -- see
+`docs/variant_annotation_pipeline.md`.
 
 ## Not here on purpose
 

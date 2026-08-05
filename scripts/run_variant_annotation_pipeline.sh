@@ -71,6 +71,16 @@ mkdir -p "$stage_dir/data"
 echo "Staging data/raw_mave_data/ -> ${stage_dir#"$CVFG_PROJECT_DIR"/}/data/ ..."
 rsync -a "$CVFG_PROJECT_DIR/data/raw_mave_data/" "$stage_dir/data/"
 
+# score_sets.tsv and Supplementary_Data_3.xlsx live in data/input/maves/
+# (not data/raw_mave_data/) so they're staged here explicitly rather than
+# picked up by the rsync above. Steps 11/14 and Step 15 of
+# scripts/variant_annotation_pipeline.sh read them as
+# /work/data/score_sets.tsv and /work/data/Supplementary_Data_3.xlsx -- see
+# docs/variant_annotation_pipeline.md.
+echo "Staging data/input/maves/ -> ${stage_dir#"$CVFG_PROJECT_DIR"/}/data/ ..."
+cp "$CVFG_PROJECT_DIR/data/input/maves/score_sets.tsv" "$stage_dir/data/score_sets.tsv"
+cp "$CVFG_PROJECT_DIR/data/input/maves/Supplementary_Data_3.xlsx" "$stage_dir/data/Supplementary_Data_3.xlsx"
+
 export VARIANT_DATA_DIR="$stage_dir"
 
 if [[ -n "$step" ]]; then

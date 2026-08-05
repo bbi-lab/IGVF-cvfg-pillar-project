@@ -23,11 +23,20 @@
 # argument to run just that one step -- normally via
 # `scripts/run_variant_annotation_pipeline.sh --step N`, which also handles
 # staging and env vars for you (see docs/variant_annotation_pipeline.md).
+#
+# Every cvfg_variants.*/integrated_variant_effect_dataset* reference below is
+# written as an explicit /work/data/... path (Dockerized steps) or
+# "$VARIANT_DATA_DIR/data/..." path (the handful of plain, non-Dockerized
+# shell/python commands) rather than a bare data/..., so every step reads and
+# writes our own staged data/intermediate/variant_annotation/data/ regardless
+# of whether the variant-annotation checkout in use happens to have its own
+# files at those same relative paths -- see the "VARIANT_DATA_DIR
+# path-mapping subtlety" section of docs/variant_annotation_pipeline.md.
 ########################################################################################################################
 
 # Step 1: Mapping
 step_1() {
-src/scripts/run_map_variants.sh data/cvfg_variants.0.tsv data/cvfg_variants.1.tsv \
+src/scripts/run_map_variants.sh /work/data/cvfg_variants.0.tsv /work/data/cvfg_variants.1.tsv \
   --preferred-transcript-col preferred_transcript \
   --drop-columns target_sequence --drop-columns preferred_transcript \
   --max-clingen-concurrency 4
@@ -35,7 +44,7 @@ src/scripts/run_map_variants.sh data/cvfg_variants.0.tsv data/cvfg_variants.1.ts
 
 # Step 2: Replace Ensembl accessions with RefSeq
 step_2() {
-src/scripts/run_remap_transcript_ids.sh data/cvfg_variants.1.tsv data/cvfg_variants.2.tsv \
+src/scripts/run_remap_transcript_ids.sh /work/data/cvfg_variants.1.tsv /work/data/cvfg_variants.2.tsv \
   --mane-file data/MANE.GRCh38.v1.5.summary.txt \
   --csv-field-size-limit 10000000
 }
@@ -43,34 +52,34 @@ src/scripts/run_remap_transcript_ids.sh data/cvfg_variants.1.tsv data/cvfg_varia
 # Step 3: Reverse translation
 # Note that --wt-codon-mode unambiguous means that for WT Met and Trp "substitutions" we will generate "no_change" DNA variants in the form of codon delinses.
 step_3() {
-src/scripts/run_reverse_translate_protein_variants.sh data/cvfg_variants.2.tsv data/cvfg_variants.3.tsv \
+src/scripts/run_reverse_translate_protein_variants.sh /work/data/cvfg_variants.2.tsv /work/data/cvfg_variants.3.tsv \
   --include-indels \
   --wt-codon-mode unambiguous
 }
 
 # Step 4: Add VCF-style identifiers to assayed variants (both DNA and protein; already done for reverse translation candidates)
 step_4() {
-src/scripts/run_add_vcf_identifiers.sh data/cvfg_variants.3.tsv data/cvfg_variants.4.tsv --csv-field-size-limit 10000000
+src/scripts/run_add_vcf_identifiers.sh /work/data/cvfg_variants.3.tsv /work/data/cvfg_variants.4.tsv --csv-field-size-limit 10000000
 }
 
 # Step 5: Add ClinGen allele IDs to reverse translations
 step_5() {
-src/scripts/run_add_dna_clingen_allele_ids.sh data/cvfg_variants.4.tsv data/cvfg_variants.5.tsv \
+src/scripts/run_add_dna_clingen_allele_ids.sh /work/data/cvfg_variants.4.tsv /work/data/cvfg_variants.5.tsv \
   --csv-field-size-limit 10000000 \
   --max-workers 5
 }
 
 # Step 6: ClinVar
 step_6() {
-src/scripts/run_annotate_clinvar.sh data/cvfg_variants.5.tsv data/cvfg_variants.6-1alt.tsv \
+src/scripts/run_annotate_clinvar.sh /work/data/cvfg_variants.5.tsv /work/data/cvfg_variants.6-1alt.tsv \
   --clinvar-version 201812 \
   --cache-dir ./clinvar_cache \
   --csv-field-size-limit 10000000
-src/scripts/run_annotate_clinvar.sh data/cvfg_variants.6-1.tsv data/cvfg_variants.6-2.tsv \
+src/scripts/run_annotate_clinvar.sh /work/data/cvfg_variants.6-1.tsv /work/data/cvfg_variants.6-2.tsv \
   --clinvar-version 202501 \
   --cache-dir ./clinvar_cache \
   --csv-field-size-limit 10000000
-src/scripts/run_annotate_clinvar.sh data/cvfg_variants.6-2.tsv data/cvfg_variants.6.tsv \
+src/scripts/run_annotate_clinvar.sh /work/data/cvfg_variants.6-2.tsv /work/data/cvfg_variants.6.tsv \
   --clinvar-version 202601 \
   --cache-dir ./clinvar_cache \
   --csv-field-size-limit 10000000
@@ -85,7 +94,7 @@ src/scripts/run_annotate_gnomad.sh /dev/null /dev/null \
   --refresh-cache \
   --gnomad-ht-uri /work/gnomAD/gnomad.joint.v4.1.sites.ht
 # GNOMAD_CACHE_DIR=/gnomad-cache is injected automatically from the Docker volume; no --cache-dir needed.
-src/scripts/run_annotate_gnomad.sh data/cvfg_variants.6.tsv data/cvfg_variants.7.tsv \
+src/scripts/run_annotate_gnomad.sh /work/data/cvfg_variants.6.tsv /work/data/cvfg_variants.7.tsv \
   --gnomad-version v4.1 \
   --require-pass \
   --callset-pass-filter any \
@@ -96,7 +105,7 @@ src/scripts/run_annotate_gnomad.sh data/cvfg_variants.6.tsv data/cvfg_variants.7
 
 # Step 8: SpliceAI
 step_8() {
-src/scripts/run_annotate_spliceai.sh data/cvfg_variants.7.tsv data/cvfg_variants.8.tsv \
+src/scripts/run_annotate_spliceai.sh /work/data/cvfg_variants.7.tsv /work/data/cvfg_variants.8.tsv \
   --mode precomputed \
   --precomputed-snv-vcf spliceai_scores.masked.snv.hg38.vcf.gz \
   --precomputed-indel-vcf spliceai_scores.masked.indel.hg38.vcf.gz \
@@ -106,13 +115,13 @@ src/scripts/run_annotate_spliceai.sh data/cvfg_variants.7.tsv data/cvfg_variants
 
 # Step 9: ClinGen Evidence Repository
 step_9() {
-src/scripts/run_annotate_erepo.sh data/cvfg_variants.8.tsv data/cvfg_variants.9.tsv \
+src/scripts/run_annotate_erepo.sh /work/data/cvfg_variants.8.tsv /work/data/cvfg_variants.9.tsv \
   --csv-field-size-limit 10000000
 }
 
 # Step 10: VEP mutational consequence
 step_10() {
-src/scripts/run_annotate_vep.sh data/cvfg_variants.9.tsv data/cvfg_variants.10.tsv \
+src/scripts/run_annotate_vep.sh /work/data/cvfg_variants.9.tsv /work/data/cvfg_variants.10.tsv \
   --vep-batch-size 20 \
   --row-batch-size 20 \
   --vep-timeout-seconds 60 \
@@ -121,9 +130,18 @@ src/scripts/run_annotate_vep.sh data/cvfg_variants.9.tsv data/cvfg_variants.10.t
 }
 
 # Step 11: MaveDB variant functional classifications
+#
+# --requested-calibrations-file is written as /work/data/score_sets.tsv
+# rather than a bare data/score_sets.tsv, for the same reason as step_12's
+# predictor-file flags below: run_annotate_mavedb.sh only remaps its two
+# positional input/output args through the /work-vs-repo-bind-mount
+# host-existence check, so an extra flag like this one is passed through
+# verbatim and would otherwise resolve against whichever variant-annotation
+# checkout is in use instead of our own staged data/input/maves/score_sets.tsv
+# -- see docs/variant_annotation_pipeline.md.
 step_11() {
-src/scripts/run_annotate_mavedb.sh data/cvfg_variants.10.tsv data/cvfg_variants.11.tsv \
-  --requested-calibrations-file data/score_sets.tsv \
+src/scripts/run_annotate_mavedb.sh /work/data/cvfg_variants.10.tsv /work/data/cvfg_variants.11.tsv \
+  --requested-calibrations-file /work/data/score_sets.tsv \
   --csv-field-size-limit 10000000
 }
 
@@ -132,14 +150,28 @@ src/scripts/run_annotate_mavedb.sh data/cvfg_variants.10.tsv data/cvfg_variants.
 # (Dockerized, from the CVFG pillar project -- see
 # src/scripts/run_build_training_variant_files.sh there) before running
 # annotate_predictors.
+#
+# All five predictor-file flags below are written as /work/data/... rather
+# than bare filenames, so every input to this step comes from our own
+# data/intermediate/variant_annotation/data/ (VARIANT_DATA_DIR) rather than
+# whichever variant-annotation checkout happens to be in use --
+# run_annotate_predictors.sh only remaps its two positional input/output
+# args through the /work-vs-repo-bind-mount host-existence check; extra
+# flags like these are passed through verbatim, and the container's cwd is
+# the variant-annotation checkout's own bind mount (/usr/src/app), not
+# /work, so a bare "data/..." path here would resolve against whichever
+# checkout is in use instead of our staged data. AlphaMissense_hg38.tsv.gz
+# and revel_hg38.tsv.gz (plus their .tbi indexes) must be copied into
+# data/intermediate/variant_annotation/data/ before running this step --
+# see docs/variant_annotation_pipeline.md.
 step_12() {
 "$CVFG_PROJECT_DIR/src/scripts/run_build_training_variant_files.sh"
-src/scripts/run_annotate_predictors.sh data/cvfg_variants.11.tsv data/cvfg_variants.12.tsv \
-  --alphamissense-file AlphaMissense_hg38.tsv.gz \
-  --mutpred2-properties-file data/data_frame_missense_variants_MP2_properties.csv.gz \
-  --revel-file revel_hg38.tsv.gz \
-  --revel-training-file data/revel_training_variants.tsv \
-  --mutpred2-training-file data/mutpred2_training_variants.tsv \
+src/scripts/run_annotate_predictors.sh /work/data/cvfg_variants.11.tsv /work/data/cvfg_variants.12.tsv \
+  --alphamissense-file /work/data/AlphaMissense_hg38.tsv.gz \
+  --mutpred2-properties-file /work/data/data_frame_missense_variants_MP2_properties.csv.gz \
+  --revel-file /work/data/revel_hg38.tsv.gz \
+  --revel-training-file /work/data/revel_training_variants.tsv \
+  --mutpred2-training-file /work/data/mutpred2_training_variants.tsv \
   --csv-field-size-limit 10000000
 }
 
@@ -147,31 +179,52 @@ src/scripts/run_annotate_predictors.sh data/cvfg_variants.11.tsv data/cvfg_varia
 # CVFG pillar project rather than variant-annotation -- see
 # src/scripts/run_add_mavedb_active_calibration_columns.sh there).
 step_13() {
-"$CVFG_PROJECT_DIR/src/scripts/run_add_mavedb_active_calibration_columns.sh" data/cvfg_variants.12.tsv data/cvfg_variants.13.tsv
+"$CVFG_PROJECT_DIR/src/scripts/run_add_mavedb_active_calibration_columns.sh" /work/data/cvfg_variants.12.tsv /work/data/cvfg_variants.13.tsv
 }
 
 # Step 14: Dataset names
+#
+# The awk pass runs directly on the host (this whole script executes with
+# the variant-annotation checkout as cwd, so it isn't a bare data/... path
+# here either) -- its input/output are written as
+# "$VARIANT_DATA_DIR/data/..." so they land in and read from our staged
+# directory regardless of cwd. The merge-columns extra-file argument is
+# written as /work/data/score_sets.tsv rather than a bare data/score_sets.tsv.
+# merge-columns's wrapper does remap all three of its positional arguments
+# through its own /work-vs-repo-bind-mount host-existence check, but that
+# check would still incorrectly prefer a variant-annotation checkout's own
+# data/score_sets.tsv over our staged data/input/maves/score_sets.tsv if one
+# happens to exist there -- so it's forced to /work explicitly, same as
+# step_11 and step_12 -- see docs/variant_annotation_pipeline.md.
 step_14() {
 awk -F'\t' -v OFS='\t' '
   NR==1 { sub(/\r$/, ""); for (i=1; i<=NF; i++) if ($i=="variant_urn") col=i; print $0, "score_set_urn" }
   NR>1  { sub(/\r$/, ""); val = col ? $col : ""; sub(/#.*$/, "", val); print $0, val }
-' data/cvfg_variants.13.tsv > data/cvfg_variants.14.temp.tsv
+' "$VARIANT_DATA_DIR/data/cvfg_variants.13.tsv" > "$VARIANT_DATA_DIR/data/cvfg_variants.14.temp.tsv"
 src/scripts/run_utilities.sh merge-columns \
-  data/cvfg_variants.14.temp.tsv \
-  data/score_sets.tsv \
-  data/cvfg_variants.14.tsv \
+  /work/data/cvfg_variants.14.temp.tsv \
+  /work/data/score_sets.tsv \
+  /work/data/cvfg_variants.14.tsv \
   --key-col "score_set_urn:score_set_urn" \
   --add-col "dataset_name" \
   --csv-field-size-limit 10000000
-rm data/cvfg_variants.14.temp.tsv
+rm "$VARIANT_DATA_DIR/data/cvfg_variants.14.temp.tsv"
 }
 
 # Step 15: Assay metadata from Supplementary Data 3
+#
+# The extra-file argument is written as /work/data/Supplementary_Data_3.xlsx
+# rather than a bare data/Supplementary_Data_3.xlsx, for the same reason as
+# step_14's score_sets.tsv above: Supplementary_Data_3.xlsx lives in this
+# project's own data/input/maves/ (not a variant-annotation checkout), and
+# merge-columns's wrapper's host-existence check on a bare path would still
+# incorrectly prefer a variant-annotation checkout's own copy if one happens
+# to exist there -- see docs/variant_annotation_pipeline.md.
 step_15() {
 src/scripts/run_utilities.sh merge-columns \
-  data/cvfg_variants.14.tsv \
-  data/Supplementary_Data_3.xlsx \
-  data/cvfg_variants.15.tsv \
+  /work/data/cvfg_variants.14.tsv \
+  /work/data/Supplementary_Data_3.xlsx \
+  /work/data/cvfg_variants.15.tsv \
   --csv-field-size-limit 10000000 \
   --extra-worksheet Curation \
   --key-col "dataset_name:Dataset Name" \
@@ -202,8 +255,13 @@ src/scripts/run_utilities.sh merge-columns \
 }
 
 # Step 16: Extra fields for GMM
+#
+# Plain python3 invocation (not yet Dockerized/wrapped), so like step_14's
+# awk pass this runs directly on the host with the variant-annotation
+# checkout as cwd -- input/output are written as "$VARIANT_DATA_DIR/data/..."
+# rather than a bare data/... so they resolve against our staged directory.
 step_16() {
-python3 -m src.annotate_simplified_consequence data/cvfg_variants.15.tsv data/cvfg_variants.16.tsv \
+python3 -m src.annotate_simplified_consequence "$VARIANT_DATA_DIR/data/cvfg_variants.15.tsv" "$VARIANT_DATA_DIR/data/cvfg_variants.16.tsv" \
   --consequence-map-file data/extended_ensembl_consequence.csv.gz \
   --csv-field-size-limit 10000000
 }
@@ -212,13 +270,13 @@ python3 -m src.annotate_simplified_consequence data/cvfg_variants.15.tsv data/cv
 # (Dockerized, from the CVFG pillar project -- see
 # src/scripts/run_recalculate_clingen_classification.sh there).
 step_17() {
-"$CVFG_PROJECT_DIR/src/scripts/run_recalculate_clingen_classification.sh" data/cvfg_variants.16.tsv data/cvfg_variants.17.tsv
+"$CVFG_PROJECT_DIR/src/scripts/run_recalculate_clingen_classification.sh" /work/data/cvfg_variants.16.tsv /work/data/cvfg_variants.17.tsv
 }
 
 # Step 18: Flag variants (Dockerized, from the CVFG pillar project rather
 # than variant-annotation -- see src/scripts/run_flag_variants.sh there).
 step_18() {
-"$CVFG_PROJECT_DIR/src/scripts/run_flag_variants.sh" data/cvfg_variants.17.tsv data/cvfg_variants.18.tsv
+"$CVFG_PROJECT_DIR/src/scripts/run_flag_variants.sh" /work/data/cvfg_variants.17.tsv /work/data/cvfg_variants.18.tsv
 }
 
 LAST_STEP=18
@@ -229,7 +287,7 @@ LAST_STEP=18
 build_condensed_and_expanded_frames() {
 
 # Flatten
-src/scripts/run_flatten_dna_variants.sh data/cvfg_variants.18.tsv data/cvfg_variants.18.flat.tsv
+src/scripts/run_flatten_dna_variants.sh /work/data/cvfg_variants.18.tsv /work/data/cvfg_variants.18.flat.tsv
 
 ########################################################################################################################
 # Condensed data frame
@@ -237,16 +295,16 @@ src/scripts/run_flatten_dna_variants.sh data/cvfg_variants.18.tsv data/cvfg_vari
 
 # Filter out unmapped variants.
 src/scripts/run_utilities.sh filter-rows \
-  data/cvfg_variants.18.tsv \
-  data/cvfg_variants.18.mapped.tsv \
+  /work/data/cvfg_variants.18.tsv \
+  /work/data/cvfg_variants.18.mapped.tsv \
   --value-col "mapped_hgvs_g,mapped_hgvs_c,mapped_hgvs_p" \
   --match any \
   --csv-field-size-limit 10000000
 
 # Filter, reorder, and rename columns to match the CVFG dataframe format.
 src/scripts/run_utilities.sh rename-columns \
-  data/cvfg_variants.18.mapped.tsv \
-  data/integrated_variant_effect_dataset.condensed.tsv \
+  /work/data/cvfg_variants.18.mapped.tsv \
+  /work/data/integrated_variant_effect_dataset.condensed.tsv \
   --csv-field-size-limit 10000000 \
   --reorder \
   --keep-col "dataset_name:Dataset" \
@@ -348,26 +406,26 @@ src/scripts/run_utilities.sh rename-columns \
 awk -F'\t' -v OFS='\t' '
   NR==1 { for (i=1; i<=NF; i++) if ($i=="nucleotide_or_aa") col=i; print }
   NR>1  { if (col) { if ($col=="protein") $col="aa"; else if ($col=="dna") $col="nt" }; print }
-' data/integrated_variant_effect_dataset.condensed.tsv > data/file.tsv && mv data/file.tsv data/integrated_variant_effect_dataset.condensed.tsv
+' "$VARIANT_DATA_DIR/data/integrated_variant_effect_dataset.condensed.tsv" > "$VARIANT_DATA_DIR/data/file.tsv" && mv "$VARIANT_DATA_DIR/data/file.tsv" "$VARIANT_DATA_DIR/data/integrated_variant_effect_dataset.condensed.tsv"
 
 # Fix two things
-src/scripts/postprocess_integrated_variant_effect_dataset.sh data/integrated_variant_effect_dataset.condensed.tsv data/file.tsv && mv data/file.tsv data/integrated_variant_effect_dataset.condensed.tsv
+src/scripts/postprocess_integrated_variant_effect_dataset.sh "$VARIANT_DATA_DIR/data/integrated_variant_effect_dataset.condensed.tsv" "$VARIANT_DATA_DIR/data/file.tsv" && mv "$VARIANT_DATA_DIR/data/file.tsv" "$VARIANT_DATA_DIR/data/integrated_variant_effect_dataset.condensed.tsv"
 
 ########################################################################################################################
 # Expanded data frame
 ########################################################################################################################
 
 src/scripts/run_utilities.sh filter-rows \
-  data/cvfg_variants.18.flat.tsv \
-  data/cvfg_variants.18.flat.mapped.tsv \
+  /work/data/cvfg_variants.18.flat.tsv \
+  /work/data/cvfg_variants.18.flat.mapped.tsv \
   --value-col "mapped_hgvs_g,mapped_hgvs_c,mapped_hgvs_p" \
   --match any \
   --csv-field-size-limit 10000000
 
 # Filter, reorder, and rename columns to match the CVFG dataframe format.
 src/scripts/run_utilities.sh rename-columns \
-  data/cvfg_variants.18.flat.mapped.tsv \
-  data/integrated_variant_effect_dataset.tsv \
+  /work/data/cvfg_variants.18.flat.mapped.tsv \
+  /work/data/integrated_variant_effect_dataset.tsv \
   --csv-field-size-limit 10000000 \
   --reorder \
   --keep-col "dataset_name:Dataset" \
@@ -469,10 +527,10 @@ src/scripts/run_utilities.sh rename-columns \
 awk -F'\t' -v OFS='\t' '
   NR==1 { for (i=1; i<=NF; i++) if ($i=="nucleotide_or_aa") col=i; print }
   NR>1  { if (col) { if ($col=="protein") $col="aa"; else if ($col=="dna") $col="nt" }; print }
-' data/integrated_variant_effect_dataset.tsv > data/file.tsv && mv data/file.tsv data/integrated_variant_effect_dataset.tsv
+' "$VARIANT_DATA_DIR/data/integrated_variant_effect_dataset.tsv" > "$VARIANT_DATA_DIR/data/file.tsv" && mv "$VARIANT_DATA_DIR/data/file.tsv" "$VARIANT_DATA_DIR/data/integrated_variant_effect_dataset.tsv"
 
 # Fix two things
-src/scripts/postprocess_integrated_variant_effect_dataset.sh data/integrated_variant_effect_dataset.tsv data/file.tsv && mv data/file.tsv data/integrated_variant_effect_dataset.tsv
+src/scripts/postprocess_integrated_variant_effect_dataset.sh "$VARIANT_DATA_DIR/data/integrated_variant_effect_dataset.tsv" "$VARIANT_DATA_DIR/data/file.tsv" && mv "$VARIANT_DATA_DIR/data/file.tsv" "$VARIANT_DATA_DIR/data/integrated_variant_effect_dataset.tsv"
 
 }
 

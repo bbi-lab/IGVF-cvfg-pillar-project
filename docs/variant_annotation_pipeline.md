@@ -111,18 +111,33 @@ exists on the host relative to the current working directory** at the moment
 the wrapper runs. If it exists, it's treated as part of the repo and mapped to
 `/usr/src/app/<path>`; if not, it falls back to `/work/<path>`.
 
-`scripts/variant_annotation_pipeline.sh`'s paths are all written with a
-`data/` prefix (e.g. `data/cvfg_variants.0.tsv`). Historically these files
-existed directly inside `variant-annotation`'s own `./data/` working copy, so
-every step resolved via the bind-mount branch, and `VARIANT_DATA_DIR` was
-never actually exercised. To keep that same `data/...` string working when we
-instead want it to resolve against **our own** staged directory, our staged
-directory needs a `data/` subfolder of its own --
-`data/intermediate/variant_annotation/data/...` -- so that once the path no
-longer exists in `variant-annotation`'s working tree, the `/work` fallback
-(`/work/data/...`) correctly lands inside it. This is why the orchestrator
-script rsyncs into `data/intermediate/variant_annotation/data/` rather than
-`data/intermediate/variant_annotation/` directly.
+Historically, `scripts/variant_annotation_pipeline.sh`'s `cvfg_variants.*`/
+`integrated_variant_effect_dataset*` paths were all written with a bare
+`data/` prefix (e.g. `data/cvfg_variants.0.tsv`) and relied entirely on this
+fallback: these files existed directly inside `variant-annotation`'s own
+`./data/` working copy before this project existed, so every step resolved
+via the bind-mount branch, and `VARIANT_DATA_DIR` was never actually
+exercised. Once these files instead lived only in **our own** staged
+directory, the same bare `data/...` string kept working only because it no
+longer existed in whichever `variant-annotation` checkout was in use, so the
+`/work` fallback happened to take over -- an implicit, easy-to-break
+dependency (a `variant-annotation` checkout shared across projects could
+easily have its own stray `data/cvfg_variants.0.tsv` left over from a
+different run, silently routing a step at our staged data). Every such path
+in `scripts/variant_annotation_pipeline.sh` is therefore now written
+explicitly: as `/work/data/...` for Dockerized steps (all step_N's honor an
+already-`/work`- or `/usr/src/app`-prefixed path verbatim, skipping the
+host-existence check entirely), or as `"$VARIANT_DATA_DIR/data/..."` for the
+handful of plain, non-Dockerized commands (step_14's and step_16's
+in-script `awk`/`python3` calls, and `build_condensed_and_expanded_frames`'s
+`awk`/`postprocess_integrated_variant_effect_dataset.sh` calls, all of which
+run directly on the host with the `variant-annotation` checkout as `cwd`, so
+a bare `data/...` there is neither Docker-remapped nor meaningful as a
+container path). This is also why our staged directory needs a `data/`
+subfolder of its own -- `data/intermediate/variant_annotation/data/...` --
+matching the `data/...` prefix every reference still uses after `/work`:
+the orchestrator script rsyncs into `data/intermediate/variant_annotation/data/`
+rather than `data/intermediate/variant_annotation/` directly.
 
 Most large external reference files the pipeline references (SpliceAI VCFs,
 `data/MANE.GRCh38.v1.5.summary.txt`, `clinvar_cache/`, dbNSFP, etc.) are
@@ -139,6 +154,22 @@ indexes) must be copied into
 `variant-annotation` checkout for this step. See [`build_training_variant_files`:
 a preparatory step before Step 12](#build_training_variant_files-a-preparatory-step-before-step-12)
 below for why all of Step 12's file inputs are staged this way.
+
+**Exception: `score_sets.tsv` and `Supplementary_Data_3.xlsx` (Steps 11, 14,
+and 15).** These two CVFG-specific inputs live in this project's own
+`data/input/maves/` (committed to git, alongside `data/input/predictors/` --
+see [`build_training_variant_files`](#build_training_variant_files-a-preparatory-step-before-step-12)
+below) rather than in a `variant-annotation` checkout or
+`data/raw_mave_data/`. Unlike the AlphaMissense/REVEL files above, staging
+them is automatic: `scripts/run_variant_annotation_pipeline.sh` copies both
+into `data/intermediate/variant_annotation/data/` on every run, right after
+rsyncing `data/raw_mave_data/` in. `step_11`'s `--requested-calibrations-file`
+flag, `step_14`'s `merge-columns` extra-file argument, and `step_15`'s
+`merge-columns` extra-file argument all reference them as
+`/work/data/score_sets.tsv` and `/work/data/Supplementary_Data_3.xlsx` rather
+than bare `data/...` paths, so all three steps resolve to our staged copies
+regardless of whether the `variant-annotation` checkout in use happens to
+have its own files at those paths -- see `data/raw_mave_data/README.md`.
 
 ## `add_mavedb_active_calibration_columns`, `recalculate_clingen_classification`, and `flag_variants`: containerized the same way
 
