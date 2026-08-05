@@ -304,6 +304,7 @@ src/scripts/run_utilities.sh rename-columns \
   --reorder \
   --keep-col "dataset_name:Dataset" \
   --keep-col "gene_symbol:Gene" \
+  --keep-col "gene_hgnc_id:HGNC_ID" \
   --keep-col "variant_urn:mavedb_variant_urn" \
   --keep-col "mapped_hgvs_g_chromosome:Chrom" \
   --keep-col "strand:Strand" \
@@ -324,8 +325,6 @@ src/scripts/run_utilities.sh rename-columns \
   --keep-col "vep.most_severe_mutational_consequence:most_severe_mutational_consequence" \
   --keep-col "score:auth_reported_score" \
   --keep-col "rna_score" \
-  --keep-col "rna_score_d6" \
-  --keep-col "rna_score_d20" \
   --keep-col "mavedb.active_calibration.functional_class_label:auth_reported_func_class" \
   --keep-col "mavedb.active_calibration.functional_classification:auth_reported_func_class_category" \
   --keep-col "assay_detects_splicing_effects:splice_measure" \
@@ -371,7 +370,8 @@ src/scripts/run_utilities.sh rename-columns \
   --keep-col "spliceai.dp_dl:spliceAI_DP_DL" \
   --keep-col "clingen_evidence_repository.ClinVar Variation Id:ClinVar Variation Id_ClinGen_repo" \
   --keep-col "clingen_evidence_repository.Allele Registry Id:Allele Registry Id_ClinGen_repo" \
-  --keep-col "clingen_evidence_repository.Disease Mondo Id:Mondo Id_ClinGen_repo" \
+  --keep-col "clingen_evidence_repository.Disease:Disease_ClinGen_repo" \
+  --keep-col "clingen_evidence_repository.Mondo Id:Mondo Id_ClinGen_repo" \
   --keep-col "clingen_evidence_repository.Mode of Inheritance:Mode of Inheritance_ClinGen_repo" \
   --keep-col "clingen_evidence_repository.Assertion:Assertion_ClinGen_repo" \
   --keep-col "clingen_evidence_repository.Applied Evidence Codes (Met):Applied Evidence Codes (Met)_ClinGen_repo" \
@@ -425,6 +425,7 @@ src/scripts/run_utilities.sh rename-columns \
   --reorder \
   --keep-col "dataset_name:Dataset" \
   --keep-col "gene_symbol:Gene" \
+  --keep-col "gene_hgnc_id:HGNC_ID" \
   --keep-col "variant_urn:mavedb_variant_urn" \
   --keep-col "mapped_hgvs_g_chromosome:Chrom" \
   --keep-col "strand:Strand" \
@@ -445,8 +446,6 @@ src/scripts/run_utilities.sh rename-columns \
   --keep-col "vep.most_severe_mutational_consequence:most_severe_mutational_consequence" \
   --keep-col "score:auth_reported_score" \
   --keep-col "rna_score" \
-  --keep-col "rna_score_d6" \
-  --keep-col "rna_score_d20" \
   --keep-col "mavedb.active_calibration.functional_class_label:auth_reported_func_class" \
   --keep-col "mavedb.active_calibration.functional_classification:auth_reported_func_class_category" \
   --keep-col "assay_detects_splicing_effects:splice_measure" \
@@ -492,7 +491,8 @@ src/scripts/run_utilities.sh rename-columns \
   --keep-col "spliceai.dp_dl:spliceAI_DP_DL" \
   --keep-col "clingen_evidence_repository.ClinVar Variation Id:ClinVar Variation Id_ClinGen_repo" \
   --keep-col "clingen_evidence_repository.Allele Registry Id:Allele Registry Id_ClinGen_repo" \
-  --keep-col "clingen_evidence_repository.Disease Mondo Id:Mondo Id_ClinGen_repo" \
+  --keep-col "clingen_evidence_repository.Disease:Disease_ClinGen_repo" \
+  --keep-col "clingen_evidence_repository.Mondo Id:Mondo Id_ClinGen_repo" \
   --keep-col "clingen_evidence_repository.Mode of Inheritance:Mode of Inheritance_ClinGen_repo" \
   --keep-col "clingen_evidence_repository.Assertion:Assertion_ClinGen_repo" \
   --keep-col "clingen_evidence_repository.Applied Evidence Codes (Met):Applied Evidence Codes (Met)_ClinGen_repo" \
