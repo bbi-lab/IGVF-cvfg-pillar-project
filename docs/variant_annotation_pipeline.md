@@ -37,7 +37,8 @@ export VARIANT_ANNOTATION_DIR=/path/to/your/existing/variant-annotation/checkout
 
 ```
 data/raw_mave_data/                        (you populate this -- see its README)
-        |  scripts/run_variant_annotation_pipeline.sh stages it in
+data/input/maves/cvfg_variants.0.tsv       (Step 1 input; see exception below)
+        |  scripts/run_variant_annotation_pipeline.sh stages both in
         v
 data/intermediate/variant_annotation/data/ (gitignored; mounted as the
                                              variant-annotation pipeline's
@@ -177,6 +178,13 @@ flag, `step_14`'s `merge-columns` extra-file argument, and `step_15`'s
 than bare `data/...` paths, so all three steps resolve to our staged copies
 regardless of whether the `variant-annotation` checkout in use happens to
 have its own files at those paths -- see `data/raw_mave_data/README.md`.
+
+**Exception: `cvfg_variants.0.tsv` (Step 1) lives at `data/input/maves/cvfg_variants.0.tsv`.**
+Unlike `score_sets.tsv`/`Supplementary_Data_3.xlsx` above, `scripts/run_variant_annotation_pipeline.sh`
+only copies it (as `cvfg_variants.0.tsv`) into the staged directory when
+Step 1 is actually about to run -- a full run, or `--step 1` -- since a
+later `--step N` reads an already-staged `cvfg_variants.<N-1>.tsv` and
+doesn't need it. `data/raw_mave_data/` no longer carries this file.
 
 ## `add_mavedb_active_calibration_columns`, `annotate_simplified_consequence`, `recalculate_clingen_classification`, and `flag_variants`: containerized the same way
 

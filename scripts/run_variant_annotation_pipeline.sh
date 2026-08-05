@@ -81,6 +81,14 @@ echo "Staging data/input/maves/ -> ${stage_dir#"$CVFG_PROJECT_DIR"/}/data/ ..."
 cp "$CVFG_PROJECT_DIR/data/input/maves/score_sets.tsv" "$stage_dir/data/score_sets.tsv"
 cp "$CVFG_PROJECT_DIR/data/input/maves/Supplementary_Data_3.xlsx" "$stage_dir/data/Supplementary_Data_3.xlsx"
 
+# cvfg_variants.0.tsv (Step 1's input) only needs staging when Step 1 is
+# actually about to run -- a full run, or --step 1. Later --step N runs read
+# an already-staged cvfg_variants.<N-1>.tsv and shouldn't require this file.
+if [[ -z "$step" || "$step" == "1" ]]; then
+  echo "Staging data/input/maves/cvfg_variants.0.tsv -> ${stage_dir#"$CVFG_PROJECT_DIR"/}/data/cvfg_variants.0.tsv ..."
+  cp "$CVFG_PROJECT_DIR/data/input/maves/cvfg_variants.0.tsv" "$stage_dir/data/cvfg_variants.0.tsv"
+fi
+
 export VARIANT_DATA_DIR="$stage_dir"
 
 if [[ -n "$step" ]]; then
