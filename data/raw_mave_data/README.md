@@ -16,7 +16,7 @@ data/raw_mave_data/                       (this directory -- you populate it)
 data/intermediate/variant_annotation/data/ (gitignored; mounted as the
                                              variant-annotation pipeline's
                                              VARIANT_DATA_DIR for the run)
-        |  variant_annotation_pipeline.sh runs Steps 1-17 + condensed/expanded
+        |  variant_annotation_pipeline.sh runs Steps 1-18 + condensed/expanded
         |  frame assembly
         v
 data/mave_data/                            (final gzipped outputs, tracked)

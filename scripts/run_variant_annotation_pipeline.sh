@@ -10,8 +10,19 @@ set -euo pipefail
 # docs/variant_annotation_pipeline.md for the why):
 #   data/raw_mave_data/  --(staged, non-destructively)-->
 #   data/intermediate/variant_annotation/data/  --(mounted as VARIANT_DATA_DIR)-->
-#   variant_annotation_pipeline.sh Steps 1-17 + condensed/expanded frame assembly  -->
+#   variant_annotation_pipeline.sh Steps 1-18 + condensed/expanded frame assembly  -->
 #   data/mave_data/*.tsv.gz
+#
+# Usage:
+#   scripts/run_variant_annotation_pipeline.sh            # full pipeline
+#   scripts/run_variant_annotation_pipeline.sh --step N   # just step N
+#
+# --step N still stages data/raw_mave_data/ and sets up VARIANT_DATA_DIR/
+# CVFG_PROJECT_DIR exactly as a full run does, but runs only step N of
+# scripts/variant_annotation_pipeline.sh (N reads
+# data/cvfg_variants.<N-1>.tsv and writes data/cvfg_variants.<N>.tsv; see
+# that script's header for the full step list) and skips the final gzip,
+# since a single step doesn't produce the final integrated dataset files.
 #
 # Env vars:
 #   VARIANT_ANNOTATION_DIR  Path to a variant-annotation checkout. Defaults to
@@ -21,6 +32,21 @@ set -euo pipefail
 #                           (AlphaMissense, REVEL, SpliceAI, MANE, clinvar_cache,
 #                           etc.) to avoid re-fetching multi-GB data.
 ########################################################################################################################
+
+step=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --step)
+      step="${2:?--step requires a step number}"
+      shift 2
+      ;;
+    *)
+      echo "error: unrecognized argument '$1'" >&2
+      echo "usage: $0 [--step N]" >&2
+      exit 1
+      ;;
+  esac
+done
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export CVFG_PROJECT_DIR
@@ -46,6 +72,13 @@ echo "Staging data/raw_mave_data/ -> ${stage_dir#"$CVFG_PROJECT_DIR"/}/data/ ...
 rsync -a "$CVFG_PROJECT_DIR/data/raw_mave_data/" "$stage_dir/data/"
 
 export VARIANT_DATA_DIR="$stage_dir"
+
+if [[ -n "$step" ]]; then
+  echo "Running step $step of scripts/variant_annotation_pipeline.sh in $va_dir (VARIANT_DATA_DIR=$VARIANT_DATA_DIR) ..."
+  ( cd "$va_dir" && bash "$CVFG_PROJECT_DIR/scripts/variant_annotation_pipeline.sh" "$step" )
+  echo "Done: $stage_dir/data/cvfg_variants.$step.tsv"
+  exit 0
+fi
 
 echo "Running scripts/variant_annotation_pipeline.sh in $va_dir (VARIANT_DATA_DIR=$VARIANT_DATA_DIR) ..."
 ( cd "$va_dir" && bash "$CVFG_PROJECT_DIR/scripts/variant_annotation_pipeline.sh" )

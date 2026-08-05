@@ -42,7 +42,7 @@ data/raw_mave_data/                        (you populate this -- see its README)
 data/intermediate/variant_annotation/data/ (gitignored; mounted as the
                                              variant-annotation pipeline's
                                              VARIANT_DATA_DIR for the run)
-        |  scripts/variant_annotation_pipeline.sh runs Steps 1-17 +
+        |  scripts/variant_annotation_pipeline.sh runs Steps 1-18 +
         |  condensed/expanded frame assembly
         v
 data/mave_data/                            (final gzipped outputs, tracked)
@@ -70,6 +70,35 @@ This:
 `scripts/variant_annotation_pipeline.sh` itself is not meant to be run
 directly -- it assumes the working directory and environment variables the
 orchestrator sets up.
+
+## Running a single step
+
+Each numbered step in `scripts/variant_annotation_pipeline.sh` is defined as
+a `step_N` shell function, where `step_N` reads `data/cvfg_variants.<N-1>.tsv`
+and writes `data/cvfg_variants.<N>.tsv` (`N` is 1-18; see that script's header
+comment for the full list, and its `case` in
+`recalculate_clingen_classification`/`flag_variants` above for how 16-18 map
+to this project's own steps). To run just one step -- for debugging a
+specific annotation step without re-running everything before it -- pass
+`--step N`:
+
+```bash
+scripts/run_variant_annotation_pipeline.sh --step 9
+```
+
+This still stages `data/raw_mave_data/` and exports `VARIANT_DATA_DIR`/
+`CVFG_PROJECT_DIR` exactly as a full run does (so step 9's inputs resolve the
+same way they would mid-pipeline), but runs only `step_9` and skips the final
+gzip step, since a single step doesn't produce the final integrated dataset
+files. Its output lands at
+`data/intermediate/variant_annotation/data/cvfg_variants.9.tsv`. The step
+must already have its input file present from a previous run (full or
+single-step) of the step before it.
+
+The flatten step and the condensed/expanded frame assembly at the end of the
+pipeline aren't part of this numbered sequence (they don't fit the
+`<N-1>.tsv -> <N>.tsv` pattern) and always run together, only as the tail of
+a full (no `--step`) run.
 
 ## The `VARIANT_DATA_DIR` path-mapping subtlety
 
@@ -118,6 +147,6 @@ build a lean image from this project's own Poetry dependencies for this
 purpose.
 
 `recalculate_clingen_classification` runs on `cvfg_variants.16.tsv` (right
-after `annotate_simplified_consequence`) and writes `cvfg_variants.16b.tsv`,
-which `flag_variants` then reads in place of `.16.tsv` to produce `.17.tsv` --
-see `docs/recalculate_clingen_classification.md`.
+after `annotate_simplified_consequence`) and writes `cvfg_variants.17.tsv`,
+which `flag_variants` then reads to produce `.18.tsv` -- see
+`docs/recalculate_clingen_classification.md`.
