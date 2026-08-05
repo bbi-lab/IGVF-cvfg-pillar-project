@@ -131,11 +131,13 @@ etc.) are untouched by any of this: they still exist on the host inside the
 branch regardless of `VARIANT_DATA_DIR`. That's why they're left in place
 rather than duplicated into this project.
 
-## `recalculate_clingen_classification` and `flag_variants`: containerized the same way
+## `add_mavedb_active_calibration_columns`, `recalculate_clingen_classification`, and `flag_variants`: containerized the same way
 
-The "Recalculate ClinGen classification" and "Flag variants" steps in
+Step 13 ("Choose the active functional classification") and the
+"Recalculate ClinGen classification" and "Flag variants" steps in
 `scripts/variant_annotation_pipeline.sh` call
-`src/scripts/run_recalculate_clingen_classification.sh` and
+`src/scripts/run_add_mavedb_active_calibration_columns.sh`,
+`src/scripts/run_recalculate_clingen_classification.sh`, and
 `src/scripts/run_flag_variants.sh` (in *this* repo, invoked by absolute path
 via `$CVFG_PROJECT_DIR` since the script runs with the `variant-annotation`
 checkout as cwd) instead of a bare `python3 src/<module>.py`. Those wrappers
@@ -145,6 +147,16 @@ share the same `VARIANT_DATA_DIR` value, so all containers read/write the
 same staged data directory. `Dockerfile` and `compose.yaml` at the repo root
 build a lean image from this project's own Poetry dependencies for this
 purpose.
+
+`add_mavedb_active_calibration_columns` runs on `cvfg_variants.12.tsv`
+(right after `annotate_predictors`, step 12) and writes `cvfg_variants.13.tsv`
+-- see `docs/add_mavedb_active_calibration_columns.md`. It's a Dockerized
+Python/click port of `add_mavedb_active_calibration_columns.sh` from the
+sibling `variant-annotation` project's own `src/scripts/`; unlike that
+script, whose input/output paths default to a hard-coded
+`data/cvfg/v13/cvfg_variants.12.tsv` -> `cvfg_variants.13.tsv`, this version
+requires them as explicit arguments, matching `flag_variants`/
+`recalculate_clingen_classification`'s convention.
 
 `recalculate_clingen_classification` runs on `cvfg_variants.16.tsv` (right
 after `annotate_simplified_consequence`) and writes `cvfg_variants.17.tsv`,

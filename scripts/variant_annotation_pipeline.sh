@@ -143,9 +143,11 @@ src/scripts/run_annotate_predictors.sh data/cvfg_variants.11.tsv data/cvfg_varia
   --csv-field-size-limit 10000000
 }
 
-# Step 13: Choose the active functional classification
+# Step 13: Choose the active functional classification (Dockerized, from the
+# CVFG pillar project rather than variant-annotation -- see
+# src/scripts/run_add_mavedb_active_calibration_columns.sh there).
 step_13() {
-src/scripts/add_mavedb_active_calibration_columns.sh
+"$CVFG_PROJECT_DIR/src/scripts/run_add_mavedb_active_calibration_columns.sh" data/cvfg_variants.12.tsv data/cvfg_variants.13.tsv
 }
 
 # Step 14: Dataset names
