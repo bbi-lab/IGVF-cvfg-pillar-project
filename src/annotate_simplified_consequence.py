@@ -282,7 +282,16 @@ def main(
     )
     df[SPLICE_VAR_AMINO_COL] = df[SPLICE_VARIANT_COL].apply(compute_splice_var_amino)
 
-    click.echo(f"Annotated {len(df)} row(s).")
+    n_simplified = (df[SIMPLIFIED_CONSEQUENCE_COL] != "").sum()
+    n_condensed = (df[CONDENSED_CONSEQUENCE_COL] != "").sum()
+    n_splice_variant = (df[SPLICE_VARIANT_COL] != "").sum()
+    n_splice_var_amino = (df[SPLICE_VAR_AMINO_COL] != "").sum()
+    click.echo(
+        f"{n_simplified}/{len(df)} rows given a non-blank {SIMPLIFIED_CONSEQUENCE_COL}, "
+        f"{n_condensed} a non-blank {CONDENSED_CONSEQUENCE_COL}, "
+        f"{n_splice_variant} a non-blank {SPLICE_VARIANT_COL}, "
+        f"{n_splice_var_amino} a non-blank {SPLICE_VAR_AMINO_COL}."
+    )
 
     counts = df[SIMPLIFIED_CONSEQUENCE_COL].apply(lambda v: v.split("|")).explode()
     counts = counts.replace("", "(no consequence)")
