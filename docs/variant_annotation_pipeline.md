@@ -146,12 +146,19 @@ untouched by any of this: they still exist on the host inside the
 branch regardless of `VARIANT_DATA_DIR`. That's why they're left in place
 rather than duplicated into this project.
 
-**Exception: Step 12's AlphaMissense/REVEL files.** Unlike the rest, `step_12`
-passes `--alphamissense-file`/`--revel-file` as `/work/data/...` paths, so
-`AlphaMissense_hg38.tsv.gz` and `revel_hg38.tsv.gz` (plus their `.tbi`
-indexes) must be copied into
-`data/intermediate/variant_annotation/data/` -- they don't resolve from a
-`variant-annotation` checkout for this step. See [`build_training_variant_files`:
+**Exception: Step 12's AlphaMissense/REVEL/MutPred2-properties files.** Unlike
+the rest, `step_12` passes `--alphamissense-file`/`--revel-file`/
+`--mutpred2-properties-file` as `/work/data/...` paths, so
+`AlphaMissense_hg38.tsv.gz`, `revel_hg38.tsv.gz` (plus their `.tbi` indexes),
+and `data_frame_missense_variants_MP2_properties.csv.gz` must all be copied
+into `data/intermediate/variant_annotation/data/` -- they don't resolve from
+a `variant-annotation` checkout for this step. Unlike the first two (large,
+generic, non-CVFG reference data), `data_frame_missense_variants_MP2_properties.csv.gz`
+*is* CVFG-specific -- a MutPred2 scores export for this project's assayed
+variants -- but at ~367MB it's still too large to commit to git the way
+`data/input/predictors/`'s other files are, so it gets the same manual-copy
+treatment rather than living in `data/raw_mave_data/` (which is git-tracked)
+-- see `data/raw_mave_data/README.md`. See [`build_training_variant_files`:
 a preparatory step before Step 12](#build_training_variant_files-a-preparatory-step-before-step-12)
 below for why all of Step 12's file inputs are staged this way.
 
@@ -171,12 +178,13 @@ than bare `data/...` paths, so all three steps resolve to our staged copies
 regardless of whether the `variant-annotation` checkout in use happens to
 have its own files at those paths -- see `data/raw_mave_data/README.md`.
 
-## `add_mavedb_active_calibration_columns`, `recalculate_clingen_classification`, and `flag_variants`: containerized the same way
+## `add_mavedb_active_calibration_columns`, `annotate_simplified_consequence`, `recalculate_clingen_classification`, and `flag_variants`: containerized the same way
 
-Step 13 ("Choose the active functional classification") and the
-"Recalculate ClinGen classification" and "Flag variants" steps in
-`scripts/variant_annotation_pipeline.sh` call
+Step 13 ("Choose the active functional classification"), step 16
+("Simplified consequence"), and the "Recalculate ClinGen classification" and
+"Flag variants" steps in `scripts/variant_annotation_pipeline.sh` call
 `src/scripts/run_add_mavedb_active_calibration_columns.sh`,
+`src/scripts/run_annotate_simplified_consequence.sh`,
 `src/scripts/run_recalculate_clingen_classification.sh`, and
 `src/scripts/run_flag_variants.sh` (in *this* repo, invoked by absolute path
 via `$CVFG_PROJECT_DIR` since the script runs with the `variant-annotation`
@@ -197,6 +205,16 @@ script, whose input/output paths default to a hard-coded
 `data/cvfg/v13/cvfg_variants.12.tsv` -> `cvfg_variants.13.tsv`, this version
 requires them as explicit arguments, matching `flag_variants`/
 `recalculate_clingen_classification`'s convention.
+
+`annotate_simplified_consequence` runs on `cvfg_variants.15.tsv` and writes
+`cvfg_variants.16.tsv` -- see `docs/annotate_simplified_consequence.md`.
+Unlike the other three, it isn't a port of a `variant-annotation` script:
+it's a Dockerized port of the `get_simplified_consequence` cell from the
+archived `notebooks/analysis/Integrated_variant_effect_dataset_pipeline.ipynb`
+notebook, reading a small CVFG-specific VEP-term-to-SO-summary-term mapping
+committed at `data/input/consequence/extended_ensembl_consequence.csv.gz`
+(hence needing both the repo bind mount and the `VARIANT_DATA_DIR` `/work`
+mount, like `flag_variants`'s `--filtering-dir`).
 
 `recalculate_clingen_classification` runs on `cvfg_variants.16.tsv` (right
 after `annotate_simplified_consequence`) and writes `cvfg_variants.17.tsv`,

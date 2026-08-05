@@ -34,16 +34,20 @@ the run itself and should not be pre-populated.
 cvfg_variants.0.tsv                              # REQUIRED -- Step 1 input:
                                                   #   harmonized variant list across
                                                   #   the 83 MAVE datasets
-data_frame_missense_variants_MP2_properties.csv.gz # REQUIRED -- Step 12 (MutPred2 scores)
-extended_ensembl_consequence.csv.gz               # REQUIRED -- simplified-consequence step
 ```
 
-`score_sets.tsv` (dataset name / score-set mapping, read by Steps 11 and 14)
-and `Supplementary_Data_3.xlsx` (assay metadata, read by Step 15) are **not**
-expected here -- they live in `data/input/maves/` instead, alongside
-`data/input/predictors/` (see `docs/build_training_variant_files.md`).
-`scripts/run_variant_annotation_pipeline.sh` copies both into the staged
-directory directly, the same way it rsyncs this directory in -- see
+`score_sets.tsv` (dataset name / score-set mapping, read by Steps 11 and 14),
+`Supplementary_Data_3.xlsx` (assay metadata, read by Step 15), and
+`extended_ensembl_consequence.csv.gz` (VEP-term mapping, read by Step 16)
+are **not** expected here -- they live in `data/input/maves/` and
+`data/input/consequence/` instead, alongside `data/input/predictors/` (see
+`docs/build_training_variant_files.md` and
+`docs/annotate_simplified_consequence.md`). `score_sets.tsv`/
+`Supplementary_Data_3.xlsx` are copied by
+`scripts/run_variant_annotation_pipeline.sh` into the staged directory
+directly, the same way it rsyncs this directory in; `extended_ensembl_consequence.csv.gz`
+isn't copied anywhere -- `annotate_simplified_consequence`'s Docker service
+reads it straight from the repo bind mount -- see
 `docs/variant_annotation_pipeline.md`.
 
 ## Not here on purpose
@@ -55,10 +59,13 @@ variant-annotation checkout already has them -- see
 own repo bind mount and are unaffected by the `VARIANT_DATA_DIR` override this
 project uses.
 
-**Exception:** `AlphaMissense_hg38.tsv.gz` and `revel_hg38.tsv.gz` (plus
-their `.tbi` indexes) are also excluded from *this* directory -- they're
-too large and too generic to track in git the way the files above are --
-but Step 12 needs them staged in
+**Exception:** `AlphaMissense_hg38.tsv.gz`, `revel_hg38.tsv.gz` (plus their
+`.tbi` indexes), and `data_frame_missense_variants_MP2_properties.csv.gz`
+are also excluded from *this* directory -- unlike the large, generic files
+above, `data_frame_missense_variants_MP2_properties.csv.gz` *is*
+CVFG-specific (a MutPred2 scores export for this project's assayed variants),
+but at ~367MB it's still too large to track in git the way the files above
+are -- but Step 12 needs all three staged in
 `data/intermediate/variant_annotation/data/` directly (not rsynced in from
 here), since `step_12` reads them as `/work/data/...` paths. See
 `docs/variant_annotation_pipeline.md` for why.

@@ -254,16 +254,11 @@ src/scripts/run_utilities.sh merge-columns \
   --add-col "Interval 6 Class"
 }
 
-# Step 16: Extra fields for GMM
-#
-# Plain python3 invocation (not yet Dockerized/wrapped), so like step_14's
-# awk pass this runs directly on the host with the variant-annotation
-# checkout as cwd -- input/output are written as "$VARIANT_DATA_DIR/data/..."
-# rather than a bare data/... so they resolve against our staged directory.
+# Step 16: Simplified consequence (Dockerized, from the CVFG pillar project
+# rather than variant-annotation -- see
+# src/scripts/run_annotate_simplified_consequence.sh there).
 step_16() {
-python3 -m src.annotate_simplified_consequence "$VARIANT_DATA_DIR/data/cvfg_variants.15.tsv" "$VARIANT_DATA_DIR/data/cvfg_variants.16.tsv" \
-  --consequence-map-file data/extended_ensembl_consequence.csv.gz \
-  --csv-field-size-limit 10000000
+"$CVFG_PROJECT_DIR/src/scripts/run_annotate_simplified_consequence.sh" /work/data/cvfg_variants.15.tsv /work/data/cvfg_variants.16.tsv
 }
 
 # Step 17: Recalculate ClinGen classification without functional-assay evidence
