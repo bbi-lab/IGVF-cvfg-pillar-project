@@ -22,6 +22,26 @@ For each grouping it reports:
 The non-IGVF grouping additionally reports the number of genes not also
 represented in IGVF data.
 
+It also reports score coverage (REVEL, AlphaMissense, MutPred2) and clinical
+attributes (VUS, pathogenic/benign, observed in gnomAD) across the assayed
+and DNA-level variants. The clinical-attribute breakdown is reported twice:
+once using ClinVar 2025 for every gene, and once using ClinVar 2025 for every
+gene except BRCA1, PTEN, MSH2, and TP53, which use ClinVar 2018 instead (see
+`MIXED_YEAR_GENES` / `mixed_year_clinvar_series` in the script).
+
+By default, a variant with a conflicting or ambiguous ClinVar call --
+disagreement between a pathogenic-leaning and benign-leaning classification
+across its measurements/DNA candidates, or ClinVar's own "Conflicting
+classifications of pathogenicity" call -- is excluded from both the VUS and
+pathogenic-or-benign buckets and counted in its own "ClinVar conflict" bucket
+instead. This mirrors the conflict handling in
+`Analysis/Curation_summary_V5_cleaned.ipynb`, which is why the two scripts'
+pathogenic/benign counts can otherwise disagree (that notebook resolves each
+protein variant to a single label and drops ambiguous ones, while this
+script's older any-match behavior folded them into whichever bucket matched).
+Pass `--allow-clinvar-conflicts` to restore that any-match behavior instead,
+which also drops the conflict bucket from the report.
+
 ## Inputs
 
 - **Condensed variant effect dataset**

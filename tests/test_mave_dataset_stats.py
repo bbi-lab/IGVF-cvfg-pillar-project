@@ -1,14 +1,19 @@
+import re
+
 import pandas as pd
 import pytest
 from click.testing import CliRunner
 
 from src.mave_dataset_stats import (
+    CLINVAR_CONFLICT_LABEL,
     GNOMAD_LABEL,
     NO_ANNOTATION_LABEL,
     PATHOGENIC_OR_BENIGN_LABEL,
     SNV_ACCESSIBLE_LABEL,
     SNV_LABEL,
     VUS_LABEL,
+    clinvar_classification_from_flags,
+    clinvar_significance_flags,
     compute_all_stats,
     distinct_variant_flags,
     format_clinical_table,
@@ -16,6 +21,7 @@ from src.mave_dataset_stats import (
     is_snv_accessible,
     main,
     matches_any_value,
+    mixed_year_clinvar_series,
     split_genes,
     stats_to_dataframe,
     summarize_clinical_flags,
@@ -29,6 +35,7 @@ ANNOTATION_COLUMNS = [
     "AM_score",
     "MutPred2",
     "clinvar_sig_2025",
+    "clinvar_sig_2018",
     "gnomad_MAF",
     "transcript_ref",
     "transcript_alt",
@@ -42,6 +49,13 @@ def _write_condensed(path, rows):
 
 def _write_full_variant_file(path, rows):
     pd.DataFrame(rows, columns=FULL_COLUMNS).to_csv(path, sep="\t", index=False)
+
+
+def _bucket_count(section_text, label):
+    """Extract the `count` column for one clinical/score-coverage bucket line."""
+    match = re.search(rf"^{re.escape(label)}\s+(\d+)", section_text, re.MULTILINE)
+    assert match, f"no line for {label!r} in:\n{section_text}"
+    return int(match.group(1))
 
 
 def _write_metadata(path, rows):
@@ -89,24 +103,56 @@ def full_dataset_files(tmp_path):
     # (unannotated, a 2-base substitution -- not a SNV), so the "of which
     # SNV" sub-breakdown differs between the assayed (100%) and DNA (50%)
     # levels.
+    #
+    # p1 is on BRCA1 (a mixed-year gene) with a 2025 call of "Pathogenic" but
+    # a 2018 call of "Uncertain significance", so it should land in a
+    # different clinical-attribute bucket between the two report sections.
+    # p3 is on GENEC (not a mixed-year gene) and carries a 2018 call
+    # ("Pathogenic") that must be ignored in favor of its empty 2025 call.
     _write_full_variant_file(
         condensed_path,
         [
-            ("DS_IGVF_A", "GENEA", "c1", "p1", "0.5", "0.5", "0.5", "Pathogenic", "", "A", "G"),
-            ("DS_IGVF_A", "GENEA", "c1", "p1", "0.5", "0.5", "0.5", "Pathogenic", "", "A", "G"),
-            ("DS_IGVF_B", "GENEB, GENEC", "c2", "p2", "", "", "", "Uncertain significance", "0.001", "A", "T"),
-            ("DS_COMM_A", "GENEC", "c3", "p3", "", "", "", "", "", "A", "G"),
-            ("DS_COMM_B", "GENED", "c4a|c4b", "p4", "0.2|", "0.2|", "0.9|0.9", "Benign|", "", "AC|A", "GT|G"),
+            ("DS_IGVF_A", "BRCA1", "c1", "p1", "0.5", "0.5", "0.5", "Pathogenic", "Uncertain significance", "", "A", "G"),
+            ("DS_IGVF_A", "BRCA1", "c1", "p1", "0.5", "0.5", "0.5", "Pathogenic", "Uncertain significance", "", "A", "G"),
+            (
+                "DS_IGVF_B",
+                "GENEB, GENEC",
+                "c2",
+                "p2",
+                "",
+                "",
+                "",
+                "Uncertain significance",
+                "Uncertain significance",
+                "0.001",
+                "A",
+                "T",
+            ),
+            ("DS_COMM_A", "GENEC", "c3", "p3", "", "", "", "", "Pathogenic", "", "A", "G"),
+            ("DS_COMM_B", "GENED", "c4a|c4b", "p4", "0.2|", "0.2|", "0.9|0.9", "Benign|", "Benign|", "", "AC|A", "GT|G"),
         ],
     )
     _write_full_variant_file(
         expanded_path,
         [
-            ("DS_IGVF_A", "GENEA", "c1", "p1", "0.5", "0.5", "0.5", "Pathogenic", "", "A", "G"),
-            ("DS_IGVF_B", "GENEB, GENEC", "c2", "p2", "", "", "", "Uncertain significance", "0.001", "A", "T"),
-            ("DS_COMM_A", "GENEC", "c3", "p3", "", "", "", "", "", "A", "G"),
-            ("DS_COMM_B", "GENED", "c4a", "p4", "0.2", "0.2", "0.9", "Benign", "", "AC", "GT"),
-            ("DS_COMM_B", "GENED", "c4b", "p4", "", "", "0.9", "", "", "AC", "GT"),
+            ("DS_IGVF_A", "BRCA1", "c1", "p1", "0.5", "0.5", "0.5", "Pathogenic", "Uncertain significance", "", "A", "G"),
+            (
+                "DS_IGVF_B",
+                "GENEB, GENEC",
+                "c2",
+                "p2",
+                "",
+                "",
+                "",
+                "Uncertain significance",
+                "Uncertain significance",
+                "0.001",
+                "A",
+                "T",
+            ),
+            ("DS_COMM_A", "GENEC", "c3", "p3", "", "", "", "", "Pathogenic", "", "A", "G"),
+            ("DS_COMM_B", "GENED", "c4a", "p4", "0.2", "0.2", "0.9", "Benign", "Benign", "", "AC", "GT"),
+            ("DS_COMM_B", "GENED", "c4b", "p4", "", "", "0.9", "", "", "", "AC", "GT"),
         ],
     )
     _write_metadata(
@@ -248,6 +294,139 @@ def test_variant_flags_and_distinct_variant_flags():
     assert distinct["REVEL"].sum() == 2
 
 
+def test_clinvar_classification_from_flags():
+    def classify(value):
+        has_pathogenic, has_benign, has_vus, has_literal_conflict = clinvar_significance_flags(pd.Series([value]))
+        vus, pathogenic_or_benign, conflict = clinvar_classification_from_flags(
+            has_pathogenic, has_benign, has_vus, has_literal_conflict
+        )
+        if conflict.iloc[0]:
+            return CLINVAR_CONFLICT_LABEL
+        if pathogenic_or_benign.iloc[0]:
+            return PATHOGENIC_OR_BENIGN_LABEL
+        if vus.iloc[0]:
+            return VUS_LABEL
+        return None
+
+    assert classify("") is None
+    assert classify("Uncertain significance") == VUS_LABEL
+    assert classify("Pathogenic") == PATHOGENIC_OR_BENIGN_LABEL
+    assert classify("Benign|Likely benign") == PATHOGENIC_OR_BENIGN_LABEL
+    # ClinVar's own conflict call is a conflict regardless of what else is present.
+    assert classify("Conflicting classifications of pathogenicity") == CLINVAR_CONFLICT_LABEL
+    assert classify("Pathogenic|Conflicting classifications of pathogenicity") == CLINVAR_CONFLICT_LABEL
+    # Disagreement between a pathogenic-leaning and benign-leaning call is also a conflict.
+    assert classify("Pathogenic|Benign") == CLINVAR_CONFLICT_LABEL
+    # VUS alongside a definitive call isn't flagged as a conflict by this script (unlike, say, a
+    # pathogenic/benign disagreement) -- the definitive call wins.
+    assert classify("Uncertain significance|Pathogenic") == PATHOGENIC_OR_BENIGN_LABEL
+
+
+def test_clinvar_classification_from_flags_resolves_conflicts_across_grouped_rows():
+    df = pd.DataFrame(
+        {
+            "hgvs_c": ["c1", "c1", "c2"],
+            "hgvs_p": ["p1", "p1", "p2"],
+        }
+    )
+    # (c1, p1)'s two rows disagree (Pathogenic vs. Benign) -- a cross-row conflict that
+    # neither row's own pipe-delimited parts would reveal on its own.
+    clinvar_series = pd.Series(["Pathogenic", "Benign", "Uncertain significance"])
+
+    has_pathogenic, has_benign, has_vus, has_literal_conflict = clinvar_significance_flags(clinvar_series)
+    keyed = pd.concat(
+        [df, has_pathogenic.rename("p"), has_benign.rename("b"), has_vus.rename("v"), has_literal_conflict.rename("c")],
+        axis=1,
+    )
+    grouped = keyed.groupby(["hgvs_c", "hgvs_p"], as_index=False).any()
+    vus, pathogenic_or_benign, conflict = clinvar_classification_from_flags(
+        grouped["p"], grouped["b"], grouped["v"], grouped["c"]
+    )
+    grouped["vus"], grouped["pathogenic_or_benign"], grouped["conflict"] = vus, pathogenic_or_benign, conflict
+    grouped = grouped.set_index(["hgvs_c", "hgvs_p"])
+
+    assert grouped.loc[("c1", "p1"), "conflict"]
+    assert not grouped.loc[("c1", "p1"), "pathogenic_or_benign"]
+    assert grouped.loc[("c2", "p2"), "vus"]
+
+
+def test_variant_flags_excludes_clinvar_conflicts_by_default():
+    df = pd.DataFrame(
+        {
+            "hgvs_c": ["c1", "c2"],
+            "hgvs_p": ["p1", "p2"],
+            "REVEL": ["", ""],
+            "AM_score": ["", ""],
+            "MutPred2": ["", ""],
+            # row 0's own pipe-delimited candidates disagree; row 1 has no conflict.
+            "clinvar_sig_2025": ["Pathogenic|Benign", "Pathogenic"],
+            "gnomad_MAF": ["", ""],
+            "transcript_ref": ["A", "A"],
+            "transcript_alt": ["G", "G"],
+        }
+    )
+
+    default_flags = variant_flags(df, SNV_ACCESSIBLE_LABEL)
+    assert list(default_flags[CLINVAR_CONFLICT_LABEL]) == [True, False]
+    assert list(default_flags[VUS_LABEL]) == [False, False]
+    assert list(default_flags[PATHOGENIC_OR_BENIGN_LABEL]) == [False, True]
+    # A conflicting row isn't double-counted as "no annotation" either.
+    assert list(default_flags[NO_ANNOTATION_LABEL]) == [False, False]
+
+    legacy_flags = variant_flags(df, SNV_ACCESSIBLE_LABEL, allow_clinvar_conflicts=True)
+    assert CLINVAR_CONFLICT_LABEL not in legacy_flags.columns
+    # Any-match folds the conflicting row into pathogenic-or-benign instead.
+    assert list(legacy_flags[PATHOGENIC_OR_BENIGN_LABEL]) == [True, True]
+
+
+def test_distinct_variant_flags_resolves_conflicts_across_rows():
+    df = pd.DataFrame(
+        {
+            "hgvs_c": ["c1", "c1", "c2"],
+            "hgvs_p": ["p1", "p1", "p2"],
+            "REVEL": ["", "", ""],
+            "AM_score": ["", "", ""],
+            "MutPred2": ["", "", ""],
+            # (c1, p1)'s two measurement rows disagree; (c2, p2) has a single, clean call.
+            "clinvar_sig_2025": ["Pathogenic", "Benign", "Benign"],
+            "gnomad_MAF": ["", "", ""],
+            "transcript_ref": ["A", "A", "A"],
+            "transcript_alt": ["G", "G", "G"],
+        }
+    )
+
+    default_distinct = distinct_variant_flags(df, SNV_ACCESSIBLE_LABEL)
+    assert len(default_distinct) == 2
+    conflict_row = default_distinct[default_distinct[CLINVAR_CONFLICT_LABEL]]
+    assert len(conflict_row) == 1
+    assert not conflict_row[PATHOGENIC_OR_BENIGN_LABEL].iloc[0]
+    clean_row = default_distinct[~default_distinct[CLINVAR_CONFLICT_LABEL]]
+    assert clean_row[PATHOGENIC_OR_BENIGN_LABEL].iloc[0]
+
+    # Any-match (the legacy behavior) instead counts (c1, p1) as pathogenic-or-benign,
+    # since at least one of its rows matches.
+    legacy_distinct = distinct_variant_flags(df, SNV_ACCESSIBLE_LABEL, allow_clinvar_conflicts=True)
+    assert CLINVAR_CONFLICT_LABEL not in legacy_distinct.columns
+    assert legacy_distinct[PATHOGENIC_OR_BENIGN_LABEL].sum() == 2
+
+
+def test_mixed_year_clinvar_series_swaps_only_mixed_year_genes():
+    df = pd.DataFrame(
+        {
+            "Gene": ["BRCA1", "PTEN", "GENEC", "CALM1, CALM2, CALM3"],
+            "clinvar_sig_2025": ["Pathogenic", "Benign", "", "Uncertain significance"],
+            "clinvar_sig_2018": ["Uncertain significance", "Uncertain significance", "Pathogenic", "Pathogenic"],
+        }
+    )
+
+    result = mixed_year_clinvar_series(df)
+
+    # BRCA1 and PTEN are mixed-year genes -> use the 2018 call.
+    assert list(result.iloc[:2]) == ["Uncertain significance", "Uncertain significance"]
+    # GENEC and the CALM1/2/3 combination aren't -> use the 2025 call.
+    assert list(result.iloc[2:]) == ["", "Uncertain significance"]
+
+
 def test_summarize_flags_reports_count_and_pct():
     flags = pd.DataFrame({"REVEL": [True, True, False, False]})
     total, table = summarize_flags(flags)
@@ -303,15 +482,65 @@ def test_cli_prints_table_and_writes_output(full_dataset_files, tmp_path):
     assert "Total: 5 (3 SNV)" in result.output
     assert "% of SNV-accessible" in result.output
     assert "% of SNV" in result.output
+
+    # The mixed-year section reclassifies p1 (BRCA1) from pathogenic/benign
+    # (its 2025 call) to VUS (its 2018 call), so at the assayed-variants,
+    # distinct level the VUS count rises (1 -> 2) and the pathogenic/benign
+    # count falls (2 -> 1) between the two clinical-attribute sections.
+    clinvar_2025_section, clinvar_mixed_section = result.output.split(
+        "=== Clinical attributes (ClinVar 2025, except ClinVar 2018 for BRCA1/PTEN/MSH2/TP53; "
+        "gnomAD; conflicting/ambiguous ClinVar calls excluded) ==="
+    )
+    assayed_distinct_2025 = clinvar_2025_section.split("Clinical attributes -- assayed variants, distinct")[1]
+    assayed_distinct_mixed = clinvar_mixed_section.split("Clinical attributes -- assayed variants, distinct")[1]
+    assert _bucket_count(assayed_distinct_2025, VUS_LABEL) == 1
+    assert _bucket_count(assayed_distinct_2025, PATHOGENIC_OR_BENIGN_LABEL) == 2
+    assert _bucket_count(assayed_distinct_mixed, VUS_LABEL) == 2
+    assert _bucket_count(assayed_distinct_mixed, PATHOGENIC_OR_BENIGN_LABEL) == 1
+
     assert output_path.exists()
-    assert "Score coverage" in output_path.read_text()
+    output_text = output_path.read_text()
+    assert "Score coverage" in output_text
+    assert "ClinVar 2025, except ClinVar 2018 for BRCA1/PTEN/MSH2/TP53" in output_text
+
+
+def test_cli_allow_clinvar_conflicts_flag_toggles_conflict_handling(tmp_path):
+    condensed_path = tmp_path / "condensed.tsv"
+    expanded_path = tmp_path / "expanded.tsv"
+    metadata_path = tmp_path / "metadata.xlsx"
+
+    # p1's two measurement rows disagree (Pathogenic vs. Benign) -- a conflict
+    # that only shows up once the rows are grouped into one distinct variant.
+    rows = [
+        ("DS_A", "GENEA", "c1", "p1", "", "", "", "Pathogenic", "Pathogenic", "", "A", "G"),
+        ("DS_A", "GENEA", "c1", "p1", "", "", "", "Benign", "Benign", "", "A", "G"),
+    ]
+    _write_full_variant_file(condensed_path, rows)
+    _write_full_variant_file(expanded_path, rows)
+    _write_metadata(metadata_path, [("DS_A", "No", "primary score set")])
+
+    default_result = CliRunner().invoke(main, [str(condensed_path), str(metadata_path), str(expanded_path)])
+    assert default_result.exit_code == 0
+    assert "conflicting/ambiguous ClinVar calls excluded" in default_result.output
+    default_distinct_section = default_result.output.split("Clinical attributes -- assayed variants, distinct")[1]
+    assert _bucket_count(default_distinct_section, CLINVAR_CONFLICT_LABEL) == 1
+    assert _bucket_count(default_distinct_section, PATHOGENIC_OR_BENIGN_LABEL) == 0
+
+    legacy_result = CliRunner().invoke(
+        main, [str(condensed_path), str(metadata_path), str(expanded_path), "--allow-clinvar-conflicts"]
+    )
+    assert legacy_result.exit_code == 0
+    assert "conflicting/ambiguous ClinVar calls folded in via any-match" in legacy_result.output
+    assert CLINVAR_CONFLICT_LABEL not in legacy_result.output
+    legacy_distinct_section = legacy_result.output.split("Clinical attributes -- assayed variants, distinct")[1]
+    assert _bucket_count(legacy_distinct_section, PATHOGENIC_OR_BENIGN_LABEL) == 1
 
 
 def test_cli_reports_missing_metadata_as_click_error(full_dataset_files):
     condensed_path, metadata_path, expanded_path = full_dataset_files
     _write_full_variant_file(
         condensed_path,
-        [("DS_UNKNOWN", "GENEX", "c5", "p5", "", "", "", "", "", "A", "G")],
+        [("DS_UNKNOWN", "GENEX", "c5", "p5", "", "", "", "", "", "", "A", "G")],
     )
 
     result = CliRunner().invoke(main, [str(condensed_path), str(metadata_path), str(expanded_path)])
