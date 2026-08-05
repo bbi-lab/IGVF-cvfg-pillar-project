@@ -16,6 +16,19 @@ services:
       - .:/usr/src/app
       - ${VARIANT_DATA_DIR:-./data}:/work
 
+  # Shares the VARIANT_DATA_DIR staging mount with flag-variants above, since
+  # it also reads/writes staged pipeline data (cvfg_variants.*.tsv) rather
+  # than committed repo files.
+  recalculate-clingen-classification:
+    <<: *tools-image
+    profiles:
+      - tools
+    entrypoint: ["python", "-m", "src.recalculate_clingen_classification"]
+    command: ["--help"]
+    volumes:
+      - .:/usr/src/app
+      - ${VARIANT_DATA_DIR:-./data}:/work
+
   # Reads only the already-committed data/mave_data/ files, so it doesn't
   # need the /work staging mount that flag-variants uses. Unlike
   # flag-variants, every CLI arg is optional (defaults point at

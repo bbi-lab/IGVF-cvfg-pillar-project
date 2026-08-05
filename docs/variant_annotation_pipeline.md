@@ -5,9 +5,9 @@
 It runs the Dockerized [variant-annotation](https://github.com/bbi-lab/variant-annotation)
 pipeline (variant mapping, reverse translation, ClinVar/gnomAD/SpliceAI/ClinGen
 evidence repository/VEP/MaveDB/predictor annotation) against this project's MAVE
-dataset, plus this project's own `flag_variants` step and final column
-filtering/renaming, to produce the condensed and expanded integrated variant
-effect datasets.
+dataset, plus this project's own `recalculate_clingen_classification` and
+`flag_variants` steps and final column filtering/renaming, to produce the
+condensed and expanded integrated variant effect datasets.
 
 ## Prerequisites
 
@@ -102,15 +102,22 @@ etc.) are untouched by any of this: they still exist on the host inside the
 branch regardless of `VARIANT_DATA_DIR`. That's why they're left in place
 rather than duplicated into this project.
 
-## `flag_variants`: containerized the same way
+## `recalculate_clingen_classification` and `flag_variants`: containerized the same way
 
-The "Flag variants" step in `scripts/variant_annotation_pipeline.sh` calls
+The "Recalculate ClinGen classification" and "Flag variants" steps in
+`scripts/variant_annotation_pipeline.sh` call
+`src/scripts/run_recalculate_clingen_classification.sh` and
 `src/scripts/run_flag_variants.sh` (in *this* repo, invoked by absolute path
 via `$CVFG_PROJECT_DIR` since the script runs with the `variant-annotation`
-checkout as cwd) instead of a bare `python3 src/flag_variants.py`. That
-wrapper follows the same conventions as `variant-annotation`'s own wrappers
+checkout as cwd) instead of a bare `python3 src/<module>.py`. Those wrappers
+follow the same conventions as `variant-annotation`'s own wrappers
 (`docker compose --profile tools run`, host-existence-based path mapping) and
-shares the same `VARIANT_DATA_DIR` value, so both containers read/write the
+share the same `VARIANT_DATA_DIR` value, so all containers read/write the
 same staged data directory. `Dockerfile` and `compose.yaml` at the repo root
 build a lean image from this project's own Poetry dependencies for this
 purpose.
+
+`recalculate_clingen_classification` runs on `cvfg_variants.16.tsv` (right
+after `annotate_simplified_consequence`) and writes `cvfg_variants.16b.tsv`,
+which `flag_variants` then reads in place of `.16.tsv` to produce `.17.tsv` --
+see `docs/recalculate_clingen_classification.md`.

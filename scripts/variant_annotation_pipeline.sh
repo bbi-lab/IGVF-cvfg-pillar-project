@@ -158,12 +158,17 @@ python3 -m src.annotate_simplified_consequence data/cvfg_variants.15.tsv data/cv
   --consequence-map-file data/extended_ensembl_consequence.csv.gz \
   --csv-field-size-limit 10000000
 
+# Recalculate ClinGen classification without functional-assay evidence
+# (Dockerized, from the CVFG pillar project -- see
+# src/scripts/run_recalculate_clingen_classification.sh there).
+"$CVFG_PROJECT_DIR/src/scripts/run_recalculate_clingen_classification.sh" data/cvfg_variants.16.tsv data/cvfg_variants.17.tsv
+
 # Flag variants (Dockerized, from the CVFG pillar project rather than
 # variant-annotation -- see src/scripts/run_flag_variants.sh there).
-"$CVFG_PROJECT_DIR/src/scripts/run_flag_variants.sh" data/cvfg_variants.16.tsv data/cvfg_variants.17.tsv
+"$CVFG_PROJECT_DIR/src/scripts/run_flag_variants.sh" data/cvfg_variants.17.tsv data/cvfg_variants.18.tsv
 
 # Flatten
-src/scripts/run_flatten_dna_variants.sh data/cvfg_variants.17.tsv data/cvfg_variants.17.flat.tsv
+src/scripts/run_flatten_dna_variants.sh data/cvfg_variants.18.tsv data/cvfg_variants.18.flat.tsv
 
 ########################################################################################################################
 # Condensed data frame
@@ -171,15 +176,15 @@ src/scripts/run_flatten_dna_variants.sh data/cvfg_variants.17.tsv data/cvfg_vari
 
 # Filter out unmapped variants.
 src/scripts/run_utilities.sh filter-rows \
-  data/cvfg_variants.17.tsv \
-  data/cvfg_variants.17.mapped.tsv \
+  data/cvfg_variants.18.tsv \
+  data/cvfg_variants.18.mapped.tsv \
   --value-col "mapped_hgvs_g,mapped_hgvs_c,mapped_hgvs_p" \
   --match any \
   --csv-field-size-limit 10000000
 
 # Filter, reorder, and rename columns to match the CVFG dataframe format.
 src/scripts/run_utilities.sh rename-columns \
-  data/cvfg_variants.17.mapped.tsv \
+  data/cvfg_variants.18.mapped.tsv \
   data/integrated_variant_effect_dataset.condensed.tsv \
   --csv-field-size-limit 10000000 \
   --reorder \
@@ -266,6 +271,8 @@ src/scripts/run_utilities.sh rename-columns \
   --keep-col "clingen_evidence_repository.Retracted:Retracted_ClinGen_repo" \
   --keep-col "clingen_evidence_repository.Evidence Repo Link:Evidence Repo Link_ClinGen_repo" \
   --keep-col "clingen_evidence_repository.Uuid:Uuid_ClinGen_repo" \
+  --keep-col "Updated_Classification_ClinGen_repo" \
+  --keep-col "Updated_Evidence Codes_ClinGen_repo" \
   --keep-col "revel.score:REVEL" \
   --keep-col "alphamissense.pathogenicity:AM_score" \
   --keep-col "alphamissense.class:AM_class" \
@@ -290,15 +297,15 @@ src/scripts/postprocess_integrated_variant_effect_dataset.sh data/integrated_var
 ########################################################################################################################
 
 src/scripts/run_utilities.sh filter-rows \
-  data/cvfg_variants.17.flat.tsv \
-  data/cvfg_variants.17.flat.mapped.tsv \
+  data/cvfg_variants.18.flat.tsv \
+  data/cvfg_variants.18.flat.mapped.tsv \
   --value-col "mapped_hgvs_g,mapped_hgvs_c,mapped_hgvs_p" \
   --match any \
   --csv-field-size-limit 10000000
 
 # Filter, reorder, and rename columns to match the CVFG dataframe format.
 src/scripts/run_utilities.sh rename-columns \
-  data/cvfg_variants.17.flat.mapped.tsv \
+  data/cvfg_variants.18.flat.mapped.tsv \
   data/integrated_variant_effect_dataset.tsv \
   --csv-field-size-limit 10000000 \
   --reorder \
@@ -385,6 +392,8 @@ src/scripts/run_utilities.sh rename-columns \
   --keep-col "clingen_evidence_repository.Retracted:Retracted_ClinGen_repo" \
   --keep-col "clingen_evidence_repository.Evidence Repo Link:Evidence Repo Link_ClinGen_repo" \
   --keep-col "clingen_evidence_repository.Uuid:Uuid_ClinGen_repo" \
+  --keep-col "Updated_Classification_ClinGen_repo" \
+  --keep-col "Updated_Evidence Codes_ClinGen_repo" \
   --keep-col "revel.score:REVEL" \
   --keep-col "alphamissense.pathogenicity:AM_score" \
   --keep-col "alphamissense.class:AM_class" \
