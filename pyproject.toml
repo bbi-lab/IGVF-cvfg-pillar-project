@@ -9,6 +9,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "altair>=5.3",
+    "biopython>=1.83",
     "click>=8.1",
     "fire>=0.6",
     "matplotlib>=3.9",

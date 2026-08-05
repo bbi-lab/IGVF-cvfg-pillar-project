@@ -150,3 +150,19 @@ purpose.
 after `annotate_simplified_consequence`) and writes `cvfg_variants.17.tsv`,
 which `flag_variants` then reads to produce `.18.tsv` -- see
 `docs/recalculate_clingen_classification.md`.
+
+## `build_training_variant_files`: a preparatory step before Step 12
+
+`step_12` (REVEL and AlphaMissense annotation) first calls
+`src/scripts/run_build_training_variant_files.sh` (also from the CVFG pillar
+project) to regenerate `revel_training_variants.tsv` and
+`mutpred2_training_variants.tsv` from this project's own upstream
+training-variant sources, then passes them to `run_annotate_predictors.sh`
+via `--revel-training-file`/`--mutpred2-training-file` -- see
+`docs/build_training_variant_files.md`.
+
+Unlike `recalculate_clingen_classification`/`flag_variants`, this step reads
+and writes paths that are fixed under this project's own tree (`data/input/predictors/`
+and `data/intermediate/variant_annotation/data/`) rather than the staged
+`cvfg_variants.*.tsv` sequence, so its wrapper script doesn't need the
+`VARIANT_DATA_DIR` `/work` mount -- see the wrapper's own notes.

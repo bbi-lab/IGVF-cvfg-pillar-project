@@ -128,11 +128,18 @@ src/scripts/run_annotate_mavedb.sh data/cvfg_variants.10.tsv data/cvfg_variants.
 }
 
 # Step 12: REVEL and AlphaMissense
+# Preparatory: regenerate the REVEL/MutPred2 training-set overlap files
+# (Dockerized, from the CVFG pillar project -- see
+# src/scripts/run_build_training_variant_files.sh there) before running
+# annotate_predictors.
 step_12() {
+"$CVFG_PROJECT_DIR/src/scripts/run_build_training_variant_files.sh"
 src/scripts/run_annotate_predictors.sh data/cvfg_variants.11.tsv data/cvfg_variants.12.tsv \
   --alphamissense-file AlphaMissense_hg38.tsv.gz \
   --mutpred2-properties-file data/data_frame_missense_variants_MP2_properties.csv.gz \
   --revel-file revel_hg38.tsv.gz \
+  --revel-training-file data/revel_training_variants.tsv \
+  --mutpred2-training-file data/mutpred2_training_variants.tsv \
   --csv-field-size-limit 10000000
 }
 
