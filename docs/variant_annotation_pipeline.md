@@ -124,12 +124,21 @@ longer exists in `variant-annotation`'s working tree, the `/work` fallback
 script rsyncs into `data/intermediate/variant_annotation/data/` rather than
 `data/intermediate/variant_annotation/` directly.
 
-The large external reference files the pipeline references (AlphaMissense,
-REVEL, SpliceAI VCFs, `data/MANE.GRCh38.v1.5.summary.txt`, `clinvar_cache/`,
-etc.) are untouched by any of this: they still exist on the host inside the
+Most large external reference files the pipeline references (SpliceAI VCFs,
+`data/MANE.GRCh38.v1.5.summary.txt`, `clinvar_cache/`, dbNSFP, etc.) are
+untouched by any of this: they still exist on the host inside the
 `variant-annotation` checkout, so they keep resolving through the bind-mount
 branch regardless of `VARIANT_DATA_DIR`. That's why they're left in place
 rather than duplicated into this project.
+
+**Exception: Step 12's AlphaMissense/REVEL files.** Unlike the rest, `step_12`
+passes `--alphamissense-file`/`--revel-file` as `/work/data/...` paths, so
+`AlphaMissense_hg38.tsv.gz` and `revel_hg38.tsv.gz` (plus their `.tbi`
+indexes) must be copied into
+`data/intermediate/variant_annotation/data/` -- they don't resolve from a
+`variant-annotation` checkout for this step. See [`build_training_variant_files`:
+a preparatory step before Step 12](#build_training_variant_files-a-preparatory-step-before-step-12)
+below for why all of Step 12's file inputs are staged this way.
 
 ## `add_mavedb_active_calibration_columns`, `recalculate_clingen_classification`, and `flag_variants`: containerized the same way
 
@@ -172,6 +181,28 @@ project) to regenerate `revel_training_variants.tsv` and
 training-variant sources, then passes them to `run_annotate_predictors.sh`
 via `--revel-training-file`/`--mutpred2-training-file` -- see
 `docs/build_training_variant_files.md`.
+
+All five of `step_12`'s predictor-file flags (`--alphamissense-file`,
+`--mutpred2-properties-file`, `--revel-file`, `--revel-training-file`,
+`--mutpred2-training-file`) are written as `/work/data/...` rather than a
+bare `data/...` path, so every one of them resolves against our own
+`data/intermediate/variant_annotation/data/` regardless of which
+`variant-annotation` checkout is in use. This matters because
+`run_annotate_predictors.sh` only remaps its two *positional* input/output
+arguments through its `/work`-vs-repo-bind-mount host-existence check (see
+[the `VARIANT_DATA_DIR` path-mapping
+subtlety](#the-variant_data_dir-path-mapping-subtlety) above); extra flags
+are passed through verbatim, and the container's cwd is the
+variant-annotation checkout's own bind mount (`/usr/src/app`), not `/work`.
+A bare `data/...` path on one of these flags would resolve against whichever
+checkout is in use (vendored submodule or a `VARIANT_ANNOTATION_DIR`
+override) instead of our staged data.
+
+This means `AlphaMissense_hg38.tsv.gz` and `revel_hg38.tsv.gz` (normally
+left in the `variant-annotation` checkout for every other step -- see
+[above](#the-variant_data_dir-path-mapping-subtlety)) must also be copied,
+together with their `.tbi` indexes, into
+`data/intermediate/variant_annotation/data/` specifically for Step 12.
 
 Unlike `recalculate_clingen_classification`/`flag_variants`, this step reads
 and writes paths that are fixed under this project's own tree (`data/input/predictors/`

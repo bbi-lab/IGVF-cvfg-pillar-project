@@ -44,9 +44,17 @@ extended_ensembl_consequence.csv.gz               # REQUIRED -- simplified-conse
 
 ## Not here on purpose
 
-Large, static, non-CVFG-specific reference data (AlphaMissense, REVEL,
-SpliceAI VCFs, the MANE summary, ClinVar/ClinGen/gnomAD caches) stay wherever
-your variant-annotation checkout already has them -- see
+Large, static, non-CVFG-specific reference data (SpliceAI VCFs, the MANE
+summary, ClinVar/ClinGen/gnomAD caches, dbNSFP) stay wherever your
+variant-annotation checkout already has them -- see
 `docs/variant_annotation_pipeline.md`. They're read via variant-annotation's
 own repo bind mount and are unaffected by the `VARIANT_DATA_DIR` override this
 project uses.
+
+**Exception:** `AlphaMissense_hg38.tsv.gz` and `revel_hg38.tsv.gz` (plus
+their `.tbi` indexes) are also excluded from *this* directory -- they're
+too large and too generic to track in git the way the files above are --
+but Step 12 needs them staged in
+`data/intermediate/variant_annotation/data/` directly (not rsynced in from
+here), since `step_12` reads them as `/work/data/...` paths. See
+`docs/variant_annotation_pipeline.md` for why.
