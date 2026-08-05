@@ -35,6 +35,7 @@ import click
 import pandas as pd
 
 DEFAULT_EVIDENCE_CODES_COL = "clingen_evidence_repository.Applied Evidence Codes (Met)"
+DEFAULT_ORIGINAL_CLASSIFICATION_COL = "clingen_evidence_repository.Assertion"
 CLASSIFICATION_COL = "Updated_Classification_ClinGen_repo"
 EVIDENCE_COL = "Updated_Evidence Codes_ClinGen_repo"
 
@@ -284,6 +285,20 @@ def compute_updated_classifications(df, evidence_codes_col):
     return classification, evidence
 
 
+def classification_counts(series, empty_label=None):
+    """Count per-candidate classifications in a "|"-delimited column.
+
+    Splits each row on "|" (one value per `mapped_hgvs_c` DNA candidate,
+    same convention as `recalculate_row`) and counts across all rows and
+    candidates. `empty_label` replaces empty segments in the count (e.g. a
+    candidate with no erepo match) with a readable placeholder.
+    """
+    values = series.apply(lambda v: v.split("|")).explode()
+    if empty_label is not None:
+        values = values.replace("", empty_label)
+    return values.value_counts()
+
+
 @click.command(help=__doc__)
 @click.argument("input", type=click.Path(exists=True, dir_okay=False, path_type=Path))
 @click.argument("output", type=click.Path(dir_okay=False, path_type=Path))
@@ -293,7 +308,13 @@ def compute_updated_classifications(df, evidence_codes_col):
     show_default=True,
     help="Column with pipe-delimited erepo 'Applied Evidence Codes (Met)' values",
 )
-def main(input, output, evidence_codes_col):
+@click.option(
+    "--classification-col",
+    default=DEFAULT_ORIGINAL_CLASSIFICATION_COL,
+    show_default=True,
+    help="Column with the unmodified erepo classification, for the stdout report's before/after breakdown",
+)
+def main(input, output, evidence_codes_col, classification_col):
     df = pd.read_csv(input, sep="\t", dtype=str, keep_default_na=False, engine="c")
 
     try:
@@ -301,9 +322,19 @@ def main(input, output, evidence_codes_col):
     except ValueError as exc:
         raise click.ClickException(str(exc)) from exc
 
+    if classification_col not in df.columns:
+        raise click.ClickException(f"Column {classification_col!r} not found in input")
+
     click.echo(f"Recalculated ClinGen classification for {len(df)} row(s).")
-    counts = df[CLASSIFICATION_COL].apply(lambda v: v.split("|")).explode().value_counts()
-    for classification, count in counts.sort_index().items():
+
+    click.echo("By recalculated classification (functional-assay evidence excluded):")
+    for classification, count in classification_counts(df[CLASSIFICATION_COL]).sort_index().items():
+        click.echo(f"  {classification}: {count}")
+
+    click.echo(f"By unmodified classification ({classification_col}):")
+    for classification, count in classification_counts(
+        df[classification_col], empty_label="(no erepo match)"
+    ).sort_index().items():
         click.echo(f"  {classification}: {count}")
 
     df.to_csv(output, sep="\t", index=False)

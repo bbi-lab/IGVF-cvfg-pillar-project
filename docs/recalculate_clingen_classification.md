@@ -56,14 +56,14 @@ Locally (with the Poetry environment):
 
 ```bash
 poetry run python -m src.recalculate_clingen_classification \
-  data/cvfg_variants.16.tsv data/cvfg_variants.16-reclassified.tsv
+  data/cvfg_variants.16.tsv data/cvfg_variants.17.tsv
 ```
 
 Via Docker (same image as `flag_variants`, see `compose.yaml`):
 
 ```bash
 src/scripts/run_recalculate_clingen_classification.sh \
-  data/cvfg_variants.16.tsv data/cvfg_variants.16-reclassified.tsv
+  data/cvfg_variants.16.tsv data/cvfg_variants.17.tsv
 ```
 
 Like `run_flag_variants.sh`, this wrapper maps its input/output paths against
@@ -76,6 +76,18 @@ committed repo file.
 | Option | Default | Description |
 |---|---|---|
 | `--evidence-codes-col` | `clingen_evidence_repository.Applied Evidence Codes (Met)` | Column with pipe-delimited erepo "Applied Evidence Codes (Met)" values |
+| `--classification-col` | `clingen_evidence_repository.Assertion` | Column with the unmodified erepo classification, used for the stdout report's before/after breakdown (not written to the output file) |
 
-Raises `click.ClickException` if `--evidence-codes-col` isn't present in the
-input file.
+Raises `click.ClickException` if `--evidence-codes-col` or
+`--classification-col` isn't present in the input file.
+
+## Stdout report
+
+After recalculating, the script prints per-candidate classification counts
+two ways: by the newly recomputed `Updated_Classification_ClinGen_repo`
+column, and by the unmodified `--classification-col` column (erepo's own
+`Assertion` field, before this script's functional-assay filtering) --
+letting you compare how many candidates moved between categories. A
+candidate with no erepo match (empty segment in `--classification-col`) is
+reported as `(no erepo match)` rather than lumped in with `VUS`, since it
+never had an original classification to move away from.
