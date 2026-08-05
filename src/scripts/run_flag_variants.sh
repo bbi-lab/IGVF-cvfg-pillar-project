@@ -100,4 +100,10 @@ cmd+=(--rm flag-variants "$input_in_container" "$output_in_container")
 if [[ ${#mapped_args[@]} -gt 0 ]]; then
   cmd+=("${mapped_args[@]}")
 fi
+
+# cd to the project root (where compose.yaml lives) so this still works when
+# called with a different cwd, e.g. from scripts/variant_annotation_pipeline.sh's
+# step_18, which runs from a variant-annotation checkout.
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$script_dir/../.."
 exec "${cmd[@]}"
