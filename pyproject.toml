@@ -17,6 +17,7 @@ dependencies = [
     "openpyxl>=3.1",
     "pandas>=2.2,<3.0",
     "pyliftover>=0.4",
+    "requests>=2.34",
     "scipy>=1.13",
     "statsmodels>=0.14",
     "tqdm>=4.66",
