@@ -27,7 +27,7 @@ git submodule update --init vendor/variant-annotation
 
 For a real run, though, set `VARIANT_ANNOTATION_DIR` to point at a checkout
 that already has the large reference files and caches downloaded
-(AlphaMissense, REVEL, SpliceAI VCFs, MANE, dbNSFP, `clinvar_cache/`, etc.) --
+(AlphaMissense, REVEL, SpliceAI VCFs, dbNSFP, `clinvar_cache/`, etc.) --
 these are tens of GB and shouldn't be re-fetched per clone:
 
 ```bash
@@ -141,11 +141,28 @@ the orchestrator script rsyncs into `data/intermediate/variant_annotation/data/`
 rather than `data/intermediate/variant_annotation/` directly.
 
 Most large external reference files the pipeline references (SpliceAI VCFs,
-`data/MANE.GRCh38.v1.5.summary.txt`, `clinvar_cache/`, dbNSFP, etc.) are
-untouched by any of this: they still exist on the host inside the
-`variant-annotation` checkout, so they keep resolving through the bind-mount
-branch regardless of `VARIANT_DATA_DIR`. That's why they're left in place
-rather than duplicated into this project.
+`clinvar_cache/`, dbNSFP, etc.) are untouched by any of this: they still
+exist on the host inside the `variant-annotation` checkout, so they keep
+resolving through the bind-mount branch regardless of `VARIANT_DATA_DIR`.
+That's why they're left in place rather than duplicated into this project.
+
+**Exception: the MANE summary file (Step 2).** Unlike the large reference
+files above, the MANE summary is small enough (a few MB gzipped) to commit
+to git, so it lives in this project's own `data/input/reference/` as
+`MANE.GRCh38.v1.5.summary.txt.gz` rather than relying on whichever
+`variant-annotation` checkout is in use. `scripts/run_variant_annotation_pipeline.sh`
+copies it into `data/intermediate/variant_annotation/data/` on every run,
+alongside `score_sets.tsv`/`Supplementary_Data_3.xlsx` below. `step_2`'s
+`--mane-file` flag references it as
+`/work/data/MANE.GRCh38.v1.5.summary.txt.gz` rather than a bare `data/...`
+path, so it resolves to our staged copy regardless of whether the
+`variant-annotation` checkout in use happens to have its own MANE file at
+that relative path -- `run_remap_transcript_ids.sh` remaps `--mane-file`
+through the same `/work`-vs-repo-bind-mount host-existence check as its
+positional input/output args, so a bare path would otherwise resolve
+against that checkout's copy instead (`_open_maybe_gzipped` in
+`remap_transcript_ids.py` reads the `.gz` transparently) -- see
+`data/raw_mave_data/README.md`.
 
 **Exception: Step 13's AlphaMissense/REVEL/MutPred2-properties files.** Unlike
 the rest, `step_13` passes `--alphamissense-file`/`--revel-file`/

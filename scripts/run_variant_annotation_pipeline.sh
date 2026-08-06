@@ -10,7 +10,7 @@ set -euo pipefail
 # docs/variant_annotation_pipeline.md for the why):
 #   data/raw_mave_data/  --(staged, non-destructively)-->
 #   data/intermediate/variant_annotation/data/  --(mounted as VARIANT_DATA_DIR)-->
-#   variant_annotation_pipeline.sh Steps 1-18 + condensed/expanded frame assembly  -->
+#   variant_annotation_pipeline.sh Steps 1-19 + condensed/expanded frame assembly  -->
 #   data/mave_data/*.tsv.gz
 #
 # Usage:
@@ -29,7 +29,7 @@ set -euo pipefail
 #                           the vendored submodule at vendor/variant-annotation.
 #                           Set this to an existing checkout that already has
 #                           the large reference files / caches downloaded
-#                           (AlphaMissense, REVEL, SpliceAI, MANE, clinvar_cache,
+#                           (AlphaMissense, REVEL, SpliceAI, clinvar_cache,
 #                           etc.) to avoid re-fetching multi-GB data.
 ########################################################################################################################
 
@@ -73,13 +73,21 @@ rsync -a "$CVFG_PROJECT_DIR/data/raw_mave_data/" "$stage_dir/data/"
 
 # score_sets.tsv and Supplementary_Data_3.xlsx live in data/input/maves/
 # (not data/raw_mave_data/) so they're staged here explicitly rather than
-# picked up by the rsync above. Steps 11/14 and Step 15 of
+# picked up by the rsync above. Steps 11/15 and Step 16 of
 # scripts/variant_annotation_pipeline.sh read them as
 # /work/data/score_sets.tsv and /work/data/Supplementary_Data_3.xlsx -- see
 # docs/variant_annotation_pipeline.md.
 echo "Staging data/input/maves/ -> ${stage_dir#"$CVFG_PROJECT_DIR"/}/data/ ..."
 cp "$CVFG_PROJECT_DIR/data/input/maves/score_sets.tsv" "$stage_dir/data/score_sets.tsv"
 cp "$CVFG_PROJECT_DIR/data/input/maves/Supplementary_Data_3.xlsx" "$stage_dir/data/Supplementary_Data_3.xlsx"
+
+# MANE.GRCh38.v1.5.summary.txt.gz lives in data/input/reference/ (not
+# data/raw_mave_data/) so it's staged here explicitly too. Step 2 of
+# scripts/variant_annotation_pipeline.sh reads it as
+# /work/data/MANE.GRCh38.v1.5.summary.txt.gz -- see
+# docs/variant_annotation_pipeline.md.
+echo "Staging data/input/reference/ -> ${stage_dir#"$CVFG_PROJECT_DIR"/}/data/ ..."
+cp "$CVFG_PROJECT_DIR/data/input/reference/MANE.GRCh38.v1.5.summary.txt.gz" "$stage_dir/data/MANE.GRCh38.v1.5.summary.txt.gz"
 
 # cvfg_variants.0.tsv (Step 1's input) only needs staging when Step 1 is
 # actually about to run -- a full run, or --step 1. Later --step N runs read

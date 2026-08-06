@@ -43,9 +43,18 @@ src/scripts/run_map_variants.sh /work/data/cvfg_variants.0.tsv /work/data/cvfg_v
 }
 
 # Step 2: Replace Ensembl accessions with RefSeq
+#
+# --mane-file is written as /work/data/MANE.GRCh38.v1.5.summary.txt.gz rather
+# than a bare data/MANE.GRCh38.v1.5.summary.txt, for the same reason as
+# step_11's --requested-calibrations-file: run_remap_transcript_ids.sh remaps
+# --mane-file through the same /work-vs-repo-bind-mount host-existence check
+# as its positional input/output args, so a bare path would resolve against
+# whichever variant-annotation checkout is in use instead of our own staged
+# data/input/reference/MANE.GRCh38.v1.5.summary.txt.gz -- see
+# docs/variant_annotation_pipeline.md.
 step_2() {
 src/scripts/run_remap_transcript_ids.sh /work/data/cvfg_variants.1.tsv /work/data/cvfg_variants.2.tsv \
-  --mane-file data/MANE.GRCh38.v1.5.summary.txt \
+  --mane-file /work/data/MANE.GRCh38.v1.5.summary.txt.gz \
   --csv-field-size-limit 10000000
 }
 
