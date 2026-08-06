@@ -207,31 +207,28 @@ the rest, `step_13` passes `--alphamissense-file`/`--revel-file`/
 `AlphaMissense_hg38.tsv.gz`, `revel_hg38.tsv.gz` (plus their `.tbi` indexes),
 and `data_frame_missense_variants_MP2_properties.csv.gz` must all resolve
 from `data/intermediate/variant_annotation/data/` -- they don't resolve from
-a `variant-annotation` checkout for this step.
-`AlphaMissense_hg38.tsv.gz`/`revel_hg38.tsv.gz` are large, generic,
-non-CVFG reference data (like the SpliceAI VCFs/`clinvar_cache/`/dbNSFP
-above), so they're left wherever your `variant-annotation` checkout already
-has them and must be copied into `data/intermediate/variant_annotation/data/`
-by hand before running this step.
-
-`data_frame_missense_variants_MP2_properties.csv.gz` is different: it *is*
-CVFG-specific (a MutPred2 scores export for this project's assayed variants),
-so it's committed to this project's own `data/input/predictors/` alongside
-the other predictor inputs (see [`build_training_variant_files`: a
-preparatory step before Step 13](#build_training_variant_files-a-preparatory-step-before-step-13)
-below), and `scripts/run_variant_annotation_pipeline.sh` copies it into
+a `variant-annotation` checkout for this step. Unlike the SpliceAI
+VCFs/`clinvar_cache/`/dbNSFP above (generic reference data too large and
+too widely shared across projects to duplicate here), all three of these
+files are pinned copies specific to this pipeline run, so they're committed
+to this project's own `data/input/predictors/` alongside the other predictor
+inputs (see [`build_training_variant_files`: a preparatory step before Step
+13](#build_training_variant_files-a-preparatory-step-before-step-13) below),
+and `scripts/run_variant_annotation_pipeline.sh` copies all of them into
 `data/intermediate/variant_annotation/data/` automatically -- but only when
 Step 13 is actually about to run (a full run, or `--step 13`), the same
-gating `cvfg_variants.0.tsv` gets for Step 1, since at ~350MB it's too big
-to copy on every single-step invocation. No manual copy is needed for it.
+gating `cvfg_variants.0.tsv` gets for Step 1, since together they're well
+over a gigabyte and too big to copy on every single-step invocation. No
+manual copy is needed for any of them.
 
 **Exception: `score_sets.tsv` and `Supplementary_Data_3.xlsx` (Steps 11, 15,
 and 16).** These two CVFG-specific inputs live in this project's own
 `data/input/maves/` (committed to git, alongside `data/input/predictors/` --
 see [`build_training_variant_files`](#build_training_variant_files-a-preparatory-step-before-step-13)
 below) rather than in a `variant-annotation` checkout or
-`data/raw_mave_data/`. Unlike the AlphaMissense/REVEL files above, staging
-them is automatic: `scripts/run_variant_annotation_pipeline.sh` copies both
+`data/raw_mave_data/`. Unlike Step 13's predictor files above (staged only
+when Step 13 is about to run), staging these two is unconditional:
+`scripts/run_variant_annotation_pipeline.sh` copies both
 into `data/intermediate/variant_annotation/data/` on every run, right after
 rsyncing `data/raw_mave_data/` in. `step_11`'s `--requested-calibrations-file`
 flag, `step_15`'s `merge-columns` extra-file argument, and `step_16`'s
@@ -331,9 +328,12 @@ override) instead of our staged data.
 
 This means `AlphaMissense_hg38.tsv.gz` and `revel_hg38.tsv.gz` (normally
 left in the `variant-annotation` checkout for every other step -- see
-[above](#the-variant_data_dir-path-mapping-subtlety)) must also be copied,
+[above](#the-variant_data_dir-path-mapping-subtlety)) are also copied,
 together with their `.tbi` indexes, into
-`data/intermediate/variant_annotation/data/` specifically for Step 13.
+`data/intermediate/variant_annotation/data/` specifically for Step 13 --
+committed to `data/input/predictors/` and staged automatically like
+`data_frame_missense_variants_MP2_properties.csv.gz`, rather than requiring
+a manual copy.
 
 Unlike `recalculate_clingen_classification`/`flag_variants`, this step reads
 and writes paths that are fixed under this project's own tree (`data/input/predictors/`
