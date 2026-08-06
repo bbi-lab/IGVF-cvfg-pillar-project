@@ -294,7 +294,7 @@ step_16() {
 "$CVFG_PROJECT_DIR/src/scripts/run_build_training_variant_files.sh"
 src/scripts/run_annotate_predictors.sh /work/data/cvfg_variants.15.tsv /work/data/cvfg_variants.16.tsv \
   --alphamissense-file /work/data/AlphaMissense_hg38.tsv.gz \
-  --mutpred2-properties-file /work/data/mp2_annotations.tsv.gz \
+  --mutpred2-properties-file /work/data/mp2_annotations.csv.gz \
   --mutpred2-properties-join-key gene-aa \
   --mutpred2-gene-aa-long-indels ignore \
   --mutpred2-gene-symbol-map-file /work/data/mp2_gene_symbol_map.tsv \
