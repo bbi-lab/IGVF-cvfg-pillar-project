@@ -87,7 +87,7 @@ src/scripts/run_add_dna_clingen_allele_ids.sh /work/data/cvfg_variants.4.tsv /wo
 
 # Step 6: ClinVar
 step_6() {
-src/scripts/run_annotate_clinvar.sh /work/data/cvfg_variants.5.tsv /work/data/cvfg_variants.6-1alt.tsv \
+src/scripts/run_annotate_clinvar.sh /work/data/cvfg_variants.5.tsv /work/data/cvfg_variants.6-1.tsv \
   --clinvar-version 201812 \
   --cache-dir ./clinvar_cache \
   --csv-field-size-limit 10000000
@@ -180,7 +180,7 @@ step_12() {
 "$CVFG_PROJECT_DIR/src/scripts/run_postprocess_mavedb_functional_classifications.sh" /work/data/cvfg_variants.11.tsv /work/data/cvfg_variants.12.tsv
 }
 
-# Step 13: REVEL and AlphaMissense
+# Step 13: Predictors (AlphaMissense, MutPred2, and REVEL)
 # Preparatory: regenerate the REVEL/MutPred2 training-set overlap files
 # (Dockerized, from the CVFG pillar project -- see
 # src/scripts/run_build_training_variant_files.sh there) before running
