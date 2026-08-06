@@ -17,7 +17,7 @@
 #
 # Steps are defined as step_N functions below: step_N reads
 # data/cvfg_variants.<N-1>.tsv and writes data/cvfg_variants.<N>.tsv (N is
-# 1-19, matching the "Step N" comment above each one). With no argument, all
+# 1-20, matching the "Step N" comment above each one). With no argument, all
 # steps run in order followed by the flatten + condensed/expanded frame
 # assembly, exactly as before. Pass a single step number as this script's
 # argument to run just that one step -- normally via
@@ -309,7 +309,20 @@ step_19() {
 "$CVFG_PROJECT_DIR/src/scripts/run_flag_variants.sh" /work/data/cvfg_variants.18.tsv /work/data/cvfg_variants.19.tsv
 }
 
-LAST_STEP=19
+# Step 20: Change codes used in the assayed_variant_level column ("protein"
+# -> "aa", "dna" -> "nt").
+#
+# The awk pass runs directly on the host, same as step_15 -- its input/output
+# are written as "$VARIANT_DATA_DIR/data/..." so they land in and read from
+# our staged directory regardless of cwd.
+step_20() {
+awk -F'\t' -v OFS='\t' '
+  NR==1 { for (i=1; i<=NF; i++) if ($i=="assayed_variant_level") col=i; print }
+  NR>1  { if (col) { if ($col=="protein") $col="aa"; else if ($col=="dna") $col="nt" }; print }
+' "$VARIANT_DATA_DIR/data/cvfg_variants.19.tsv" > "$VARIANT_DATA_DIR/data/cvfg_variants.20.tsv"
+}
+
+LAST_STEP=20
 
 # Flatten, then assemble the condensed and expanded data frames. Not part of
 # the numbered step_N sequence (see module docstring above) -- always runs in
@@ -317,7 +330,7 @@ LAST_STEP=19
 build_condensed_and_expanded_frames() {
 
 # Flatten
-src/scripts/run_flatten_dna_variants.sh /work/data/cvfg_variants.19.tsv /work/data/cvfg_variants.19.flat.tsv
+src/scripts/run_flatten_dna_variants.sh /work/data/cvfg_variants.20.tsv /work/data/cvfg_variants.20.flat.tsv
 
 ########################################################################################################################
 # Condensed data frame
@@ -325,15 +338,15 @@ src/scripts/run_flatten_dna_variants.sh /work/data/cvfg_variants.19.tsv /work/da
 
 # Filter out unmapped variants.
 src/scripts/run_utilities.sh filter-rows \
-  /work/data/cvfg_variants.19.tsv \
-  /work/data/cvfg_variants.19.mapped.tsv \
+  /work/data/cvfg_variants.20.tsv \
+  /work/data/cvfg_variants.20.mapped.tsv \
   --value-col "mapped_hgvs_g,mapped_hgvs_c,mapped_hgvs_p" \
   --match any \
   --csv-field-size-limit 10000000
 
 # Filter, reorder, and rename columns to match the CVFG dataframe format.
 src/scripts/run_utilities.sh rename-columns \
-  /work/data/cvfg_variants.19.mapped.tsv \
+  /work/data/cvfg_variants.20.mapped.tsv \
   /work/data/integrated_variant_effect_dataset.condensed.tsv \
   --csv-field-size-limit 10000000 \
   --reorder \
@@ -432,26 +445,20 @@ src/scripts/run_utilities.sh rename-columns \
   --keep-col "splice_var_amino" \
   --keep-col "Flag"
 
-# Change codes used in the nucleotide_or_aa column.
-awk -F'\t' -v OFS='\t' '
-  NR==1 { for (i=1; i<=NF; i++) if ($i=="nucleotide_or_aa") col=i; print }
-  NR>1  { if (col) { if ($col=="protein") $col="aa"; else if ($col=="dna") $col="nt" }; print }
-' "$VARIANT_DATA_DIR/data/integrated_variant_effect_dataset.condensed.tsv" > "$VARIANT_DATA_DIR/data/file.tsv" && mv "$VARIANT_DATA_DIR/data/file.tsv" "$VARIANT_DATA_DIR/data/integrated_variant_effect_dataset.condensed.tsv"
-
 ########################################################################################################################
 # Expanded data frame
 ########################################################################################################################
 
 src/scripts/run_utilities.sh filter-rows \
-  /work/data/cvfg_variants.19.flat.tsv \
-  /work/data/cvfg_variants.19.flat.mapped.tsv \
+  /work/data/cvfg_variants.20.flat.tsv \
+  /work/data/cvfg_variants.20.flat.mapped.tsv \
   --value-col "mapped_hgvs_g,mapped_hgvs_c,mapped_hgvs_p" \
   --match any \
   --csv-field-size-limit 10000000
 
 # Filter, reorder, and rename columns to match the CVFG dataframe format.
 src/scripts/run_utilities.sh rename-columns \
-  /work/data/cvfg_variants.19.flat.mapped.tsv \
+  /work/data/cvfg_variants.20.flat.mapped.tsv \
   /work/data/integrated_variant_effect_dataset.tsv \
   --csv-field-size-limit 10000000 \
   --reorder \
@@ -549,12 +556,6 @@ src/scripts/run_utilities.sh rename-columns \
   --keep-col "splice_variant" \
   --keep-col "splice_var_amino" \
   --keep-col "Flag"
-
-# Change codes used in the nucleotide_or_aa column.
-awk -F'\t' -v OFS='\t' '
-  NR==1 { for (i=1; i<=NF; i++) if ($i=="nucleotide_or_aa") col=i; print }
-  NR>1  { if (col) { if ($col=="protein") $col="aa"; else if ($col=="dna") $col="nt" }; print }
-' "$VARIANT_DATA_DIR/data/integrated_variant_effect_dataset.tsv" > "$VARIANT_DATA_DIR/data/file.tsv" && mv "$VARIANT_DATA_DIR/data/file.tsv" "$VARIANT_DATA_DIR/data/integrated_variant_effect_dataset.tsv"
 
 }
 

@@ -81,7 +81,7 @@ data/input/maves/cvfg_variants.0.tsv       (Step 1 input; see exception below)
 data/intermediate/variant_annotation/data/ (gitignored; mounted as the
                                              variant-annotation pipeline's
                                              VARIANT_DATA_DIR for the run)
-        |  scripts/variant_annotation_pipeline.sh runs Steps 1-19 +
+        |  scripts/variant_annotation_pipeline.sh runs Steps 1-20 +
         |  condensed/expanded frame assembly
         v
 data/mave_data/                            (final gzipped outputs, tracked)
@@ -114,7 +114,7 @@ orchestrator sets up.
 
 Each numbered step in `scripts/variant_annotation_pipeline.sh` is defined as
 a `step_N` shell function, where `step_N` reads `data/cvfg_variants.<N-1>.tsv`
-and writes `data/cvfg_variants.<N>.tsv` (`N` is 1-19; see that script's header
+and writes `data/cvfg_variants.<N>.tsv` (`N` is 1-20; see that script's header
 comment for the full list, and its `case` in
 `recalculate_clingen_classification`/`flag_variants` above for how 17-19 map
 to this project's own steps). To run just one step -- for debugging a
