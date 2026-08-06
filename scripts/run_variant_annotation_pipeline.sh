@@ -120,6 +120,16 @@ if [[ -z "$step" || "$step" == "1" ]]; then
   cp "$CVFG_PROJECT_DIR/data/input/maves/cvfg_variants.0.tsv" "$stage_dir/data/cvfg_variants.0.tsv"
 fi
 
+# data_frame_missense_variants_MP2_properties.csv.gz (Step 13's MutPred2
+# scores input) is ~350MB, so it's only staged when Step 13 is actually about
+# to run -- a full run, or --step 13 -- same gating as cvfg_variants.0.tsv
+# above. Step 13 reads it as /work/data/data_frame_missense_variants_MP2_properties.csv.gz;
+# see docs/variant_annotation_pipeline.md.
+if [[ -z "$step" || "$step" == "13" ]]; then
+  echo "Staging data/input/predictors/data_frame_missense_variants_MP2_properties.csv.gz -> ${stage_dir#"$CVFG_PROJECT_DIR"/}/data/ ..."
+  cp "$CVFG_PROJECT_DIR/data/input/predictors/data_frame_missense_variants_MP2_properties.csv.gz" "$stage_dir/data/data_frame_missense_variants_MP2_properties.csv.gz"
+fi
+
 export VARIANT_DATA_DIR="$stage_dir"
 
 if [[ -n "$step" ]]; then

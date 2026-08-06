@@ -64,13 +64,18 @@ small enough to commit to git, so it lives in this project's own
 `data/input/reference/` and is staged automatically instead -- see above and
 `docs/variant_annotation_pipeline.md`.
 
-**Exception:** `AlphaMissense_hg38.tsv.gz`, `revel_hg38.tsv.gz` (plus their
-`.tbi` indexes), and `data_frame_missense_variants_MP2_properties.csv.gz`
-are also excluded from *this* directory -- unlike the large, generic files
-above, `data_frame_missense_variants_MP2_properties.csv.gz` *is*
-CVFG-specific (a MutPred2 scores export for this project's assayed variants),
-but at ~367MB it's still too large to track in git the way the files above
-are -- but Step 13 needs all three staged in
-`data/intermediate/variant_annotation/data/` directly (not rsynced in from
-here), since `step_13` reads them as `/work/data/...` paths. See
+**Exception:** `AlphaMissense_hg38.tsv.gz` and `revel_hg38.tsv.gz` (plus
+their `.tbi` indexes) are also excluded from *this* directory -- they're
+large, generic, non-CVFG reference data, so they must be copied by hand into
+`data/intermediate/variant_annotation/data/` before Step 13 runs, since
+`step_13` reads them as `/work/data/...` paths. See
 `docs/variant_annotation_pipeline.md` for why.
+
+`data_frame_missense_variants_MP2_properties.csv.gz` (Step 13's MutPred2
+scores export) *is* CVFG-specific, so it's committed to
+`data/input/predictors/` instead and staged into
+`data/intermediate/variant_annotation/data/` automatically by
+`scripts/run_variant_annotation_pipeline.sh` -- gated on whether Step 13 is
+actually about to run, since at ~350MB it's too big to copy on every
+single-step invocation. See `docs/variant_annotation_pipeline.md` for
+details.

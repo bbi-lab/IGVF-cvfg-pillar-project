@@ -200,7 +200,11 @@ step_12() {
 # checkout is in use instead of our staged data. AlphaMissense_hg38.tsv.gz
 # and revel_hg38.tsv.gz (plus their .tbi indexes) must be copied into
 # data/intermediate/variant_annotation/data/ before running this step --
-# see docs/variant_annotation_pipeline.md.
+# see docs/variant_annotation_pipeline.md. data_frame_missense_variants_MP2_properties.csv.gz
+# lives in this project's own data/input/predictors/ and is staged there
+# automatically by scripts/run_variant_annotation_pipeline.sh (gated on
+# whether Step 13 is actually about to run, same as cvfg_variants.0.tsv for
+# Step 1) -- no manual copy needed for it.
 step_13() {
 "$CVFG_PROJECT_DIR/src/scripts/run_build_training_variant_files.sh"
 src/scripts/run_annotate_predictors.sh /work/data/cvfg_variants.12.tsv /work/data/cvfg_variants.13.tsv \

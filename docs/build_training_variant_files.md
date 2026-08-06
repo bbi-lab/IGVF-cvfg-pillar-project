@@ -25,7 +25,9 @@ The output directory is the gitignored staging directory
 `scripts/run_variant_annotation_pipeline.sh` mounts as the
 variant-annotation pipeline's `VARIANT_DATA_DIR` -- the script creates it if
 missing, and its output lands in the same place `annotate_predictors.py`
-already reads `data_frame_missense_variants_MP2_properties.csv.gz` from.
+reads `data_frame_missense_variants_MP2_properties.csv.gz` from (that file
+is also staged there automatically, from `data/input/predictors/` -- see
+`docs/variant_annotation_pipeline.md`).
 
 Both `.csv.gz`/`.txt.gz` sources are read transparently (no need to decompress first).
 

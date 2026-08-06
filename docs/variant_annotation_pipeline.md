@@ -205,17 +205,25 @@ against that checkout's copy instead (`_open_maybe_gzipped` in
 the rest, `step_13` passes `--alphamissense-file`/`--revel-file`/
 `--mutpred2-properties-file` as `/work/data/...` paths, so
 `AlphaMissense_hg38.tsv.gz`, `revel_hg38.tsv.gz` (plus their `.tbi` indexes),
-and `data_frame_missense_variants_MP2_properties.csv.gz` must all be copied
-into `data/intermediate/variant_annotation/data/` -- they don't resolve from
-a `variant-annotation` checkout for this step. Unlike the first two (large,
-generic, non-CVFG reference data), `data_frame_missense_variants_MP2_properties.csv.gz`
-*is* CVFG-specific -- a MutPred2 scores export for this project's assayed
-variants -- but at ~367MB it's still too large to commit to git the way
-`data/input/predictors/`'s other files are, so it gets the same manual-copy
-treatment rather than living in `data/raw_mave_data/` (which is git-tracked)
--- see `data/raw_mave_data/README.md`. See [`build_training_variant_files`:
-a preparatory step before Step 13](#build_training_variant_files-a-preparatory-step-before-step-13)
-below for why all of Step 13's file inputs are staged this way.
+and `data_frame_missense_variants_MP2_properties.csv.gz` must all resolve
+from `data/intermediate/variant_annotation/data/` -- they don't resolve from
+a `variant-annotation` checkout for this step.
+`AlphaMissense_hg38.tsv.gz`/`revel_hg38.tsv.gz` are large, generic,
+non-CVFG reference data (like the SpliceAI VCFs/`clinvar_cache/`/dbNSFP
+above), so they're left wherever your `variant-annotation` checkout already
+has them and must be copied into `data/intermediate/variant_annotation/data/`
+by hand before running this step.
+
+`data_frame_missense_variants_MP2_properties.csv.gz` is different: it *is*
+CVFG-specific (a MutPred2 scores export for this project's assayed variants),
+so it's committed to this project's own `data/input/predictors/` alongside
+the other predictor inputs (see [`build_training_variant_files`: a
+preparatory step before Step 13](#build_training_variant_files-a-preparatory-step-before-step-13)
+below), and `scripts/run_variant_annotation_pipeline.sh` copies it into
+`data/intermediate/variant_annotation/data/` automatically -- but only when
+Step 13 is actually about to run (a full run, or `--step 13`), the same
+gating `cvfg_variants.0.tsv` gets for Step 1, since at ~350MB it's too big
+to copy on every single-step invocation. No manual copy is needed for it.
 
 **Exception: `score_sets.tsv` and `Supplementary_Data_3.xlsx` (Steps 11, 15,
 and 16).** These two CVFG-specific inputs live in this project's own
