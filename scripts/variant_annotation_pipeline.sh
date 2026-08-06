@@ -152,11 +152,11 @@ src/scripts/run_annotate_erepo.sh /work/data/cvfg_variants.8.tsv /work/data/cvfg
 # Step 10: VEP mutational consequence
 step_10() {
 src/scripts/run_annotate_vep.sh /work/data/cvfg_variants.9.tsv /work/data/cvfg_variants.10.tsv \
-  --vep-batch-size 20 \
-  --row-batch-size 20 \
+  --vep-batch-size 25 \
+  --row-batch-size 100 \
   --vep-timeout-seconds 60 \
   --csv-field-size-limit 10000000 \
-  --log-level INFO --vep-workers 1
+  --log-level INFO --vep-workers 3
 }
 
 # Step 11: MaveDB variant functional classifications
