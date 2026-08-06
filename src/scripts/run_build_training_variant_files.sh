@@ -48,7 +48,7 @@ fi
 
 # cd to the project root (where compose.yaml lives) so this still works when
 # called with a different cwd, e.g. from scripts/variant_annotation_pipeline.sh's
-# preparatory step before step_12, which runs from a variant-annotation checkout.
+# preparatory step before step_13, which runs from a variant-annotation checkout.
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$script_dir/../.."
 exec "${cmd[@]}"

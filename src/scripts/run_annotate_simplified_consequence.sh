@@ -6,7 +6,7 @@ if [[ $# -lt 2 ]]; then
 Usage: src/scripts/run_annotate_simplified_consequence.sh <input-file> <output-file> [annotate_simplified_consequence options...]
 
 Examples:
-  src/scripts/run_annotate_simplified_consequence.sh data/cvfg_variants.15.tsv data/cvfg_variants.16.tsv
+  src/scripts/run_annotate_simplified_consequence.sh data/cvfg_variants.16.tsv data/cvfg_variants.17.tsv
   src/scripts/run_annotate_simplified_consequence.sh input.tsv output.tsv --consequence-col vep.most_severe_mutational_consequence
 
 Notes:
@@ -104,7 +104,7 @@ fi
 
 # cd to the project root (where compose.yaml lives) so this still works when
 # called with a different cwd, e.g. from scripts/variant_annotation_pipeline.sh's
-# step_16, which runs from a variant-annotation checkout.
+# step_17, which runs from a variant-annotation checkout.
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$script_dir/../.."
 exec "${cmd[@]}"

@@ -6,7 +6,7 @@ if [[ $# -lt 2 ]]; then
 Usage: src/scripts/run_recalculate_clingen_classification.sh <input-file> <output-file> [recalculate_clingen_classification options...]
 
 Examples:
-  src/scripts/run_recalculate_clingen_classification.sh data/cvfg/v13/cvfg_variants.16.tsv data/cvfg/v13/cvfg_variants.17.tsv
+  src/scripts/run_recalculate_clingen_classification.sh data/cvfg/v13/cvfg_variants.17.tsv data/cvfg/v13/cvfg_variants.18.tsv
   src/scripts/run_recalculate_clingen_classification.sh input.tsv output.tsv --evidence-codes-col "clingen_evidence_repository.Applied Evidence Codes (Met)"
 
 Notes:
@@ -85,7 +85,7 @@ fi
 
 # cd to the project root (where compose.yaml lives) so this still works when
 # called with a different cwd, e.g. from scripts/variant_annotation_pipeline.sh's
-# step_17, which runs from a variant-annotation checkout.
+# step_18, which runs from a variant-annotation checkout.
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$script_dir/../.."
 exec "${cmd[@]}"

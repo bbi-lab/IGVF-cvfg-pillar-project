@@ -37,7 +37,7 @@ Locally (with the Poetry environment):
 
 ```bash
 poetry run python -m src.annotate_simplified_consequence \
-  data/cvfg_variants.15.tsv data/cvfg_variants.16.tsv
+  data/cvfg_variants.16.tsv data/cvfg_variants.17.tsv
 ```
 
 Via Docker (same image as `flag_variants`/`recalculate_clingen_classification`,
@@ -45,7 +45,7 @@ see `compose.yaml`):
 
 ```bash
 src/scripts/run_annotate_simplified_consequence.sh \
-  data/cvfg_variants.15.tsv data/cvfg_variants.16.tsv
+  data/cvfg_variants.16.tsv data/cvfg_variants.17.tsv
 ```
 
 Like `run_flag_variants.sh`, this wrapper maps its input/output paths against

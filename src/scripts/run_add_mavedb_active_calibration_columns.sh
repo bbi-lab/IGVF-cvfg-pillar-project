@@ -6,7 +6,7 @@ if [[ $# -lt 2 ]]; then
 Usage: src/scripts/run_add_mavedb_active_calibration_columns.sh <input-file> <output-file> [add_mavedb_active_calibration_columns options...]
 
 Examples:
-  src/scripts/run_add_mavedb_active_calibration_columns.sh data/cvfg/v13/cvfg_variants.12.tsv data/cvfg/v13/cvfg_variants.13.tsv
+  src/scripts/run_add_mavedb_active_calibration_columns.sh data/cvfg/v13/cvfg_variants.13.tsv data/cvfg/v13/cvfg_variants.14.tsv
   src/scripts/run_add_mavedb_active_calibration_columns.sh input.tsv output.tsv --preferred-primary-calibration-name "Fayer calibration"
 
 Notes:
@@ -85,7 +85,7 @@ fi
 
 # cd to the project root (where compose.yaml lives) so this still works when
 # called with a different cwd, e.g. from scripts/variant_annotation_pipeline.sh's
-# step_13, which runs from a variant-annotation checkout.
+# step_14, which runs from a variant-annotation checkout.
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$script_dir/../.."
 exec "${cmd[@]}"

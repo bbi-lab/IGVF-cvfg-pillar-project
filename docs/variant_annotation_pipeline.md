@@ -5,9 +5,10 @@
 It runs the Dockerized [variant-annotation](https://github.com/bbi-lab/variant-annotation)
 pipeline (variant mapping, reverse translation, ClinVar/gnomAD/SpliceAI/ClinGen
 evidence repository/VEP/MaveDB/predictor annotation) against this project's MAVE
-dataset, plus this project's own `recalculate_clingen_classification` and
-`flag_variants` steps and final column filtering/renaming, to produce the
-condensed and expanded integrated variant effect datasets.
+dataset, plus this project's own `postprocess_mavedb_functional_classifications`,
+`recalculate_clingen_classification`, and `flag_variants` steps and final
+column filtering/renaming, to produce the condensed and expanded integrated
+variant effect datasets.
 
 ## Prerequisites
 
@@ -43,7 +44,7 @@ data/input/maves/cvfg_variants.0.tsv       (Step 1 input; see exception below)
 data/intermediate/variant_annotation/data/ (gitignored; mounted as the
                                              variant-annotation pipeline's
                                              VARIANT_DATA_DIR for the run)
-        |  scripts/variant_annotation_pipeline.sh runs Steps 1-18 +
+        |  scripts/variant_annotation_pipeline.sh runs Steps 1-19 +
         |  condensed/expanded frame assembly
         v
 data/mave_data/                            (final gzipped outputs, tracked)
@@ -76,9 +77,9 @@ orchestrator sets up.
 
 Each numbered step in `scripts/variant_annotation_pipeline.sh` is defined as
 a `step_N` shell function, where `step_N` reads `data/cvfg_variants.<N-1>.tsv`
-and writes `data/cvfg_variants.<N>.tsv` (`N` is 1-18; see that script's header
+and writes `data/cvfg_variants.<N>.tsv` (`N` is 1-19; see that script's header
 comment for the full list, and its `case` in
-`recalculate_clingen_classification`/`flag_variants` above for how 16-18 map
+`recalculate_clingen_classification`/`flag_variants` above for how 17-19 map
 to this project's own steps). To run just one step -- for debugging a
 specific annotation step without re-running everything before it -- pass
 `--step N`:
@@ -129,11 +130,10 @@ in `scripts/variant_annotation_pipeline.sh` is therefore now written
 explicitly: as `/work/data/...` for Dockerized steps (all step_N's honor an
 already-`/work`- or `/usr/src/app`-prefixed path verbatim, skipping the
 host-existence check entirely), or as `"$VARIANT_DATA_DIR/data/..."` for the
-handful of plain, non-Dockerized commands (step_14's and step_16's
-in-script `awk`/`python3` calls, and `build_condensed_and_expanded_frames`'s
-`awk`/`postprocess_integrated_variant_effect_dataset.sh` calls, all of which
-run directly on the host with the `variant-annotation` checkout as `cwd`, so
-a bare `data/...` there is neither Docker-remapped nor meaningful as a
+handful of plain, non-Dockerized commands (step_15's in-script `awk` call,
+and `build_condensed_and_expanded_frames`'s `awk` calls, all of which run
+directly on the host with the `variant-annotation` checkout as `cwd`, so a
+bare `data/...` there is neither Docker-remapped nor meaningful as a
 container path). This is also why our staged directory needs a `data/`
 subfolder of its own -- `data/intermediate/variant_annotation/data/...` --
 matching the `data/...` prefix every reference still uses after `/work`:
@@ -147,8 +147,8 @@ untouched by any of this: they still exist on the host inside the
 branch regardless of `VARIANT_DATA_DIR`. That's why they're left in place
 rather than duplicated into this project.
 
-**Exception: Step 12's AlphaMissense/REVEL/MutPred2-properties files.** Unlike
-the rest, `step_12` passes `--alphamissense-file`/`--revel-file`/
+**Exception: Step 13's AlphaMissense/REVEL/MutPred2-properties files.** Unlike
+the rest, `step_13` passes `--alphamissense-file`/`--revel-file`/
 `--mutpred2-properties-file` as `/work/data/...` paths, so
 `AlphaMissense_hg38.tsv.gz`, `revel_hg38.tsv.gz` (plus their `.tbi` indexes),
 and `data_frame_missense_variants_MP2_properties.csv.gz` must all be copied
@@ -160,19 +160,19 @@ variants -- but at ~367MB it's still too large to commit to git the way
 `data/input/predictors/`'s other files are, so it gets the same manual-copy
 treatment rather than living in `data/raw_mave_data/` (which is git-tracked)
 -- see `data/raw_mave_data/README.md`. See [`build_training_variant_files`:
-a preparatory step before Step 12](#build_training_variant_files-a-preparatory-step-before-step-12)
-below for why all of Step 12's file inputs are staged this way.
+a preparatory step before Step 13](#build_training_variant_files-a-preparatory-step-before-step-13)
+below for why all of Step 13's file inputs are staged this way.
 
-**Exception: `score_sets.tsv` and `Supplementary_Data_3.xlsx` (Steps 11, 14,
-and 15).** These two CVFG-specific inputs live in this project's own
+**Exception: `score_sets.tsv` and `Supplementary_Data_3.xlsx` (Steps 11, 15,
+and 16).** These two CVFG-specific inputs live in this project's own
 `data/input/maves/` (committed to git, alongside `data/input/predictors/` --
-see [`build_training_variant_files`](#build_training_variant_files-a-preparatory-step-before-step-12)
+see [`build_training_variant_files`](#build_training_variant_files-a-preparatory-step-before-step-13)
 below) rather than in a `variant-annotation` checkout or
 `data/raw_mave_data/`. Unlike the AlphaMissense/REVEL files above, staging
 them is automatic: `scripts/run_variant_annotation_pipeline.sh` copies both
 into `data/intermediate/variant_annotation/data/` on every run, right after
 rsyncing `data/raw_mave_data/` in. `step_11`'s `--requested-calibrations-file`
-flag, `step_14`'s `merge-columns` extra-file argument, and `step_15`'s
+flag, `step_15`'s `merge-columns` extra-file argument, and `step_16`'s
 `merge-columns` extra-file argument all reference them as
 `/work/data/score_sets.tsv` and `/work/data/Supplementary_Data_3.xlsx` rather
 than bare `data/...` paths, so all three steps resolve to our staged copies
@@ -186,11 +186,13 @@ Step 1 is actually about to run -- a full run, or `--step 1` -- since a
 later `--step N` reads an already-staged `cvfg_variants.<N-1>.tsv` and
 doesn't need it. `data/raw_mave_data/` no longer carries this file.
 
-## `add_mavedb_active_calibration_columns`, `annotate_simplified_consequence`, `recalculate_clingen_classification`, and `flag_variants`: containerized the same way
+## `postprocess_mavedb_functional_classifications`, `add_mavedb_active_calibration_columns`, `annotate_simplified_consequence`, `recalculate_clingen_classification`, and `flag_variants`: containerized the same way
 
-Step 13 ("Choose the active functional classification"), step 16
-("Simplified consequence"), and the "Recalculate ClinGen classification" and
-"Flag variants" steps in `scripts/variant_annotation_pipeline.sh` call
+Step 12 ("Fix known MaveDB functional-classification overrides"), step 14
+("Choose the active functional classification"), step 17 ("Simplified
+consequence"), and the "Recalculate ClinGen classification" and "Flag
+variants" steps in `scripts/variant_annotation_pipeline.sh` call
+`src/scripts/run_postprocess_mavedb_functional_classifications.sh`,
 `src/scripts/run_add_mavedb_active_calibration_columns.sh`,
 `src/scripts/run_annotate_simplified_consequence.sh`,
 `src/scripts/run_recalculate_clingen_classification.sh`, and
@@ -204,8 +206,18 @@ same staged data directory. `Dockerfile` and `compose.yaml` at the repo root
 build a lean image from this project's own Poetry dependencies for this
 purpose.
 
-`add_mavedb_active_calibration_columns` runs on `cvfg_variants.12.tsv`
-(right after `annotate_predictors`, step 12) and writes `cvfg_variants.13.tsv`
+`postprocess_mavedb_functional_classifications` runs on `cvfg_variants.11.tsv`
+(right after `annotate_mavedb`, step 11) and writes `cvfg_variants.12.tsv` --
+see `docs/postprocess_mavedb_functional_classifications.md`. It's a
+Dockerized Python/click port of `postprocess_integrated_variant_effect_dataset.sh`
+from the sibling `variant-annotation` project's own `src/scripts/` (an ad
+hoc, uncommitted script there); this version drops the no-longer-needed
+`CHEK2_McCarthy_Leo_2024` dataset rename and re-keys its functional-class
+override on MaveDB variant URN prefix rather than dataset name, since dataset
+names aren't merged in until step 15.
+
+`add_mavedb_active_calibration_columns` runs on `cvfg_variants.13.tsv`
+(right after `annotate_predictors`, step 13) and writes `cvfg_variants.14.tsv`
 -- see `docs/add_mavedb_active_calibration_columns.md`. It's a Dockerized
 Python/click port of `add_mavedb_active_calibration_columns.sh` from the
 sibling `variant-annotation` project's own `src/scripts/`; unlike that
@@ -214,9 +226,9 @@ script, whose input/output paths default to a hard-coded
 requires them as explicit arguments, matching `flag_variants`/
 `recalculate_clingen_classification`'s convention.
 
-`annotate_simplified_consequence` runs on `cvfg_variants.15.tsv` and writes
-`cvfg_variants.16.tsv` -- see `docs/annotate_simplified_consequence.md`.
-Unlike the other three, it isn't a port of a `variant-annotation` script:
+`annotate_simplified_consequence` runs on `cvfg_variants.16.tsv` and writes
+`cvfg_variants.17.tsv` -- see `docs/annotate_simplified_consequence.md`.
+Unlike the other four, it isn't a port of a `variant-annotation` script:
 it's a Dockerized port of the `get_simplified_consequence` cell from the
 archived `notebooks/analysis/Integrated_variant_effect_dataset_pipeline.ipynb`
 notebook, reading a small CVFG-specific VEP-term-to-SO-summary-term mapping
@@ -224,14 +236,14 @@ committed at `data/input/consequence/extended_ensembl_consequence.csv.gz`
 (hence needing both the repo bind mount and the `VARIANT_DATA_DIR` `/work`
 mount, like `flag_variants`'s `--filtering-dir`).
 
-`recalculate_clingen_classification` runs on `cvfg_variants.16.tsv` (right
-after `annotate_simplified_consequence`) and writes `cvfg_variants.17.tsv`,
-which `flag_variants` then reads to produce `.18.tsv` -- see
+`recalculate_clingen_classification` runs on `cvfg_variants.17.tsv` (right
+after `annotate_simplified_consequence`) and writes `cvfg_variants.18.tsv`,
+which `flag_variants` then reads to produce `.19.tsv` -- see
 `docs/recalculate_clingen_classification.md`.
 
-## `build_training_variant_files`: a preparatory step before Step 12
+## `build_training_variant_files`: a preparatory step before Step 13
 
-`step_12` (REVEL and AlphaMissense annotation) first calls
+`step_13` (REVEL and AlphaMissense annotation) first calls
 `src/scripts/run_build_training_variant_files.sh` (also from the CVFG pillar
 project) to regenerate `revel_training_variants.tsv` and
 `mutpred2_training_variants.tsv` from this project's own upstream
@@ -239,7 +251,7 @@ training-variant sources, then passes them to `run_annotate_predictors.sh`
 via `--revel-training-file`/`--mutpred2-training-file` -- see
 `docs/build_training_variant_files.md`.
 
-All five of `step_12`'s predictor-file flags (`--alphamissense-file`,
+All five of `step_13`'s predictor-file flags (`--alphamissense-file`,
 `--mutpred2-properties-file`, `--revel-file`, `--revel-training-file`,
 `--mutpred2-training-file`) are written as `/work/data/...` rather than a
 bare `data/...` path, so every one of them resolves against our own
@@ -259,7 +271,7 @@ This means `AlphaMissense_hg38.tsv.gz` and `revel_hg38.tsv.gz` (normally
 left in the `variant-annotation` checkout for every other step -- see
 [above](#the-variant_data_dir-path-mapping-subtlety)) must also be copied,
 together with their `.tbi` indexes, into
-`data/intermediate/variant_annotation/data/` specifically for Step 12.
+`data/intermediate/variant_annotation/data/` specifically for Step 13.
 
 Unlike `recalculate_clingen_classification`/`flag_variants`, this step reads
 and writes paths that are fixed under this project's own tree (`data/input/predictors/`

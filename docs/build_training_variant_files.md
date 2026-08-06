@@ -4,9 +4,9 @@
 `revel_training_variants.tsv` and `mutpred2_training_variants.tsv` from
 richer upstream training-variant sources, for use with
 `annotate_predictors.py`'s `--revel-training-file` and
-`--mutpred2-training-file` options (variant-annotation pipeline Step 12 --
+`--mutpred2-training-file` options (variant-annotation pipeline Step 13 --
 REVEL and AlphaMissense; see `docs/variant_annotation_pipeline.md`). It is a
-**preparatory step that runs before Step 12** -- `step_12` in
+**preparatory step that runs before Step 13** -- `step_13` in
 `scripts/variant_annotation_pipeline.sh` calls it automatically before
 `run_annotate_predictors.sh`.
 

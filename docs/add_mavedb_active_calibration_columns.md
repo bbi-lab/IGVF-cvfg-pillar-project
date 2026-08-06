@@ -50,7 +50,7 @@ Locally (with the Poetry environment):
 
 ```bash
 poetry run python -m src.add_mavedb_active_calibration_columns \
-  data/cvfg_variants.12.tsv data/cvfg_variants.13.tsv
+  data/cvfg_variants.13.tsv data/cvfg_variants.14.tsv
 ```
 
 Via Docker (same image as `flag_variants`/`recalculate_clingen_classification`,
@@ -58,7 +58,7 @@ see `compose.yaml`):
 
 ```bash
 src/scripts/run_add_mavedb_active_calibration_columns.sh \
-  data/cvfg_variants.12.tsv data/cvfg_variants.13.tsv
+  data/cvfg_variants.13.tsv data/cvfg_variants.14.tsv
 ```
 
 Like `run_recalculate_clingen_classification.sh`, this wrapper maps its

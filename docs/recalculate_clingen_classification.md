@@ -56,14 +56,14 @@ Locally (with the Poetry environment):
 
 ```bash
 poetry run python -m src.recalculate_clingen_classification \
-  data/cvfg_variants.16.tsv data/cvfg_variants.17.tsv
+  data/cvfg_variants.17.tsv data/cvfg_variants.18.tsv
 ```
 
 Via Docker (same image as `flag_variants`, see `compose.yaml`):
 
 ```bash
 src/scripts/run_recalculate_clingen_classification.sh \
-  data/cvfg_variants.16.tsv data/cvfg_variants.17.tsv
+  data/cvfg_variants.17.tsv data/cvfg_variants.18.tsv
 ```
 
 Like `run_flag_variants.sh`, this wrapper maps its input/output paths against

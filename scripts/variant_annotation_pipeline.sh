@@ -17,7 +17,7 @@
 #
 # Steps are defined as step_N functions below: step_N reads
 # data/cvfg_variants.<N-1>.tsv and writes data/cvfg_variants.<N>.tsv (N is
-# 1-18, matching the "Step N" comment above each one). With no argument, all
+# 1-19, matching the "Step N" comment above each one). With no argument, all
 # steps run in order followed by the flatten + condensed/expanded frame
 # assembly, exactly as before. Pass a single step number as this script's
 # argument to run just that one step -- normally via
@@ -132,7 +132,7 @@ src/scripts/run_annotate_vep.sh /work/data/cvfg_variants.9.tsv /work/data/cvfg_v
 # Step 11: MaveDB variant functional classifications
 #
 # --requested-calibrations-file is written as /work/data/score_sets.tsv
-# rather than a bare data/score_sets.tsv, for the same reason as step_12's
+# rather than a bare data/score_sets.tsv, for the same reason as step_13's
 # predictor-file flags below: run_annotate_mavedb.sh only remaps its two
 # positional input/output args through the /work-vs-repo-bind-mount
 # host-existence check, so an extra flag like this one is passed through
@@ -145,7 +145,14 @@ src/scripts/run_annotate_mavedb.sh /work/data/cvfg_variants.10.tsv /work/data/cv
   --csv-field-size-limit 10000000
 }
 
-# Step 12: REVEL and AlphaMissense
+# Step 12: Fix known MaveDB functional-classification overrides (Dockerized,
+# from the CVFG pillar project rather than variant-annotation -- see
+# src/scripts/run_postprocess_mavedb_functional_classifications.sh there).
+step_12() {
+"$CVFG_PROJECT_DIR/src/scripts/run_postprocess_mavedb_functional_classifications.sh" /work/data/cvfg_variants.11.tsv /work/data/cvfg_variants.12.tsv
+}
+
+# Step 13: REVEL and AlphaMissense
 # Preparatory: regenerate the REVEL/MutPred2 training-set overlap files
 # (Dockerized, from the CVFG pillar project -- see
 # src/scripts/run_build_training_variant_files.sh there) before running
@@ -164,9 +171,9 @@ src/scripts/run_annotate_mavedb.sh /work/data/cvfg_variants.10.tsv /work/data/cv
 # and revel_hg38.tsv.gz (plus their .tbi indexes) must be copied into
 # data/intermediate/variant_annotation/data/ before running this step --
 # see docs/variant_annotation_pipeline.md.
-step_12() {
+step_13() {
 "$CVFG_PROJECT_DIR/src/scripts/run_build_training_variant_files.sh"
-src/scripts/run_annotate_predictors.sh /work/data/cvfg_variants.11.tsv /work/data/cvfg_variants.12.tsv \
+src/scripts/run_annotate_predictors.sh /work/data/cvfg_variants.12.tsv /work/data/cvfg_variants.13.tsv \
   --alphamissense-file /work/data/AlphaMissense_hg38.tsv.gz \
   --mutpred2-properties-file /work/data/data_frame_missense_variants_MP2_properties.csv.gz \
   --revel-file /work/data/revel_hg38.tsv.gz \
@@ -175,14 +182,14 @@ src/scripts/run_annotate_predictors.sh /work/data/cvfg_variants.11.tsv /work/dat
   --csv-field-size-limit 10000000
 }
 
-# Step 13: Choose the active functional classification (Dockerized, from the
+# Step 14: Choose the active functional classification (Dockerized, from the
 # CVFG pillar project rather than variant-annotation -- see
 # src/scripts/run_add_mavedb_active_calibration_columns.sh there).
-step_13() {
-"$CVFG_PROJECT_DIR/src/scripts/run_add_mavedb_active_calibration_columns.sh" /work/data/cvfg_variants.12.tsv /work/data/cvfg_variants.13.tsv
+step_14() {
+"$CVFG_PROJECT_DIR/src/scripts/run_add_mavedb_active_calibration_columns.sh" /work/data/cvfg_variants.13.tsv /work/data/cvfg_variants.14.tsv
 }
 
-# Step 14: Dataset names
+# Step 15: Dataset names
 #
 # The awk pass runs directly on the host (this whole script executes with
 # the variant-annotation checkout as cwd, so it isn't a bare data/... path
@@ -195,36 +202,36 @@ step_13() {
 # check would still incorrectly prefer a variant-annotation checkout's own
 # data/score_sets.tsv over our staged data/input/maves/score_sets.tsv if one
 # happens to exist there -- so it's forced to /work explicitly, same as
-# step_11 and step_12 -- see docs/variant_annotation_pipeline.md.
-step_14() {
+# step_11 and step_13 -- see docs/variant_annotation_pipeline.md.
+step_15() {
 awk -F'\t' -v OFS='\t' '
   NR==1 { sub(/\r$/, ""); for (i=1; i<=NF; i++) if ($i=="variant_urn") col=i; print $0, "score_set_urn" }
   NR>1  { sub(/\r$/, ""); val = col ? $col : ""; sub(/#.*$/, "", val); print $0, val }
-' "$VARIANT_DATA_DIR/data/cvfg_variants.13.tsv" > "$VARIANT_DATA_DIR/data/cvfg_variants.14.temp.tsv"
+' "$VARIANT_DATA_DIR/data/cvfg_variants.14.tsv" > "$VARIANT_DATA_DIR/data/cvfg_variants.15.temp.tsv"
 src/scripts/run_utilities.sh merge-columns \
-  /work/data/cvfg_variants.14.temp.tsv \
+  /work/data/cvfg_variants.15.temp.tsv \
   /work/data/score_sets.tsv \
-  /work/data/cvfg_variants.14.tsv \
+  /work/data/cvfg_variants.15.tsv \
   --key-col "score_set_urn:score_set_urn" \
   --add-col "dataset_name" \
   --csv-field-size-limit 10000000
-rm "$VARIANT_DATA_DIR/data/cvfg_variants.14.temp.tsv"
+rm "$VARIANT_DATA_DIR/data/cvfg_variants.15.temp.tsv"
 }
 
-# Step 15: Assay metadata from Supplementary Data 3
+# Step 16: Assay metadata from Supplementary Data 3
 #
 # The extra-file argument is written as /work/data/Supplementary_Data_3.xlsx
 # rather than a bare data/Supplementary_Data_3.xlsx, for the same reason as
-# step_14's score_sets.tsv above: Supplementary_Data_3.xlsx lives in this
+# step_15's score_sets.tsv above: Supplementary_Data_3.xlsx lives in this
 # project's own data/input/maves/ (not a variant-annotation checkout), and
 # merge-columns's wrapper's host-existence check on a bare path would still
 # incorrectly prefer a variant-annotation checkout's own copy if one happens
 # to exist there -- see docs/variant_annotation_pipeline.md.
-step_15() {
+step_16() {
 src/scripts/run_utilities.sh merge-columns \
-  /work/data/cvfg_variants.14.tsv \
-  /work/data/Supplementary_Data_3.xlsx \
   /work/data/cvfg_variants.15.tsv \
+  /work/data/Supplementary_Data_3.xlsx \
+  /work/data/cvfg_variants.16.tsv \
   --csv-field-size-limit 10000000 \
   --extra-worksheet Curation \
   --key-col "dataset_name:Dataset Name" \
@@ -254,27 +261,27 @@ src/scripts/run_utilities.sh merge-columns \
   --add-col "Interval 6 Class"
 }
 
-# Step 16: Simplified consequence (Dockerized, from the CVFG pillar project
+# Step 17: Simplified consequence (Dockerized, from the CVFG pillar project
 # rather than variant-annotation -- see
 # src/scripts/run_annotate_simplified_consequence.sh there).
-step_16() {
-"$CVFG_PROJECT_DIR/src/scripts/run_annotate_simplified_consequence.sh" /work/data/cvfg_variants.15.tsv /work/data/cvfg_variants.16.tsv
+step_17() {
+"$CVFG_PROJECT_DIR/src/scripts/run_annotate_simplified_consequence.sh" /work/data/cvfg_variants.16.tsv /work/data/cvfg_variants.17.tsv
 }
 
-# Step 17: Recalculate ClinGen classification without functional-assay evidence
+# Step 18: Recalculate ClinGen classification without functional-assay evidence
 # (Dockerized, from the CVFG pillar project -- see
 # src/scripts/run_recalculate_clingen_classification.sh there).
-step_17() {
-"$CVFG_PROJECT_DIR/src/scripts/run_recalculate_clingen_classification.sh" /work/data/cvfg_variants.16.tsv /work/data/cvfg_variants.17.tsv
-}
-
-# Step 18: Flag variants (Dockerized, from the CVFG pillar project rather
-# than variant-annotation -- see src/scripts/run_flag_variants.sh there).
 step_18() {
-"$CVFG_PROJECT_DIR/src/scripts/run_flag_variants.sh" /work/data/cvfg_variants.17.tsv /work/data/cvfg_variants.18.tsv
+"$CVFG_PROJECT_DIR/src/scripts/run_recalculate_clingen_classification.sh" /work/data/cvfg_variants.17.tsv /work/data/cvfg_variants.18.tsv
 }
 
-LAST_STEP=18
+# Step 19: Flag variants (Dockerized, from the CVFG pillar project rather
+# than variant-annotation -- see src/scripts/run_flag_variants.sh there).
+step_19() {
+"$CVFG_PROJECT_DIR/src/scripts/run_flag_variants.sh" /work/data/cvfg_variants.18.tsv /work/data/cvfg_variants.19.tsv
+}
+
+LAST_STEP=19
 
 # Flatten, then assemble the condensed and expanded data frames. Not part of
 # the numbered step_N sequence (see module docstring above) -- always runs in
@@ -282,7 +289,7 @@ LAST_STEP=18
 build_condensed_and_expanded_frames() {
 
 # Flatten
-src/scripts/run_flatten_dna_variants.sh /work/data/cvfg_variants.18.tsv /work/data/cvfg_variants.18.flat.tsv
+src/scripts/run_flatten_dna_variants.sh /work/data/cvfg_variants.19.tsv /work/data/cvfg_variants.19.flat.tsv
 
 ########################################################################################################################
 # Condensed data frame
@@ -290,15 +297,15 @@ src/scripts/run_flatten_dna_variants.sh /work/data/cvfg_variants.18.tsv /work/da
 
 # Filter out unmapped variants.
 src/scripts/run_utilities.sh filter-rows \
-  /work/data/cvfg_variants.18.tsv \
-  /work/data/cvfg_variants.18.mapped.tsv \
+  /work/data/cvfg_variants.19.tsv \
+  /work/data/cvfg_variants.19.mapped.tsv \
   --value-col "mapped_hgvs_g,mapped_hgvs_c,mapped_hgvs_p" \
   --match any \
   --csv-field-size-limit 10000000
 
 # Filter, reorder, and rename columns to match the CVFG dataframe format.
 src/scripts/run_utilities.sh rename-columns \
-  /work/data/cvfg_variants.18.mapped.tsv \
+  /work/data/cvfg_variants.19.mapped.tsv \
   /work/data/integrated_variant_effect_dataset.condensed.tsv \
   --csv-field-size-limit 10000000 \
   --reorder \
@@ -403,23 +410,20 @@ awk -F'\t' -v OFS='\t' '
   NR>1  { if (col) { if ($col=="protein") $col="aa"; else if ($col=="dna") $col="nt" }; print }
 ' "$VARIANT_DATA_DIR/data/integrated_variant_effect_dataset.condensed.tsv" > "$VARIANT_DATA_DIR/data/file.tsv" && mv "$VARIANT_DATA_DIR/data/file.tsv" "$VARIANT_DATA_DIR/data/integrated_variant_effect_dataset.condensed.tsv"
 
-# Fix two things
-src/scripts/postprocess_integrated_variant_effect_dataset.sh "$VARIANT_DATA_DIR/data/integrated_variant_effect_dataset.condensed.tsv" "$VARIANT_DATA_DIR/data/file.tsv" && mv "$VARIANT_DATA_DIR/data/file.tsv" "$VARIANT_DATA_DIR/data/integrated_variant_effect_dataset.condensed.tsv"
-
 ########################################################################################################################
 # Expanded data frame
 ########################################################################################################################
 
 src/scripts/run_utilities.sh filter-rows \
-  /work/data/cvfg_variants.18.flat.tsv \
-  /work/data/cvfg_variants.18.flat.mapped.tsv \
+  /work/data/cvfg_variants.19.flat.tsv \
+  /work/data/cvfg_variants.19.flat.mapped.tsv \
   --value-col "mapped_hgvs_g,mapped_hgvs_c,mapped_hgvs_p" \
   --match any \
   --csv-field-size-limit 10000000
 
 # Filter, reorder, and rename columns to match the CVFG dataframe format.
 src/scripts/run_utilities.sh rename-columns \
-  /work/data/cvfg_variants.18.flat.mapped.tsv \
+  /work/data/cvfg_variants.19.flat.mapped.tsv \
   /work/data/integrated_variant_effect_dataset.tsv \
   --csv-field-size-limit 10000000 \
   --reorder \
@@ -523,9 +527,6 @@ awk -F'\t' -v OFS='\t' '
   NR==1 { for (i=1; i<=NF; i++) if ($i=="nucleotide_or_aa") col=i; print }
   NR>1  { if (col) { if ($col=="protein") $col="aa"; else if ($col=="dna") $col="nt" }; print }
 ' "$VARIANT_DATA_DIR/data/integrated_variant_effect_dataset.tsv" > "$VARIANT_DATA_DIR/data/file.tsv" && mv "$VARIANT_DATA_DIR/data/file.tsv" "$VARIANT_DATA_DIR/data/integrated_variant_effect_dataset.tsv"
-
-# Fix two things
-src/scripts/postprocess_integrated_variant_effect_dataset.sh "$VARIANT_DATA_DIR/data/integrated_variant_effect_dataset.tsv" "$VARIANT_DATA_DIR/data/file.tsv" && mv "$VARIANT_DATA_DIR/data/file.tsv" "$VARIANT_DATA_DIR/data/integrated_variant_effect_dataset.tsv"
 
 }
 
