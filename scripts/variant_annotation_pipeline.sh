@@ -162,7 +162,7 @@ src/scripts/run_annotate_vep.sh /work/data/cvfg_variants.9.tsv /work/data/cvfg_v
 # Step 11: MaveDB variant functional classifications
 #
 # --requested-calibrations-file is written as /work/data/score_sets.tsv
-# rather than a bare data/score_sets.tsv, for the same reason as step_13's
+# rather than a bare data/score_sets.tsv, for the same reason as step_16's
 # predictor-file flags below: run_annotate_mavedb.sh only remaps its two
 # positional input/output args through the /work-vs-repo-bind-mount
 # host-existence check, so an extra flag like this one is passed through
@@ -182,47 +182,14 @@ step_12() {
 "$CVFG_PROJECT_DIR/src/scripts/run_postprocess_mavedb_functional_classifications.sh" /work/data/cvfg_variants.11.tsv /work/data/cvfg_variants.12.tsv
 }
 
-# Step 13: Predictors (AlphaMissense, MutPred2, and REVEL)
-# Preparatory: regenerate the REVEL/MutPred2 training-set overlap files
-# (Dockerized, from the CVFG pillar project -- see
-# src/scripts/run_build_training_variant_files.sh there) before running
-# annotate_predictors.
-#
-# All five predictor-file flags below are written as /work/data/... rather
-# than bare filenames, so every input to this step comes from our own
-# data/intermediate/variant_annotation/data/ (VARIANT_DATA_DIR) rather than
-# whichever variant-annotation checkout happens to be in use --
-# run_annotate_predictors.sh only remaps its two positional input/output
-# args through the /work-vs-repo-bind-mount host-existence check; extra
-# flags like these are passed through verbatim, and the container's cwd is
-# the variant-annotation checkout's own bind mount (/usr/src/app), not
-# /work, so a bare "data/..." path here would resolve against whichever
-# checkout is in use instead of our staged data. AlphaMissense_hg38.tsv.gz,
-# revel_hg38.tsv.gz (plus their .tbi indexes), and
-# data_frame_missense_variants_MP2_properties.csv.gz all live in this
-# project's own data/input/predictors/ and are staged automatically by
-# scripts/run_variant_annotation_pipeline.sh (gated on whether Step 13 is
-# actually about to run, same as cvfg_variants.0.tsv for Step 1) -- no
-# manual copy needed for any of them.
-step_13() {
-"$CVFG_PROJECT_DIR/src/scripts/run_build_training_variant_files.sh"
-src/scripts/run_annotate_predictors.sh /work/data/cvfg_variants.12.tsv /work/data/cvfg_variants.13.tsv \
-  --alphamissense-file /work/data/AlphaMissense_hg38.tsv.gz \
-  --mutpred2-properties-file /work/data/data_frame_missense_variants_MP2_properties.csv.gz \
-  --revel-file /work/data/revel_hg38.tsv.gz \
-  --revel-training-file /work/data/revel_training_variants.tsv \
-  --mutpred2-training-file /work/data/mutpred2_training_variants.tsv \
-  --csv-field-size-limit 10000000
-}
-
-# Step 14: Choose the active functional classification (Dockerized, from the
+# Step 13: Choose the active functional classification (Dockerized, from the
 # CVFG pillar project rather than variant-annotation -- see
 # src/scripts/run_add_mavedb_active_calibration_columns.sh there).
-step_14() {
-"$CVFG_PROJECT_DIR/src/scripts/run_add_mavedb_active_calibration_columns.sh" /work/data/cvfg_variants.13.tsv /work/data/cvfg_variants.14.tsv
+step_13() {
+"$CVFG_PROJECT_DIR/src/scripts/run_add_mavedb_active_calibration_columns.sh" /work/data/cvfg_variants.12.tsv /work/data/cvfg_variants.13.tsv
 }
 
-# Step 15: Dataset names
+# Step 14: Dataset names
 #
 # The awk pass runs directly on the host (this whole script executes with
 # the variant-annotation checkout as cwd, so it isn't a bare data/... path
@@ -235,36 +202,36 @@ step_14() {
 # check would still incorrectly prefer a variant-annotation checkout's own
 # data/score_sets.tsv over our staged data/input/maves/score_sets.tsv if one
 # happens to exist there -- so it's forced to /work explicitly, same as
-# step_11 and step_13 -- see docs/variant_annotation_pipeline.md.
-step_15() {
+# step_11 and step_16 -- see docs/variant_annotation_pipeline.md.
+step_14() {
 awk -F'\t' -v OFS='\t' '
   NR==1 { sub(/\r$/, ""); for (i=1; i<=NF; i++) if ($i=="variant_urn") col=i; print $0, "score_set_urn" }
   NR>1  { sub(/\r$/, ""); val = col ? $col : ""; sub(/#.*$/, "", val); print $0, val }
-' "$VARIANT_DATA_DIR/data/cvfg_variants.14.tsv" > "$VARIANT_DATA_DIR/data/cvfg_variants.15.temp.tsv"
+' "$VARIANT_DATA_DIR/data/cvfg_variants.13.tsv" > "$VARIANT_DATA_DIR/data/cvfg_variants.14.temp.tsv"
 src/scripts/run_utilities.sh merge-columns \
-  /work/data/cvfg_variants.15.temp.tsv \
+  /work/data/cvfg_variants.14.temp.tsv \
   /work/data/score_sets.tsv \
-  /work/data/cvfg_variants.15.tsv \
+  /work/data/cvfg_variants.14.tsv \
   --key-col "score_set_urn:score_set_urn" \
   --add-col "dataset_name" \
   --csv-field-size-limit 10000000
-rm "$VARIANT_DATA_DIR/data/cvfg_variants.15.temp.tsv"
+rm "$VARIANT_DATA_DIR/data/cvfg_variants.14.temp.tsv"
 }
 
-# Step 16: Assay metadata from Supplementary Data 3
+# Step 15: Assay metadata from Supplementary Data 3
 #
 # The extra-file argument is written as /work/data/Supplementary_Data_3.xlsx
 # rather than a bare data/Supplementary_Data_3.xlsx, for the same reason as
-# step_15's score_sets.tsv above: Supplementary_Data_3.xlsx lives in this
+# step_14's score_sets.tsv above: Supplementary_Data_3.xlsx lives in this
 # project's own data/input/maves/ (not a variant-annotation checkout), and
 # merge-columns's wrapper's host-existence check on a bare path would still
 # incorrectly prefer a variant-annotation checkout's own copy if one happens
 # to exist there -- see docs/variant_annotation_pipeline.md.
-step_16() {
+step_15() {
 src/scripts/run_utilities.sh merge-columns \
-  /work/data/cvfg_variants.15.tsv \
+  /work/data/cvfg_variants.14.tsv \
   /work/data/Supplementary_Data_3.xlsx \
-  /work/data/cvfg_variants.16.tsv \
+  /work/data/cvfg_variants.15.tsv \
   --csv-field-size-limit 10000000 \
   --extra-worksheet Curation \
   --key-col "dataset_name:Dataset Name" \
@@ -294,6 +261,49 @@ src/scripts/run_utilities.sh merge-columns \
   --add-col "Interval 6 Class"
 }
 
+# Step 16: Predictors (AlphaMissense, MutPred2, and REVEL)
+#
+# Runs after Step 15 (used to be Step 13) rather than right after Step 12,
+# because the MutPred2 gene-aa properties join below needs a reliable
+# gene_symbol column, and Step 15's Supplementary Data 3 merge is what
+# actually supplies that (its "Gene:gene_symbol" add-col) -- earlier in the
+# pipeline gene_symbol isn't populated/curated yet.
+#
+# Preparatory: regenerate the REVEL/MutPred2 training-set overlap files
+# (Dockerized, from the CVFG pillar project -- see
+# src/scripts/run_build_training_variant_files.sh there) before running
+# annotate_predictors.
+#
+# All five predictor-file flags below are written as /work/data/... rather
+# than bare filenames, so every input to this step comes from our own
+# data/intermediate/variant_annotation/data/ (VARIANT_DATA_DIR) rather than
+# whichever variant-annotation checkout happens to be in use --
+# run_annotate_predictors.sh only remaps its two positional input/output
+# args through the /work-vs-repo-bind-mount host-existence check; extra
+# flags like these are passed through verbatim, and the container's cwd is
+# the variant-annotation checkout's own bind mount (/usr/src/app), not
+# /work, so a bare "data/..." path here would resolve against whichever
+# checkout is in use instead of our staged data. AlphaMissense_hg38.tsv.gz,
+# revel_hg38.tsv.gz (plus their .tbi indexes), and
+# data_frame_missense_variants_MP2_properties.csv.gz all live in this
+# project's own data/input/predictors/ and are staged automatically by
+# scripts/run_variant_annotation_pipeline.sh (gated on whether Step 16 is
+# actually about to run, same as cvfg_variants.0.tsv for Step 1) -- no
+# manual copy needed for any of them.
+step_16() {
+"$CVFG_PROJECT_DIR/src/scripts/run_build_training_variant_files.sh"
+src/scripts/run_annotate_predictors.sh /work/data/cvfg_variants.15.tsv /work/data/cvfg_variants.16.tsv \
+  --alphamissense-file /work/data/AlphaMissense_hg38.tsv.gz \
+  --mutpred2-properties-file /work/data/mp2_annotations.tsv.gz \
+  --mutpred2-properties-join-key gene-aa \
+  --mutpred2-gene-aa-long-indels ignore \
+  --mutpred2-gene-symbol-map-file /work/data/mp2_gene_symbol_map.tsv \
+  --revel-file /work/data/revel_hg38.tsv.gz \
+  --revel-training-file /work/data/revel_training_variants.tsv \
+  --mutpred2-training-file /work/data/mutpred2_training_variants.tsv \
+  --csv-field-size-limit 10000000
+}
+
 # Step 17: Simplified consequence (Dockerized, from the CVFG pillar project
 # rather than variant-annotation -- see
 # src/scripts/run_annotate_simplified_consequence.sh there).
@@ -317,7 +327,7 @@ step_19() {
 # Step 20: Change codes used in the assayed_variant_level column ("protein"
 # -> "aa", "dna" -> "nt").
 #
-# The awk pass runs directly on the host, same as step_15 -- its input/output
+# The awk pass runs directly on the host, same as step_14 -- its input/output
 # are written as "$VARIANT_DATA_DIR/data/..." so they land in and read from
 # our staged directory regardless of cwd.
 step_20() {
