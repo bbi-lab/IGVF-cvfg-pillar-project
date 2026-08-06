@@ -17,10 +17,12 @@
 #
 # Steps are defined as step_N functions below: step_N reads
 # data/cvfg_variants.<N-1>.tsv and writes data/cvfg_variants.<N>.tsv (N is
-# 1-20, matching the "Step N" comment above each one). With no argument, all
-# steps run in order followed by the flatten + condensed/expanded frame
-# assembly, exactly as before. Pass a single step number as this script's
-# argument to run just that one step -- normally via
+# 1-20, matching the "Step N" comment above each one), except step_21, which
+# flattens data/cvfg_variants.20.tsv and writes the final integrated MAVE
+# dataset files (condensed and expanded) directly rather than a numbered
+# cvfg_variants.21.tsv -- see step_21's own comment below. With no argument,
+# all steps run in order, exactly as before. Pass a single step number as
+# this script's argument to run just that one step -- normally via
 # `scripts/run_variant_annotation_pipeline.sh --step N`, which also handles
 # staging and env vars for you (see docs/variant_annotation_pipeline.md).
 #
@@ -322,18 +324,123 @@ awk -F'\t' -v OFS='\t' '
 ' "$VARIANT_DATA_DIR/data/cvfg_variants.19.tsv" > "$VARIANT_DATA_DIR/data/cvfg_variants.20.tsv"
 }
 
-LAST_STEP=20
+LAST_STEP=21
 
-# Flatten, then assemble the condensed and expanded data frames. Not part of
-# the numbered step_N sequence (see module docstring above) -- always runs in
-# full, as the tail of a complete pipeline run.
-build_condensed_and_expanded_frames() {
+# Step 21: Flatten cvfg_variants.20.tsv, then assemble the condensed and
+# expanded final integrated MAVE dataset files. Unlike the other steps, this
+# doesn't write a numbered cvfg_variants.21.tsv -- it writes
+# integrated_variant_effect_dataset.condensed.tsv and
+# integrated_variant_effect_dataset.tsv directly (see the module docstring
+# above), though it can still be run individually via --step 21 like any
+# other step.
+#
+# The condensed and expanded datasets share the same column
+# selection/renaming, so COLUMN_MAP below is built once and reused for both
+# rename-columns calls.
+step_21() {
 
 # Flatten
 src/scripts/run_flatten_dna_variants.sh /work/data/cvfg_variants.20.tsv /work/data/cvfg_variants.20.flat.tsv
 
+COLUMN_MAP=(
+  --keep-col "dataset_name:Dataset"
+  --keep-col "gene_symbol:Gene"
+  --keep-col "gene_hgnc_id:HGNC_ID"
+  --keep-col "variant_urn:mavedb_variant_urn"
+  --keep-col "mapped_hgvs_g_chromosome:Chrom"
+  --keep-col "strand:Strand"
+  --keep-col "mapped_hgvs_g_start:hg38_start"
+  --keep-col "mapped_hgvs_g_stop:hg38_end"
+  --keep-col "mapped_hgvs_g_ref:ref_allele"
+  --keep-col "mapped_hgvs_g_alt:alt_allele"
+  --keep-col "author_provided_transcript_id:auth_transcript_id"
+  --keep-col "mapped_hgvs_c_start:transcript_pos"
+  --keep-col "mapped_hgvs_c_ref:transcript_ref"
+  --keep-col "mapped_hgvs_c_alt:transcript_alt"
+  --keep-col "mapped_hgvs_p_start:aa_pos"
+  --keep-col "mapped_hgvs_p_ref:aa_ref"
+  --keep-col "mapped_hgvs_p_alt:aa_alt"
+  --keep-col "mapped_hgvs_c:hgvs_c"
+  --keep-col "mapped_hgvs_p:hgvs_p"
+  --keep-col "vep.mutational_consequences:consequence"
+  --keep-col "vep.most_severe_mutational_consequence:most_severe_mutational_consequence"
+  --keep-col "score:auth_reported_score"
+  --keep-col "rna_score"
+  --keep-col "mavedb.active_calibration.functional_class_label:auth_reported_func_class"
+  --keep-col "mavedb.active_calibration.functional_classification:auth_reported_func_class_category"
+  --keep-col "assay_detects_splicing_effects:splice_measure"
+  --keep-col "gnomad.v4_1.minor_allele_frequency:gnomad_MAF"
+  --keep-col "clinvar.202601.clinical_significance:clinvar_sig_2026"
+  --keep-col "clinvar.202601.review_status:clinvar_star_2026"
+  --keep-col "clinvar.202601.last_review_date:clinvar_date_last_reviewed_2026"
+  --keep-col "clinvar.202501.clinical_significance:clinvar_sig_2025"
+  --keep-col "clinvar.202501.review_status:clinvar_star_2025"
+  --keep-col "clinvar.202501.last_review_date:clinvar_date_last_reviewed_2025"
+  --keep-col "clinvar.201812.clinical_significance:clinvar_sig_2018"
+  --keep-col "clinvar.201812.review_status:clinvar_star_2018"
+  --keep-col "clinvar.201812.last_review_date:clinvar_date_last_reviewed_2018"
+  --keep-col "assayed_variant_level:nucleotide_or_aa"
+  --keep-col "ensembl_transcript_id_from_assay_metadata:Ensembl Transcript ID"
+  --keep-col "refseq_transcript_id_from_assay_metadata:RefSeq Transcript ID"
+  --keep-col "Interval 1 Name"
+  --keep-col "Interval 1 Range"
+  --keep-col "Interval 1 Class"
+  --keep-col "Interval 2 Name"
+  --keep-col "Interval 2 Range"
+  --keep-col "Interval 2 Class"
+  --keep-col "Interval 3 Name"
+  --keep-col "Interval 3 Range"
+  --keep-col "Interval 3 Class"
+  --keep-col "Interval 4 Name"
+  --keep-col "Interval 4 Range"
+  --keep-col "Interval 4 Class"
+  --keep-col "Interval 5 Name"
+  --keep-col "Interval 5 Range"
+  --keep-col "Interval 5 Class"
+  --keep-col "Interval 6 Name"
+  --keep-col "Interval 6 Range"
+  --keep-col "Interval 6 Class"
+  --keep-col "spliceai.ds_ag:spliceAI_DS_AG"
+  --keep-col "spliceai.ds_al:spliceAI_DS_AL"
+  --keep-col "spliceai.ds_dg:spliceAI_DS_DG"
+  --keep-col "spliceai.ds_dl:spliceAI_DS_DL"
+  --keep-col "spliceai.dp_ag:spliceAI_DP_AG"
+  --keep-col "spliceai.dp_al:spliceAI_DP_AL"
+  --keep-col "spliceai.dp_dg:spliceAI_DP_DG"
+  --keep-col "spliceai.dp_dl:spliceAI_DP_DL"
+  --keep-col "spliceai.dp_dl:spliceAI_DP_DL"
+  --keep-col "clingen_evidence_repository.ClinVar Variation Id:ClinVar Variation Id_ClinGen_repo"
+  --keep-col "clingen_evidence_repository.Allele Registry Id:Allele Registry Id_ClinGen_repo"
+  --keep-col "clingen_evidence_repository.Disease:Disease_ClinGen_repo"
+  --keep-col "clingen_evidence_repository.Mondo Id:Mondo Id_ClinGen_repo"
+  --keep-col "clingen_evidence_repository.Mode of Inheritance:Mode of Inheritance_ClinGen_repo"
+  --keep-col "clingen_evidence_repository.Assertion:Assertion_ClinGen_repo"
+  --keep-col "clingen_evidence_repository.Applied Evidence Codes (Met):Applied Evidence Codes (Met)_ClinGen_repo"
+  --keep-col "clingen_evidence_repository.Applied Evidence Codes (Not Met):Applied Evidence Codes (Not Met)_ClinGen_repo"
+  --keep-col "clingen_evidence_repository.Summary of interpretation:Summary of interpretation_ClinGen_repo"
+  --keep-col "clingen_evidence_repository.PubMed Articles:PubMed Articles_ClinGen_repo"
+  --keep-col "clingen_evidence_repository.Expert Panel:Expert Panel_ClinGen_repo"
+  --keep-col "clingen_evidence_repository.Guideline:Guideline_ClinGen_repo"
+  --keep-col "clingen_evidence_repository.Approval Date:Approval Date_ClinGen_repo"
+  --keep-col "clingen_evidence_repository.Published Date:Published Date_ClinGen_repo"
+  --keep-col "clingen_evidence_repository.Retracted:Retracted_ClinGen_repo"
+  --keep-col "clingen_evidence_repository.Evidence Repo Link:Evidence Repo Link_ClinGen_repo"
+  --keep-col "clingen_evidence_repository.Uuid:Uuid_ClinGen_repo"
+  --keep-col "Updated_Classification_ClinGen_repo"
+  --keep-col "Updated_Evidence Codes_ClinGen_repo"
+  --keep-col "revel.score:REVEL"
+  --keep-col "alphamissense.pathogenicity:AM_score"
+  --keep-col "alphamissense.class:AM_class"
+  --keep-col "mutpred2.score:MutPred2"
+  --keep-col "simplified_consequence"
+  --keep-col "condensed_consequence"
+  --keep-col "splice_variant"
+  --keep-col "splice_var_amino"
+  --keep-col "Flag"
+)
+
 ########################################################################################################################
-# Condensed data frame
+# Condensed final integrated MAVE dataset
 ########################################################################################################################
 
 # Filter out unmapped variants.
@@ -344,109 +451,16 @@ src/scripts/run_utilities.sh filter-rows \
   --match any \
   --csv-field-size-limit 10000000
 
-# Filter, reorder, and rename columns to match the CVFG dataframe format.
+# Filter, reorder, and rename columns to match the CVFG dataset format.
 src/scripts/run_utilities.sh rename-columns \
   /work/data/cvfg_variants.20.mapped.tsv \
   /work/data/integrated_variant_effect_dataset.condensed.tsv \
   --csv-field-size-limit 10000000 \
   --reorder \
-  --keep-col "dataset_name:Dataset" \
-  --keep-col "gene_symbol:Gene" \
-  --keep-col "gene_hgnc_id:HGNC_ID" \
-  --keep-col "variant_urn:mavedb_variant_urn" \
-  --keep-col "mapped_hgvs_g_chromosome:Chrom" \
-  --keep-col "strand:Strand" \
-  --keep-col "mapped_hgvs_g_start:hg38_start" \
-  --keep-col "mapped_hgvs_g_stop:hg38_end" \
-  --keep-col "mapped_hgvs_g_ref:ref_allele" \
-  --keep-col "mapped_hgvs_g_alt:alt_allele" \
-  --keep-col "author_provided_transcript_id:auth_transcript_id" \
-  --keep-col "mapped_hgvs_c_start:transcript_pos" \
-  --keep-col "mapped_hgvs_c_ref:transcript_ref" \
-  --keep-col "mapped_hgvs_c_alt:transcript_alt" \
-  --keep-col "mapped_hgvs_p_start:aa_pos" \
-  --keep-col "mapped_hgvs_p_ref:aa_ref" \
-  --keep-col "mapped_hgvs_p_alt:aa_alt" \
-  --keep-col "mapped_hgvs_c:hgvs_c" \
-  --keep-col "mapped_hgvs_p:hgvs_p" \
-  --keep-col "vep.mutational_consequences:consequence" \
-  --keep-col "vep.most_severe_mutational_consequence:most_severe_mutational_consequence" \
-  --keep-col "score:auth_reported_score" \
-  --keep-col "rna_score" \
-  --keep-col "mavedb.active_calibration.functional_class_label:auth_reported_func_class" \
-  --keep-col "mavedb.active_calibration.functional_classification:auth_reported_func_class_category" \
-  --keep-col "assay_detects_splicing_effects:splice_measure" \
-  --keep-col "gnomad.v4_1.minor_allele_frequency:gnomad_MAF" \
-  --keep-col "clinvar.202601.clinical_significance:clinvar_sig_2026" \
-  --keep-col "clinvar.202601.review_status:clinvar_star_2026" \
-  --keep-col "clinvar.202601.last_review_date:clinvar_date_last_reviewed_2026" \
-  --keep-col "clinvar.202501.clinical_significance:clinvar_sig_2025" \
-  --keep-col "clinvar.202501.review_status:clinvar_star_2025" \
-  --keep-col "clinvar.202501.last_review_date:clinvar_date_last_reviewed_2025" \
-  --keep-col "clinvar.201812.clinical_significance:clinvar_sig_2018" \
-  --keep-col "clinvar.201812.review_status:clinvar_star_2018" \
-  --keep-col "clinvar.201812.last_review_date:clinvar_date_last_reviewed_2018" \
-  --keep-col "assayed_variant_level:nucleotide_or_aa" \
-  --keep-col "ensembl_transcript_id_from_assay_metadata:Ensembl Transcript ID" \
-  --keep-col "refseq_transcript_id_from_assay_metadata:RefSeq Transcript ID" \
-  --keep-col "Interval 1 Name" \
-  --keep-col "Interval 1 Range" \
-  --keep-col "Interval 1 Class" \
-  --keep-col "Interval 2 Name" \
-  --keep-col "Interval 2 Range" \
-  --keep-col "Interval 2 Class" \
-  --keep-col "Interval 3 Name" \
-  --keep-col "Interval 3 Range" \
-  --keep-col "Interval 3 Class" \
-  --keep-col "Interval 4 Name" \
-  --keep-col "Interval 4 Range" \
-  --keep-col "Interval 4 Class" \
-  --keep-col "Interval 5 Name" \
-  --keep-col "Interval 5 Range" \
-  --keep-col "Interval 5 Class" \
-  --keep-col "Interval 6 Name" \
-  --keep-col "Interval 6 Range" \
-  --keep-col "Interval 6 Class" \
-  --keep-col "spliceai.ds_ag:spliceAI_DS_AG" \
-  --keep-col "spliceai.ds_al:spliceAI_DS_AL" \
-  --keep-col "spliceai.ds_dg:spliceAI_DS_DG" \
-  --keep-col "spliceai.ds_dl:spliceAI_DS_DL" \
-  --keep-col "spliceai.dp_ag:spliceAI_DP_AG" \
-  --keep-col "spliceai.dp_al:spliceAI_DP_AL" \
-  --keep-col "spliceai.dp_dg:spliceAI_DP_DG" \
-  --keep-col "spliceai.dp_dl:spliceAI_DP_DL" \
-  --keep-col "spliceai.dp_dl:spliceAI_DP_DL" \
-  --keep-col "clingen_evidence_repository.ClinVar Variation Id:ClinVar Variation Id_ClinGen_repo" \
-  --keep-col "clingen_evidence_repository.Allele Registry Id:Allele Registry Id_ClinGen_repo" \
-  --keep-col "clingen_evidence_repository.Disease:Disease_ClinGen_repo" \
-  --keep-col "clingen_evidence_repository.Mondo Id:Mondo Id_ClinGen_repo" \
-  --keep-col "clingen_evidence_repository.Mode of Inheritance:Mode of Inheritance_ClinGen_repo" \
-  --keep-col "clingen_evidence_repository.Assertion:Assertion_ClinGen_repo" \
-  --keep-col "clingen_evidence_repository.Applied Evidence Codes (Met):Applied Evidence Codes (Met)_ClinGen_repo" \
-  --keep-col "clingen_evidence_repository.Applied Evidence Codes (Not Met):Applied Evidence Codes (Not Met)_ClinGen_repo" \
-  --keep-col "clingen_evidence_repository.Summary of interpretation:Summary of interpretation_ClinGen_repo" \
-  --keep-col "clingen_evidence_repository.PubMed Articles:PubMed Articles_ClinGen_repo" \
-  --keep-col "clingen_evidence_repository.Expert Panel:Expert Panel_ClinGen_repo" \
-  --keep-col "clingen_evidence_repository.Guideline:Guideline_ClinGen_repo" \
-  --keep-col "clingen_evidence_repository.Approval Date:Approval Date_ClinGen_repo" \
-  --keep-col "clingen_evidence_repository.Published Date:Published Date_ClinGen_repo" \
-  --keep-col "clingen_evidence_repository.Retracted:Retracted_ClinGen_repo" \
-  --keep-col "clingen_evidence_repository.Evidence Repo Link:Evidence Repo Link_ClinGen_repo" \
-  --keep-col "clingen_evidence_repository.Uuid:Uuid_ClinGen_repo" \
-  --keep-col "Updated_Classification_ClinGen_repo" \
-  --keep-col "Updated_Evidence Codes_ClinGen_repo" \
-  --keep-col "revel.score:REVEL" \
-  --keep-col "alphamissense.pathogenicity:AM_score" \
-  --keep-col "alphamissense.class:AM_class" \
-  --keep-col "mutpred2.score:MutPred2" \
-  --keep-col "simplified_consequence" \
-  --keep-col "condensed_consequence" \
-  --keep-col "splice_variant" \
-  --keep-col "splice_var_amino" \
-  --keep-col "Flag"
+  "${COLUMN_MAP[@]}"
 
 ########################################################################################################################
-# Expanded data frame
+# Expanded final integrated MAVE dataset
 ########################################################################################################################
 
 src/scripts/run_utilities.sh filter-rows \
@@ -456,106 +470,13 @@ src/scripts/run_utilities.sh filter-rows \
   --match any \
   --csv-field-size-limit 10000000
 
-# Filter, reorder, and rename columns to match the CVFG dataframe format.
+# Filter, reorder, and rename columns to match the CVFG dataset format.
 src/scripts/run_utilities.sh rename-columns \
   /work/data/cvfg_variants.20.flat.mapped.tsv \
   /work/data/integrated_variant_effect_dataset.tsv \
   --csv-field-size-limit 10000000 \
   --reorder \
-  --keep-col "dataset_name:Dataset" \
-  --keep-col "gene_symbol:Gene" \
-  --keep-col "gene_hgnc_id:HGNC_ID" \
-  --keep-col "variant_urn:mavedb_variant_urn" \
-  --keep-col "mapped_hgvs_g_chromosome:Chrom" \
-  --keep-col "strand:Strand" \
-  --keep-col "mapped_hgvs_g_start:hg38_start" \
-  --keep-col "mapped_hgvs_g_stop:hg38_end" \
-  --keep-col "mapped_hgvs_g_ref:ref_allele" \
-  --keep-col "mapped_hgvs_g_alt:alt_allele" \
-  --keep-col "author_provided_transcript_id:auth_transcript_id" \
-  --keep-col "mapped_hgvs_c_start:transcript_pos" \
-  --keep-col "mapped_hgvs_c_ref:transcript_ref" \
-  --keep-col "mapped_hgvs_c_alt:transcript_alt" \
-  --keep-col "mapped_hgvs_p_start:aa_pos" \
-  --keep-col "mapped_hgvs_p_ref:aa_ref" \
-  --keep-col "mapped_hgvs_p_alt:aa_alt" \
-  --keep-col "mapped_hgvs_c:hgvs_c" \
-  --keep-col "mapped_hgvs_p:hgvs_p" \
-  --keep-col "vep.mutational_consequences:consequence" \
-  --keep-col "vep.most_severe_mutational_consequence:most_severe_mutational_consequence" \
-  --keep-col "score:auth_reported_score" \
-  --keep-col "rna_score" \
-  --keep-col "mavedb.active_calibration.functional_class_label:auth_reported_func_class" \
-  --keep-col "mavedb.active_calibration.functional_classification:auth_reported_func_class_category" \
-  --keep-col "assay_detects_splicing_effects:splice_measure" \
-  --keep-col "gnomad.v4_1.minor_allele_frequency:gnomad_MAF" \
-  --keep-col "clinvar.202601.clinical_significance:clinvar_sig_2026" \
-  --keep-col "clinvar.202601.review_status:clinvar_star_2026" \
-  --keep-col "clinvar.202601.last_review_date:clinvar_date_last_reviewed_2026" \
-  --keep-col "clinvar.202501.clinical_significance:clinvar_sig_2025" \
-  --keep-col "clinvar.202501.review_status:clinvar_star_2025" \
-  --keep-col "clinvar.202501.last_review_date:clinvar_date_last_reviewed_2025" \
-  --keep-col "clinvar.201812.clinical_significance:clinvar_sig_2018" \
-  --keep-col "clinvar.201812.review_status:clinvar_star_2018" \
-  --keep-col "clinvar.201812.last_review_date:clinvar_date_last_reviewed_2018" \
-  --keep-col "assayed_variant_level:nucleotide_or_aa" \
-  --keep-col "ensembl_transcript_id_from_assay_metadata:Ensembl Transcript ID" \
-  --keep-col "refseq_transcript_id_from_assay_metadata:RefSeq Transcript ID" \
-  --keep-col "Interval 1 Name" \
-  --keep-col "Interval 1 Range" \
-  --keep-col "Interval 1 Class" \
-  --keep-col "Interval 2 Name" \
-  --keep-col "Interval 2 Range" \
-  --keep-col "Interval 2 Class" \
-  --keep-col "Interval 3 Name" \
-  --keep-col "Interval 3 Range" \
-  --keep-col "Interval 3 Class" \
-  --keep-col "Interval 4 Name" \
-  --keep-col "Interval 4 Range" \
-  --keep-col "Interval 4 Class" \
-  --keep-col "Interval 5 Name" \
-  --keep-col "Interval 5 Range" \
-  --keep-col "Interval 5 Class" \
-  --keep-col "Interval 6 Name" \
-  --keep-col "Interval 6 Range" \
-  --keep-col "Interval 6 Class" \
-  --keep-col "spliceai.ds_ag:spliceAI_DS_AG" \
-  --keep-col "spliceai.ds_al:spliceAI_DS_AL" \
-  --keep-col "spliceai.ds_dg:spliceAI_DS_DG" \
-  --keep-col "spliceai.ds_dl:spliceAI_DS_DL" \
-  --keep-col "spliceai.dp_ag:spliceAI_DP_AG" \
-  --keep-col "spliceai.dp_al:spliceAI_DP_AL" \
-  --keep-col "spliceai.dp_dg:spliceAI_DP_DG" \
-  --keep-col "spliceai.dp_dl:spliceAI_DP_DL" \
-  --keep-col "spliceai.dp_dl:spliceAI_DP_DL" \
-  --keep-col "clingen_evidence_repository.ClinVar Variation Id:ClinVar Variation Id_ClinGen_repo" \
-  --keep-col "clingen_evidence_repository.Allele Registry Id:Allele Registry Id_ClinGen_repo" \
-  --keep-col "clingen_evidence_repository.Disease:Disease_ClinGen_repo" \
-  --keep-col "clingen_evidence_repository.Mondo Id:Mondo Id_ClinGen_repo" \
-  --keep-col "clingen_evidence_repository.Mode of Inheritance:Mode of Inheritance_ClinGen_repo" \
-  --keep-col "clingen_evidence_repository.Assertion:Assertion_ClinGen_repo" \
-  --keep-col "clingen_evidence_repository.Applied Evidence Codes (Met):Applied Evidence Codes (Met)_ClinGen_repo" \
-  --keep-col "clingen_evidence_repository.Applied Evidence Codes (Not Met):Applied Evidence Codes (Not Met)_ClinGen_repo" \
-  --keep-col "clingen_evidence_repository.Summary of interpretation:Summary of interpretation_ClinGen_repo" \
-  --keep-col "clingen_evidence_repository.PubMed Articles:PubMed Articles_ClinGen_repo" \
-  --keep-col "clingen_evidence_repository.Expert Panel:Expert Panel_ClinGen_repo" \
-  --keep-col "clingen_evidence_repository.Guideline:Guideline_ClinGen_repo" \
-  --keep-col "clingen_evidence_repository.Approval Date:Approval Date_ClinGen_repo" \
-  --keep-col "clingen_evidence_repository.Published Date:Published Date_ClinGen_repo" \
-  --keep-col "clingen_evidence_repository.Retracted:Retracted_ClinGen_repo" \
-  --keep-col "clingen_evidence_repository.Evidence Repo Link:Evidence Repo Link_ClinGen_repo" \
-  --keep-col "clingen_evidence_repository.Uuid:Uuid_ClinGen_repo" \
-  --keep-col "Updated_Classification_ClinGen_repo" \
-  --keep-col "Updated_Evidence Codes_ClinGen_repo" \
-  --keep-col "revel.score:REVEL" \
-  --keep-col "alphamissense.pathogenicity:AM_score" \
-  --keep-col "alphamissense.class:AM_class" \
-  --keep-col "mutpred2.score:MutPred2" \
-  --keep-col "simplified_consequence" \
-  --keep-col "condensed_consequence" \
-  --keep-col "splice_variant" \
-  --keep-col "splice_var_amino" \
-  --keep-col "Flag"
+  "${COLUMN_MAP[@]}"
 
 }
 
@@ -582,5 +503,4 @@ else
   for ((n = 1; n <= LAST_STEP; n++)); do
     "step_$n"
   done
-  build_condensed_and_expanded_frames
 fi

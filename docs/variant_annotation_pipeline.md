@@ -81,8 +81,7 @@ data/input/maves/cvfg_variants.0.tsv       (Step 1 input; see exception below)
 data/intermediate/variant_annotation/data/ (gitignored; mounted as the
                                              variant-annotation pipeline's
                                              VARIANT_DATA_DIR for the run)
-        |  scripts/variant_annotation_pipeline.sh runs Steps 1-20 +
-        |  condensed/expanded frame assembly
+        |  scripts/variant_annotation_pipeline.sh runs Steps 1-21
         v
 data/mave_data/                            (final gzipped outputs, tracked)
 ```
@@ -114,12 +113,14 @@ orchestrator sets up.
 
 Each numbered step in `scripts/variant_annotation_pipeline.sh` is defined as
 a `step_N` shell function, where `step_N` reads `data/cvfg_variants.<N-1>.tsv`
-and writes `data/cvfg_variants.<N>.tsv` (`N` is 1-20; see that script's header
+and writes `data/cvfg_variants.<N>.tsv` (`N` is 1-21; see that script's header
 comment for the full list, and its `case` in
 `recalculate_clingen_classification`/`flag_variants` above for how 17-19 map
-to this project's own steps). To run just one step -- for debugging a
-specific annotation step without re-running everything before it -- pass
-`--step N`:
+to this project's own steps) -- except `step_21`, which flattens
+`cvfg_variants.20.tsv` and writes the condensed and expanded final integrated
+MAVE dataset files directly rather than a numbered `cvfg_variants.21.tsv`. To
+run just one step -- for debugging a specific annotation step without
+re-running everything before it -- pass `--step N`:
 
 ```bash
 scripts/run_variant_annotation_pipeline.sh --step 9
@@ -128,20 +129,16 @@ scripts/run_variant_annotation_pipeline.sh --step 9
 This still stages `data/raw_mave_data/` and exports `VARIANT_DATA_DIR`/
 `CVFG_PROJECT_DIR` exactly as a full run does (so step 9's inputs resolve the
 same way they would mid-pipeline), but runs only `step_9` and skips the final
-gzip step, since a single step doesn't produce the final integrated dataset
-files. Its output lands at
+gzip into `data/mave_data/` -- even `--step 21` only writes its outputs to
+the staged intermediate directory. Its output lands at
 `data/intermediate/variant_annotation/data/cvfg_variants.9.tsv`. The step
 must already have its input file present from a previous run (full or
 single-step) of the step before it.
 
-The flatten step and the condensed/expanded frame assembly at the end of the
-pipeline aren't part of this numbered sequence (they don't fit the
-`<N-1>.tsv -> <N>.tsv` pattern) and always run together, only as the tail of
-a full (no `--step`) run. `prepare_gnomad_cache` is likewise not part of the
-numbered sequence -- see [gnomAD Hail table
-cache](#gnomad-hail-table-cache-prerequisite-for-step-7) above; unlike the
-flatten/assembly tail, it's invoked with its own flag
-(`--prepare-gnomad-cache`) rather than running automatically.
+`prepare_gnomad_cache` is not part of the numbered sequence -- see [gnomAD
+Hail table cache](#gnomad-hail-table-cache-prerequisite-for-step-7) above;
+it's invoked with its own flag (`--prepare-gnomad-cache`) rather than running
+automatically or via `--step`.
 
 ## The `VARIANT_DATA_DIR` path-mapping subtlety
 
@@ -171,11 +168,10 @@ in `scripts/variant_annotation_pipeline.sh` is therefore now written
 explicitly: as `/work/data/...` for Dockerized steps (all step_N's honor an
 already-`/work`- or `/usr/src/app`-prefixed path verbatim, skipping the
 host-existence check entirely), or as `"$VARIANT_DATA_DIR/data/..."` for the
-handful of plain, non-Dockerized commands (step_15's in-script `awk` call,
-and `build_condensed_and_expanded_frames`'s `awk` calls, all of which run
-directly on the host with the `variant-annotation` checkout as `cwd`, so a
-bare `data/...` there is neither Docker-remapped nor meaningful as a
-container path). This is also why our staged directory needs a `data/`
+handful of plain, non-Dockerized commands (step_15's and step_20's in-script
+`awk` calls, both of which run directly on the host with the
+`variant-annotation` checkout as `cwd`, so a bare `data/...` there is neither
+Docker-remapped nor meaningful as a container path). This is also why our staged directory needs a `data/`
 subfolder of its own -- `data/intermediate/variant_annotation/data/...` --
 matching the `data/...` prefix every reference still uses after `/work`:
 the orchestrator script rsyncs into `data/intermediate/variant_annotation/data/`

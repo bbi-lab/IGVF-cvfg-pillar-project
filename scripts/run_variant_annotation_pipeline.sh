@@ -10,7 +10,7 @@ set -euo pipefail
 # docs/variant_annotation_pipeline.md for the why):
 #   data/raw_mave_data/  --(staged, non-destructively)-->
 #   data/intermediate/variant_annotation/data/  --(mounted as VARIANT_DATA_DIR)-->
-#   variant_annotation_pipeline.sh Steps 1-19 + condensed/expanded frame assembly  -->
+#   variant_annotation_pipeline.sh Steps 1-21  -->
 #   data/mave_data/*.tsv.gz
 #
 # Usage:
@@ -21,9 +21,11 @@ set -euo pipefail
 # --step N still stages data/raw_mave_data/ and sets up VARIANT_DATA_DIR/
 # CVFG_PROJECT_DIR exactly as a full run does, but runs only step N of
 # scripts/variant_annotation_pipeline.sh (N reads
-# data/cvfg_variants.<N-1>.tsv and writes data/cvfg_variants.<N>.tsv; see
-# that script's header for the full step list) and skips the final gzip,
-# since a single step doesn't produce the final integrated dataset files.
+# data/cvfg_variants.<N-1>.tsv and writes data/cvfg_variants.<N>.tsv, except
+# step 21, which writes the final integrated MAVE dataset files directly; see
+# that script's header for the full step list) and skips the final gzip into
+# data/mave_data/ either way, since even --step 21 only writes its outputs to
+# the staged intermediate directory.
 #
 # --prepare-gnomad-cache builds/refreshes Step 7's local gnomAD Hail table
 # cache and exits -- it skips all of the CVFG-specific data staging below,
@@ -123,7 +125,13 @@ export VARIANT_DATA_DIR="$stage_dir"
 if [[ -n "$step" ]]; then
   echo "Running step $step of scripts/variant_annotation_pipeline.sh in $va_dir (VARIANT_DATA_DIR=$VARIANT_DATA_DIR) ..."
   ( cd "$va_dir" && bash "$CVFG_PROJECT_DIR/scripts/variant_annotation_pipeline.sh" "$step" )
-  echo "Done: $stage_dir/data/cvfg_variants.$step.tsv"
+  if [[ "$step" == "21" ]]; then
+    echo "Done:"
+    echo "  $stage_dir/data/integrated_variant_effect_dataset.tsv"
+    echo "  $stage_dir/data/integrated_variant_effect_dataset.condensed.tsv"
+  else
+    echo "Done: $stage_dir/data/cvfg_variants.$step.tsv"
+  fi
   exit 0
 fi
 
