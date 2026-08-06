@@ -15,6 +15,10 @@ variant effect datasets.
 - Docker and Docker Compose
 - A `variant-annotation` checkout -- either the vendored git submodule at
   `vendor/variant-annotation`, or your own existing checkout (see below)
+- Step 7's gnomAD Hail table cache, built or refreshed once per checkout
+  (see [gnomAD Hail table cache](#gnomad-hail-table-cache-prerequisite-for-step-7)
+  below) -- **not needed** if you're pointing `VARIANT_ANNOTATION_DIR` at an
+  existing checkout where this has already been done
 
 ## Locating variant-annotation: submodule vs. override
 
@@ -33,6 +37,39 @@ these are tens of GB and shouldn't be re-fetched per clone:
 ```bash
 export VARIANT_ANNOTATION_DIR=/path/to/your/existing/variant-annotation/checkout
 ```
+
+## gnomAD Hail table cache (prerequisite for Step 7)
+
+Step 7 (gnomAD annotation) reads from a local Hail table cache rather than
+querying gnomAD directly; that cache has to be built before Step 7 can run.
+Building/refreshing it is deliberately **not** part of the normal pipeline
+run -- it's a one-time (per checkout) preparation step, since a full build
+can take ~6-7 hours:
+
+```bash
+scripts/run_variant_annotation_pipeline.sh --prepare-gnomad-cache
+```
+
+This runs `prepare_gnomad_cache` from `scripts/variant_annotation_pipeline.sh`
+-- the `--download-only --refresh-cache` invocation that used to live inline
+in Step 7 -- against a local Hail table copy expected at
+`$VARIANT_DATA_DIR/gnomAD/gnomad.joint.v4.1.sites.ht` (i.e.
+`data/intermediate/variant_annotation/gnomAD/...` when using the default
+staging directory, or wherever `VARIANT_DATA_DIR` points if you've overridden
+it). It skips all of the CVFG-specific data staging (`data/raw_mave_data/`,
+`score_sets.tsv`, etc.) since none of it is relevant to a cache build.
+
+The built cache is written to the `variant-annotation-gnomad-cache` Docker
+named volume, which is scoped to the `variant-annotation` checkout's Compose
+project rather than to any particular `VARIANT_DATA_DIR` staging directory.
+**This means you only need to run `--prepare-gnomad-cache` once per
+`variant-annotation` checkout** -- if `VARIANT_ANNOTATION_DIR` already points
+at a checkout where Step 7 (or this prep step) has been run before, the
+cache already exists in that checkout's volume and Step 7 will use it
+directly; you don't need to rebuild or refresh it again. Only re-run this
+prep step if you're using a fresh checkout, switching to a different gnomAD
+release/version, or need to pick up new histogram fields (`--refresh-cache`
+forces a rebuild even if a cache already exists).
 
 ## Data flow
 
@@ -100,7 +137,11 @@ single-step) of the step before it.
 The flatten step and the condensed/expanded frame assembly at the end of the
 pipeline aren't part of this numbered sequence (they don't fit the
 `<N-1>.tsv -> <N>.tsv` pattern) and always run together, only as the tail of
-a full (no `--step`) run.
+a full (no `--step`) run. `prepare_gnomad_cache` is likewise not part of the
+numbered sequence -- see [gnomAD Hail table
+cache](#gnomad-hail-table-cache-prerequisite-for-step-7) above; unlike the
+flatten/assembly tail, it's invoked with its own flag
+(`--prepare-gnomad-cache`) rather than running automatically.
 
 ## The `VARIANT_DATA_DIR` path-mapping subtlety
 

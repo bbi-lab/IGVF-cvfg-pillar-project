@@ -24,6 +24,13 @@
 # `scripts/run_variant_annotation_pipeline.sh --step N`, which also handles
 # staging and env vars for you (see docs/variant_annotation_pipeline.md).
 #
+# prepare_gnomad_cache is a separate, optional preparation step (not part of
+# the numbered step_N sequence, and never run automatically) that builds/
+# refreshes Step 7's local gnomAD Hail table cache. Run it explicitly via
+# `scripts/run_variant_annotation_pipeline.sh --prepare-gnomad-cache` --
+# see the "gnomAD Hail table cache" prerequisite in
+# docs/variant_annotation_pipeline.md for when this is (and isn't) needed.
+#
 # Every cvfg_variants.*/integrated_variant_effect_dataset* reference below is
 # written as an explicit /work/data/... path (Dockerized steps) or
 # "$VARIANT_DATA_DIR/data/..." path (the handful of plain, non-Dockerized
@@ -94,14 +101,26 @@ src/scripts/run_annotate_clinvar.sh /work/data/cvfg_variants.6-2.tsv /work/data/
   --csv-field-size-limit 10000000
 }
 
-# Step 7: gnomAD (using local Hail table copy and Docker-volume cache)
-# Build the cache first if needed (one-time; ~6-7 hours with local[1]):
-step_7() {
+# Prepare the gnomAD Hail table cache (optional; not part of the numbered
+# step_N sequence below, and never run as part of a normal pipeline run --
+# see the module docstring above and the "gnomAD Hail table cache"
+# prerequisite in docs/variant_annotation_pipeline.md). Run this once per
+# variant-annotation checkout before Step 7's first real run against it --
+# the built cache persists in that checkout's variant-annotation-gnomad-cache
+# Docker volume, so an existing checkout where this has already been run
+# doesn't need it again. Rebuilding takes ~6-7 hours with local[1] for a
+# full gnomAD joint sites table.
+prepare_gnomad_cache() {
 src/scripts/run_annotate_gnomad.sh /dev/null /dev/null \
   --gnomad-version v4.1 \
   --download-only \
   --refresh-cache \
   --gnomad-ht-uri /work/gnomAD/gnomad.joint.v4.1.sites.ht
+}
+
+# Step 7: gnomAD (using local Hail table copy and Docker-volume cache; see
+# prepare_gnomad_cache above for the one-time cache build/refresh)
+step_7() {
 # GNOMAD_CACHE_DIR=/gnomad-cache is injected automatically from the Docker volume; no --cache-dir needed.
 src/scripts/run_annotate_gnomad.sh /work/data/cvfg_variants.6.tsv /work/data/cvfg_variants.7.tsv \
   --gnomad-version v4.1 \
@@ -540,15 +559,21 @@ awk -F'\t' -v OFS='\t' '
 }
 
 ########################################################################################################################
-# Entry point: run everything, or just one requested step.
+# Entry point: run everything, just one requested step, or the optional
+# prepare-gnomad-cache preparation step.
 ########################################################################################################################
 
 requested_step="${1:-}"
 
+if [[ "$requested_step" == "prepare-gnomad-cache" ]]; then
+  prepare_gnomad_cache
+  exit 0
+fi
+
 if [[ -n "$requested_step" ]]; then
   step_fn="step_${requested_step}"
   if ! declare -F "$step_fn" > /dev/null; then
-    echo "error: no such step '$requested_step' (valid: 1-$LAST_STEP)" >&2
+    echo "error: no such step '$requested_step' (valid: 1-$LAST_STEP, or 'prepare-gnomad-cache')" >&2
     exit 1
   fi
   "$step_fn"

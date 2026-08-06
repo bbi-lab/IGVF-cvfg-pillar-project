@@ -14,8 +14,9 @@ set -euo pipefail
 #   data/mave_data/*.tsv.gz
 #
 # Usage:
-#   scripts/run_variant_annotation_pipeline.sh            # full pipeline
-#   scripts/run_variant_annotation_pipeline.sh --step N   # just step N
+#   scripts/run_variant_annotation_pipeline.sh                     # full pipeline
+#   scripts/run_variant_annotation_pipeline.sh --step N            # just step N
+#   scripts/run_variant_annotation_pipeline.sh --prepare-gnomad-cache
 #
 # --step N still stages data/raw_mave_data/ and sets up VARIANT_DATA_DIR/
 # CVFG_PROJECT_DIR exactly as a full run does, but runs only step N of
@@ -23,6 +24,13 @@ set -euo pipefail
 # data/cvfg_variants.<N-1>.tsv and writes data/cvfg_variants.<N>.tsv; see
 # that script's header for the full step list) and skips the final gzip,
 # since a single step doesn't produce the final integrated dataset files.
+#
+# --prepare-gnomad-cache builds/refreshes Step 7's local gnomAD Hail table
+# cache and exits -- it skips all of the CVFG-specific data staging below,
+# since that data is irrelevant to a cache build. This is a prerequisite for
+# Step 7, not something a normal run needs to do -- see the "gnomAD Hail
+# table cache" section of docs/variant_annotation_pipeline.md for when this
+# is (and isn't) necessary.
 #
 # Env vars:
 #   VARIANT_ANNOTATION_DIR  Path to a variant-annotation checkout. Defaults to
@@ -34,15 +42,20 @@ set -euo pipefail
 ########################################################################################################################
 
 step=""
+prepare_gnomad_cache=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --step)
       step="${2:?--step requires a step number}"
       shift 2
       ;;
+    --prepare-gnomad-cache)
+      prepare_gnomad_cache=1
+      shift
+      ;;
     *)
       echo "error: unrecognized argument '$1'" >&2
-      echo "usage: $0 [--step N]" >&2
+      echo "usage: $0 [--step N | --prepare-gnomad-cache]" >&2
       exit 1
       ;;
   esac
@@ -67,6 +80,14 @@ fi
 
 stage_dir="$CVFG_PROJECT_DIR/data/intermediate/variant_annotation"
 mkdir -p "$stage_dir/data"
+
+if [[ "$prepare_gnomad_cache" -eq 1 ]]; then
+  export VARIANT_DATA_DIR="$stage_dir"
+  echo "Running prepare-gnomad-cache of scripts/variant_annotation_pipeline.sh in $va_dir (VARIANT_DATA_DIR=$VARIANT_DATA_DIR) ..."
+  ( cd "$va_dir" && bash "$CVFG_PROJECT_DIR/scripts/variant_annotation_pipeline.sh" prepare-gnomad-cache )
+  echo "Done: gnomAD Hail table cache built/refreshed in the variant-annotation-gnomad-cache Docker volume."
+  exit 0
+fi
 
 echo "Staging data/raw_mave_data/ -> ${stage_dir#"$CVFG_PROJECT_DIR"/}/data/ ..."
 rsync -a "$CVFG_PROJECT_DIR/data/raw_mave_data/" "$stage_dir/data/"
