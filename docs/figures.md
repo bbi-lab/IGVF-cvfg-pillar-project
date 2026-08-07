@@ -6,6 +6,55 @@ AGENTS.md's roadmap, these are still notebooks/scripts rather than converted
 directory alone -- this doc is where that gets written down, one figure at a
 time, starting with Figure 4.
 
+## Figure 4
+
+Directory: `Main_Figures/Figure_4/`. `figure4.ipynb` only *loads* a cached
+`figure4_data.json.gz` and calls `plot_figure4()` (in `plot_utils.py`); it
+does not compute anything itself. That cache used to be committed directly,
+pre-built, with no in-repo script that produced it.
+
+`src/build_figure4_data.py` now rebuilds most of that cache from current
+pipeline outputs. Three sub-panels (the panel a density-band fit, panel c's
+out-of-bag confusion matrices, and panel d's illustrative cartoon) have no
+source anywhere in this repo and can only be carried forward from a prior
+cache -- see `docs/build_figure4_data.md` for exactly which fields and why.
+
+### Steps
+
+```bash
+# One-time environment setup (skip if already done)
+poetry install --all-extras
+poetry run python -m ipykernel install --user --name igvf-cvfg-pillar-project \
+  --display-name "IGVF CVFG Pillar Project (Poetry)"
+
+# 1. Rebuild figure4_data.json.gz, carrying forward the fields that can't be
+#    regenerated (see docs/build_figure4_data.md)
+poetry run python -m src.build_figure4_data \
+  --cached-json Main_Figures/Figure_4/old_figure4_data.json.gz
+
+# 2. Execute the notebook to produce fig4.png
+poetry run jupyter nbconvert --to notebook --execute \
+  --ExecutePreprocessor.kernel_name=igvf-cvfg-pillar-project \
+  --ExecutePreprocessor.timeout=600 \
+  --output executed_figure4.ipynb \
+  Main_Figures/Figure_4/figure4.ipynb
+```
+
+Step 1 writes to `Main_Figures/Figure_4/figure4_data.json.gz` by default
+(override with `--output`); step 2 reads that same path. Step 2 writes
+`Main_Figures/Figure_4/fig4.png` and a side-effect `executed_figure4.ipynb`
+(nbconvert's copy of the notebook with outputs attached) -- delete the latter
+afterward if you don't want it in the working tree.
+
+`--cached-json` must point at a `figure4_data.json.gz`-shaped file;
+`old_figure4_data.json.gz` (a byte-identical backup of the originally
+committed cache) works. Without `--cached-json`, step 1 raises immediately
+and names the fields it can't source rather than guessing.
+
+See `docs/build_figure4_data.md` for what's actually reconstructed vs.
+carried forward, and the known discrepancies (ClinVar/gnomAD drift since the
+original figure, and `finalout_4f`'s row-count mismatch in panel f).
+
 ## Figure 2
 
 Directory: `Main_Figures/Figure_2/`. Six scripts: one prep notebook everything
