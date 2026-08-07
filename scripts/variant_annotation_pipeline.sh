@@ -191,23 +191,22 @@ step_13() {
 
 # Step 14: Dataset names
 #
-# The awk pass runs directly on the host (this whole script executes with
-# the variant-annotation checkout as cwd, so it isn't a bare data/... path
-# here either) -- its input/output are written as
-# "$VARIANT_DATA_DIR/data/..." so they land in and read from our staged
-# directory regardless of cwd. The merge-columns extra-file argument is
-# written as /work/data/score_sets.tsv rather than a bare data/score_sets.tsv.
-# merge-columns's wrapper does remap all three of its positional arguments
-# through its own /work-vs-repo-bind-mount host-existence check, but that
-# check would still incorrectly prefer a variant-annotation checkout's own
-# data/score_sets.tsv over our staged data/input/maves/score_sets.tsv if one
-# happens to exist there -- so it's forced to /work explicitly, same as
-# step_11 and step_16 -- see docs/variant_annotation_pipeline.md.
+# derive_score_set_urn (Dockerized, from the CVFG pillar project -- see
+# src/scripts/run_derive_score_set_urn.sh there) replaces a former in-script
+# `awk` pass that read the file line-by-line: it silently corrupted the
+# derived score_set_urn for any row whose mavedb_mapping_error spans multiple
+# physical lines (MaveDB occasionally persists a multi-line HTTPStatusError
+# message there, quoted per RFC 4180) -- see docs/derive_score_set_urn.md.
+# The merge-columns extra-file argument is written as /work/data/score_sets.tsv
+# rather than a bare data/score_sets.tsv. merge-columns's wrapper does remap
+# all three of its positional arguments through its own
+# /work-vs-repo-bind-mount host-existence check, but that check would still
+# incorrectly prefer a variant-annotation checkout's own data/score_sets.tsv
+# over our staged data/input/maves/score_sets.tsv if one happens to exist
+# there -- so it's forced to /work explicitly, same as step_11 and step_16 --
+# see docs/variant_annotation_pipeline.md.
 step_14() {
-awk -F'\t' -v OFS='\t' '
-  NR==1 { sub(/\r$/, ""); for (i=1; i<=NF; i++) if ($i=="variant_urn") col=i; print $0, "score_set_urn" }
-  NR>1  { sub(/\r$/, ""); val = col ? $col : ""; sub(/#.*$/, "", val); print $0, val }
-' "$VARIANT_DATA_DIR/data/cvfg_variants.13.tsv" > "$VARIANT_DATA_DIR/data/cvfg_variants.14.temp.tsv"
+"$CVFG_PROJECT_DIR/src/scripts/run_derive_score_set_urn.sh" /work/data/cvfg_variants.13.tsv /work/data/cvfg_variants.14.temp.tsv
 src/scripts/run_utilities.sh merge-columns \
   /work/data/cvfg_variants.14.temp.tsv \
   /work/data/score_sets.tsv \

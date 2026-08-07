@@ -45,6 +45,22 @@ services:
 
   # Shares the VARIANT_DATA_DIR staging mount with the other steps above, for
   # the same reason: it reads/writes staged pipeline data (cvfg_variants.*.tsv)
+  # rather than committed repo files. Replaces step_14's old in-script `awk`
+  # pass, which read the file line-by-line and silently corrupted the
+  # derived score_set_urn for any row whose mavedb_mapping_error spans
+  # multiple physical lines (see docs/derive_score_set_urn.md).
+  derive-score-set-urn:
+    <<: *tools-image
+    profiles:
+      - tools
+    entrypoint: ["python", "-m", "src.derive_score_set_urn"]
+    command: ["--help"]
+    volumes:
+      - .:/usr/src/app
+      - ${VARIANT_DATA_DIR:-./data}:/work
+
+  # Shares the VARIANT_DATA_DIR staging mount with the other steps above, for
+  # the same reason: it reads/writes staged pipeline data (cvfg_variants.*.tsv)
   # rather than committed repo files.
   postprocess-mavedb-functional-classifications:
     <<: *tools-image

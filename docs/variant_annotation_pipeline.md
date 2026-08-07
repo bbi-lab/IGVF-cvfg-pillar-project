@@ -168,10 +168,12 @@ in `scripts/variant_annotation_pipeline.sh` is therefore now written
 explicitly: as `/work/data/...` for Dockerized steps (all step_N's honor an
 already-`/work`- or `/usr/src/app`-prefixed path verbatim, skipping the
 host-existence check entirely), or as `"$VARIANT_DATA_DIR/data/..."` for the
-handful of plain, non-Dockerized commands (step_15's and step_20's in-script
-`awk` calls, both of which run directly on the host with the
-`variant-annotation` checkout as `cwd`, so a bare `data/...` there is neither
-Docker-remapped nor meaningful as a container path). This is also why our staged directory needs a `data/`
+handful of plain, non-Dockerized commands (step_20's in-script `awk` call,
+which runs directly on the host with the `variant-annotation` checkout as
+`cwd`, so a bare `data/...` there is neither Docker-remapped nor meaningful
+as a container path -- step_14's former `awk` call was the other one here
+until it was replaced by the Dockerized `derive_score_set_urn`, see below).
+This is also why our staged directory needs a `data/`
 subfolder of its own -- `data/intermediate/variant_annotation/data/...` --
 matching the `data/...` prefix every reference still uses after `/work`:
 the orchestrator script rsyncs into `data/intermediate/variant_annotation/data/`
@@ -245,14 +247,16 @@ Step 1 is actually about to run -- a full run, or `--step 1` -- since a
 later `--step N` reads an already-staged `cvfg_variants.<N-1>.tsv` and
 doesn't need it. `data/raw_mave_data/` no longer carries this file.
 
-## `postprocess_mavedb_functional_classifications`, `add_mavedb_active_calibration_columns`, `annotate_simplified_consequence`, `recalculate_clingen_classification`, and `flag_variants`: containerized the same way
+## `postprocess_mavedb_functional_classifications`, `add_mavedb_active_calibration_columns`, `derive_score_set_urn`, `annotate_simplified_consequence`, `recalculate_clingen_classification`, and `flag_variants`: containerized the same way
 
-Step 12 ("Fix known MaveDB functional-classification overrides"), step 14
-("Choose the active functional classification"), step 17 ("Simplified
-consequence"), and the "Recalculate ClinGen classification" and "Flag
-variants" steps in `scripts/variant_annotation_pipeline.sh` call
+Step 12 ("Fix known MaveDB functional-classification overrides"), step 13
+("Choose the active functional classification"), step 14's `score_set_urn`
+derivation ("Dataset names"), step 17 ("Simplified consequence"), and the
+"Recalculate ClinGen classification" and "Flag variants" steps in
+`scripts/variant_annotation_pipeline.sh` call
 `src/scripts/run_postprocess_mavedb_functional_classifications.sh`,
 `src/scripts/run_add_mavedb_active_calibration_columns.sh`,
+`src/scripts/run_derive_score_set_urn.sh`,
 `src/scripts/run_annotate_simplified_consequence.sh`,
 `src/scripts/run_recalculate_clingen_classification.sh`, and
 `src/scripts/run_flag_variants.sh` (in *this* repo, invoked by absolute path
@@ -275,15 +279,26 @@ hoc, uncommitted script there); this version drops the no-longer-needed
 override on MaveDB variant URN prefix rather than dataset name, since dataset
 names aren't merged in until step 15.
 
-`add_mavedb_active_calibration_columns` runs on `cvfg_variants.13.tsv`
-(right after `annotate_predictors`, step 13) and writes `cvfg_variants.14.tsv`
--- see `docs/add_mavedb_active_calibration_columns.md`. It's a Dockerized
-Python/click port of `add_mavedb_active_calibration_columns.sh` from the
-sibling `variant-annotation` project's own `src/scripts/`; unlike that
-script, whose input/output paths default to a hard-coded
+`add_mavedb_active_calibration_columns` runs on `cvfg_variants.12.tsv`
+(right after `annotate_predictors`, step 13's own preceding input) and writes
+`cvfg_variants.13.tsv` -- see `docs/add_mavedb_active_calibration_columns.md`.
+It's a Dockerized Python/click port of `add_mavedb_active_calibration_columns.sh`
+from the sibling `variant-annotation` project's own `src/scripts/`; unlike
+that script, whose input/output paths default to a hard-coded
 `data/cvfg/v13/cvfg_variants.12.tsv` -> `cvfg_variants.13.tsv`, this version
 requires them as explicit arguments, matching `flag_variants`/
 `recalculate_clingen_classification`'s convention.
+
+`derive_score_set_urn` runs on `cvfg_variants.13.tsv` and writes
+`cvfg_variants.14.temp.tsv`, which the rest of step 14 immediately feeds into
+`merge-columns` to produce `cvfg_variants.14.tsv` -- see
+`docs/derive_score_set_urn.md`. It replaces a former in-script `awk` pass
+that derived `score_set_urn` from `variant_urn` by stripping everything from
+the first `#` onward: `awk`'s line-oriented (`NR`-based) record handling
+silently corrupted that derivation for any row whose `mavedb_mapping_error`
+spans multiple physical lines (MaveDB occasionally persists a multi-line
+`HTTPStatusError` message there, quoted per RFC 4180), since `merge-columns`
+(quote-aware) and `awk` (not) disagreed about where such a row ends.
 
 `annotate_simplified_consequence` runs on `cvfg_variants.16.tsv` and writes
 `cvfg_variants.17.tsv` -- see `docs/annotate_simplified_consequence.md`.
