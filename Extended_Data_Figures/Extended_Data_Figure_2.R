@@ -220,11 +220,11 @@ condensed_assay_plot_df <-
     Dataset %in% c(
       'BAP1_Waters_2024',
       'BARD1_IGVF',
-      #'BRCA1_Adamovich_2022_Cisplatin',
+      #'BRCA1_Adamovich_2022_Cisplatin_Resistance',
       #'BRCA1_Adamovich_2022_HDR',
       'BRCA1_Findlay_2018',
       'BRCA2_Hu_2024',
-      #'BRCA2_Sahu_2025_HDR',
+      #'BRCA2_Sahu_2025_SGE',
       'GCK_Gersing_2023_complementation',
       'KCNH2_Jiang_2022',
       'KCNQ4_Zheng_2022_current_homozygous',
@@ -235,7 +235,7 @@ condensed_assay_plot_df <-
       'SCN5A_Ma_2024',
       'TP53_Fayer_2021_meta',
       #'TP53_Boettcher_2019'
-      #'TP53_Fortuno_2021_Kato_meta',
+      #'TP53_Fortuno_2021',
       #'TP53_Giacomelli_2018_combined_score'
       'TSC2_IGVF'
     ),
@@ -305,4 +305,5 @@ ggsave(
   width = 160, # Max 183
   height = 247,
   units = 'mm',
-  device = cairo_pdf)
+  device = pdf) # JS 20260714
+  # device = cairo_pdf)

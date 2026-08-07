@@ -21,7 +21,7 @@ class PillarProjectDataframe:
     def init_data(self):
         if not self.data_path.exists():
             raise FileNotFoundError(f"File not found: {self.data_path}")
-        self.dataframe = pd.read_csv(self.data_path)
+        self.dataframe = pd.read_csv(self.data_path, sep="\t")
 
     def __len__(self):
         return len(self.dataframe)
@@ -55,40 +55,39 @@ func_class_map = {#'BRCA1_Findlay_2018': {'LOF':'Abnormal','FUNC':'Normal','INT'
          'BRCA2_Hu_2024': {'Abnormal': 'Abnormal', 'Normal': 'Normal', 'Intermediate': 'Indeterminate'},
          'CRX_Shepherdson_2024': {'low_activity': 'Abnormal','non-significant': 'Normal',
                                   'high_activity': 'Not specified'},
-         'DDX3X_Radford_2023_cLFC_day15': {'fast depleting': 'Abnormal', 'slow depleting': 'Abnormal',
+         'DDX3X_Radford_2023': {'fast depleting': 'Abnormal', 'slow depleting': 'Abnormal',
                                           'unchanged': 'Normal', 'enriched': 'Not specified'},
          'FKRP_Ma_2024': {'damaging_severe': 'Abnormal', 'damaging_mild': 'Abnormal', 
                           'damaging_intermediate': 'Abnormal', 'functional': 'Normal'},
          'JAG1_Gilbert_2024': {'Abnormal': 'Abnormal', 'Likely abnormal': 'Abnormal','Normal': 'Normal'},
-         'KCNE1_Muhammad_2024_presence_of_WT': {'Loss': 'Abnormal','Possible':'Abnormal','Partial':'Abnormal',
+         'KCNE1_Muhammad_2024_trafficking_WT_background_DN': {'Loss': 'Abnormal','Possible':'Abnormal','Partial':'Abnormal',
                                                'Normal':'Normal','Gain':'Not specified','PossibleGain':'Not specified'},
-         'KCNE1_Muhammad_2024_absence_of_WT': {'Loss': 'Abnormal','Possible':'Abnormal','Partial':'Abnormal',
+         'KCNE1_Muhammad_2024_trafficking': {'Loss': 'Abnormal','Possible':'Abnormal','Partial':'Abnormal',
                                                'Normal':'Normal','Gain':'Not specified','PossibleGain':'Not specified'},
          'KCNE1_Muhammad_2024_potassium_flux': {'Loss': 'Abnormal','Possible':'Abnormal','Partial':'Abnormal',
                                                'Normal':'Normal','Gain':'Not specified','PossibleGain':'Not specified'},
          'LARGE1_Ma_2024': {'damaging':'Abnormal','functional': 'Normal'},
          'NDUFAF6_Sung_2024': {'abnormal': 'Abnormal','normal':'Normal','uncertain': 'Indeterminate'},
          'OTC_Lo_2023': {'Amorphic':'Abnormal','Unimpaired':'Normal', 'Hypomorphic':'Not specified'},
-         'RAD51C_Olvera-León_2024_z_score_D4_D14': {'fast depleted': 'Abnormal','slow depleted': 'Abnormal',
+         'RAD51C_Olvera-León_2024': {'fast depleted': 'Abnormal','slow depleted': 'Abnormal',
                                                    'unchanged': 'Normal','enriched':'Not specified'},
          'RHO_Wan_2019':{'low': 'Abnormal','very low': 'Abnormal','high': 'Normal','indeterminate': 'Indeterminate'},
          'SCN5A_Glazer_2020': {'LOF':'Abnormal','possiblyLOF':'Abnormal','possiblyWT':'Normal','WT':'Normal',
                               'GOF': 'Not specified','possiblyGOF':'Not specified'},
-         'SCN5A_Ma_2024_current_density':{'severe LOF': 'Abnormal', 'moderate LOF': 'Abnormal','normal': 'Normal'},
+         'SCN5A_Ma_2024':{'severe LOF': 'Abnormal', 'moderate LOF': 'Abnormal','normal': 'Normal'},
          'SGCB_Li_2023': {'Non-Functional': 'Abnormal','Functional': 'Normal'},
          'TP53_Fayer_2021_meta': {'Functionally abnormal': 'Abnormal','Functionally normal': 'Normal'},
          'VHL_Buckley_2024': {'LOF1': 'Abnormal','LOF2': 'Abnormal','Neutral': 'Normal', 'Intermediate': 'Indeterminate'},
-         'BARD1_unpublished': {'functionally_abnormal': 'Abnormal', 'functionally_normal': 'Normal', 'indeterminate': 'Indeterminate'},
-         'PALB2_unpublished': {'functionally_abnormal': 'Abnormal', 'functionally_normal': 'Normal', 'indeterminate': 'Indeterminate'},
-         'CTCF_unpublished': {'functionally_abnormal': 'Abnormal', 'functionally_normal': 'Normal', 'indeterminate': 'Indeterminate'},
-         'RAD51D_unpublished': {'functionally_abnormal': 'Abnormal', 'functionally_normal': 'Normal', 'indeterminate': 'Indeterminate'},
-         'SFPQ_unpublished': {'functionally_abnormal': 'Abnormal', 'functionally_normal': 'Normal', 'indeterminate': 'Indeterminate'},
+         'BARD1_IGVF': {'functionally_abnormal': 'Abnormal', 'functionally_normal': 'Normal', 'indeterminate': 'Indeterminate'},
+         'PALB2_IGVF': {'functionally_abnormal': 'Abnormal', 'functionally_normal': 'Normal', 'indeterminate': 'Indeterminate'},
+         'CTCF_IGVF': {'functionally_abnormal': 'Abnormal', 'functionally_normal': 'Normal', 'indeterminate': 'Indeterminate'},
+         'RAD51D_IGVF': {'functionally_abnormal': 'Abnormal', 'functionally_normal': 'Normal', 'indeterminate': 'Indeterminate'},
+         'SFPQ_IGVF': {'functionally_abnormal': 'Abnormal', 'functionally_normal': 'Normal', 'indeterminate': 'Indeterminate'},
          'PTEN_Matreyek_2018': {'functionally_abnormal': 'Abnormal', 'functionally_normal': 'Normal'},
          'F9_Popp_2025_model': {'WT-like': 'Normal','Loss of function': 'Abnormal'},
-         'G6PD_unpublished': {'functionally_abnormal': 'Abnormal', 'functionally_normal': 'Normal'}, 
-         'TSC2_rapgap_unpublished': {'functionally_abnormal': 'Abnormal', 'functionally_normal': 'Normal'},
-         'TSC2_tuberin_unpublished': {'functionally_abnormal': 'Abnormal', 'functionally_normal': 'Normal'},
-         'CARD11_Meitlis_2020_DMSO_no_introns': {'functional': 'Normal', 'not definitive': 'Indeterminate', 
+         'G6PD_IGVF': {'functionally_abnormal': 'Abnormal', 'functionally_normal': 'Normal'},
+         'TSC2_IGVF': {'functionally_abnormal': 'Abnormal', 'functionally_normal': 'Normal'},
+         'CARD11_Meitlis_2020_SGE_LoF': {'functional': 'Normal', 'not definitive': 'Indeterminate',
                                                  'likely functional': 'Normal','likely nonfunctional': 'Abnormal', 
                                                  'nonfunctional': 'Abnormal'}}
 
@@ -450,7 +449,8 @@ class Scoreset:
         self._init_matrices(**kwargs)
 
     def filter_invalid(self):
-        self.dataframe = self.dataframe[self.dataframe.Flag != "*"]
+        if "Flag" in self.dataframe.columns:
+            self.dataframe = self.dataframe[self.dataframe.Flag != "*"]
 
         if self.filter_nonsense:
             # print('filtering nonsense variants within 50 aa of termini...')
@@ -982,5 +982,6 @@ def csv_to_vcf(input_filepath, output_filepath):
 
 
 if __name__ == "__main__":
+    # summarize_datasets("../../outputs/integrated_variant_effect_dataset.tsv.gz",missense_only=False, synonymous_exclusive=False,output_file="dataset_summary_all_synonymousNonExclusive.txt")
     Fire()
     # summarize_datasets("/data/dzeiberg/pillar_project/dataframe/pillar_data_condensed_gold_standard_02_05_25.csv",missense_only=False, synonymous_exclusive=False,output_file="dataset_summary_all_synonymousNonExclusive.txt")
