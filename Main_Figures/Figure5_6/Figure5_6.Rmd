@@ -7,8 +7,8 @@ output: html_document
 
 ```{r}
 
-DATA_DIR = "~/Downloads/data"
-OUT_DIR = "/Users/malvikatejura/Downloads/outputs"
+DATA_DIR = "/usr/src/app/data/output"
+OUT_DIR = "/usr/src/app/data/output/figures"
 ```
 
 ```{r}
@@ -91,9 +91,9 @@ colors_custom <- c(
 #Figure 5a
 
 #read in csv 
-controls_REVEL_YP  = read_excel(file.path(DATA_DIR, "Supplemental_Data/Supplementary_Data_5.xlsx"), sheet = "controls_REVEL_GeneSpecific")
-controls_AM_YP  = read_excel(file.path(DATA_DIR, "Supplemental_Data/Supplementary_Data_5.xlsx"), sheet = "controls_AM_GeneSpecific")
-controls_MP2_YP  = read_excel(file.path(DATA_DIR, "Supplemental_Data/Supplementary_Data_5.xlsx"), sheet = "controls_MP2_GeneSpecific")
+controls_REVEL_YP  = read_excel(file.path(DATA_DIR, "supplementary_data/Supplementary_Data_5.xlsx"), sheet = "controls_REVEL_GeneSpecific")
+controls_AM_YP  = read_excel(file.path(DATA_DIR, "supplementary_data/Supplementary_Data_5.xlsx"), sheet = "controls_AM_GeneSpecific")
+controls_MP2_YP  = read_excel(file.path(DATA_DIR, "supplementary_data/Supplementary_Data_5.xlsx"), sheet = "controls_MP2_GeneSpecific")
 
 
 ##------------Controls Sankey plot --------------------
@@ -441,7 +441,7 @@ for (nm in names(controls_1star_YP)) {
   save_my_plot(
     plot = controls_1star_YP[[nm]],
     filename = nm,
-    folder = file.path(OUT_DIR, "Figure5"),
+    folder = file.path(OUT_DIR, "figure_5"),
     width = w,
     height = h
   )
@@ -453,9 +453,9 @@ for (nm in names(controls_1star_YP)) {
 
 ##---read csv files ----
 
-ClinGen_REVEL_YP  =  read_excel(file.path(DATA_DIR, "Supplemental_Data/Supplementary_Data_5.xlsx"), sheet = "ClinGen_Repo_REVEL_GeneSpecific")
-ClinGen_AM_YP  = read_excel(file.path(DATA_DIR, "Supplemental_Data/Supplementary_Data_5.xlsx"), sheet = "ClinGen_Repo_AM_GeneSpecific")
-ClinGen_MP2_YP  = read_excel(file.path(DATA_DIR, "Supplemental_Data/Supplementary_Data_5.xlsx"), sheet = "ClinGen_Repo_MP2_GeneSpecific")
+ClinGen_REVEL_YP  =  read_excel(file.path(DATA_DIR, "supplementary_data/Supplementary_Data_5.xlsx"), sheet = "ClinGen_Repo_REVEL_GeneSpecific")
+ClinGen_AM_YP  = read_excel(file.path(DATA_DIR, "supplementary_data/Supplementary_Data_5.xlsx"), sheet = "ClinGen_Repo_AM_GeneSpecific")
+ClinGen_MP2_YP  = read_excel(file.path(DATA_DIR, "supplementary_data/Supplementary_Data_5.xlsx"), sheet = "ClinGen_Repo_MP2_GeneSpecific")
 
 
 # ------ Sankey function for clingen controls ------
@@ -745,7 +745,7 @@ for (nm in names(clingen_YP_pejaver)) {
   save_my_plot(
     plot = clingen_YP_pejaver[[nm]],
     filename = nm,
-    folder = file.path(OUT_DIR, "Figure5"),
+    folder = file.path(OUT_DIR, "figure_5"),
     width = w,
     height = h
   )
@@ -757,7 +757,7 @@ for (nm in names(clingen_YP_pejaver)) {
 
 #Figure 6a
 
-VUS_REVEL_YP = read_excel(file.path(DATA_DIR, "Supplemental_Data/Supplementary_Data_5.xlsx"), sheet = "VUS_REVEL")
+VUS_REVEL_YP = read_excel(file.path(DATA_DIR, "supplementary_data/Supplementary_Data_5.xlsx"), sheet = "VUS_REVEL")
 
 
 make_sankey_VUS <- function(df, points_col, colors_custom) {
@@ -866,9 +866,9 @@ make_uncertain_confusion <- function(df, points_col, xlabel) {
 cm_REVEL_VUS_YP <- make_uncertain_confusion(VUS_REVEL_YP, Class_REVEL, "REVEL_GeneSpecific")
 
 
-ggsave(file.path(OUT_DIR, "Figure6/sankey_VUS_REVEL_GeneSpecific.png",sankey_VUS_REVEL_YP, dpi = 300, device = 'png', bg = 'transparent'))
+ggsave(file.path(OUT_DIR, "figure_6/sankey_VUS_REVEL_GeneSpecific.png"), sankey_VUS_REVEL_YP, dpi = 300, device = 'png', bg = 'transparent', create.dir = TRUE)
 
-ggsave(file.path(OUT_DIR, "Figure6/cm_VUS_REVEL_GeneSpecific.png",cm_REVEL_VUS_YP, dpi = 300, device = 'png', bg = 'transparent'))
+ggsave(file.path(OUT_DIR, "figure_6/cm_VUS_REVEL_GeneSpecific.png"), cm_REVEL_VUS_YP, dpi = 300, device = 'png', bg = 'transparent', create.dir = TRUE)
   
 
 ```
@@ -1189,9 +1189,9 @@ path_plot
 unc_plot
 ben_plot
 
-ggsave('~/Downloads/outputs/Figure6/pie_path_REVEL_GeneSpecific_lab.png',path_plot, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7)
-ggsave('~/Downloads/outputs/Figure6/pie_ben_REVEL_GeneSpecific_lab.png',ben_plot, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7)
-ggsave('~/Downloads/outputs/Figure6/pie_unc_REVEL_GeneSpecific_lab.png',unc_plot, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7)
+ggsave(file.path(OUT_DIR, 'figure_6/pie_path_REVEL_GeneSpecific_lab.png'), path_plot, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7, create.dir = TRUE)
+ggsave(file.path(OUT_DIR, 'figure_6/pie_ben_REVEL_GeneSpecific_lab.png'), ben_plot, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7, create.dir = TRUE)
+ggsave(file.path(OUT_DIR, 'figure_6/pie_unc_REVEL_GeneSpecific_lab.png'), unc_plot, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7, create.dir = TRUE)
 
 
 
@@ -1201,7 +1201,7 @@ ggsave('~/Downloads/outputs/Figure6/pie_unc_REVEL_GeneSpecific_lab.png',unc_plot
 
 #Figure 6d
 
-gnomad_REVEL_YP = read_excel(file.path(DATA_DIR, "Supplemental_Data/Supplementary_Data_5.xlsx"), sheet = "gnomAD_REVEL")
+gnomad_REVEL_YP = read_excel(file.path(DATA_DIR, "supplementary_data/Supplementary_Data_5.xlsx"), sheet = "gnomAD_REVEL")
 
 make_sankey_gnomad <- function(df, points_col, colors_custom) {
   
@@ -1311,16 +1311,16 @@ make_gnomad_confusion <- function(df, points_col, xlabel) {
 cm_REVEL_gnomad_YP <- make_gnomad_confusion(gnomad_REVEL_YP, Class_REVEL, "REVEL_GeneSpecific")
 
 
-ggsave(file.path(OUT_DIR,'Figure6/gnomad_sankey_REVEL_YP.png',sankey_gnomad_REVEL_YP, dpi = 300, device = 'png', bg = 'transparent'))
+ggsave(file.path(OUT_DIR, 'figure_6/gnomad_sankey_REVEL_YP.png'), sankey_gnomad_REVEL_YP, dpi = 300, device = 'png', bg = 'transparent', create.dir = TRUE)
 
-ggsave(file.path(OUT_DIR,'Figure6/cm_REVEL_gnomad_YP.png',cm_REVEL_gnomad_YP, dpi = 300, device = 'png', bg = 'transparent', height = 4, width = 6))
+ggsave(file.path(OUT_DIR, 'figure_6/cm_REVEL_gnomad_YP.png'), cm_REVEL_gnomad_YP, dpi = 300, device = 'png', bg = 'transparent', height = 4, width = 6, create.dir = TRUE)
 
 ```
 
 ```{r}
 #Figure 6e
 
-preclass_REVEL_YP = read_excel(file.path(DATA_DIR, "Supplemental_Data/Supplementary_Data_5.xlsx"), sheet = "Unobserved_REVEL")
+preclass_REVEL_YP = read_excel(file.path(DATA_DIR, "supplementary_data/Supplementary_Data_5.xlsx"), sheet = "Unobserved_REVEL")
 
 
 make_sankey_preclass <- function(df, points_col, colors_custom) {
@@ -1396,9 +1396,9 @@ library(dplyr)
 cm_REVEL_preclass_YP <- make_uncertain_confusion(preclass_REVEL_YP, Class_REVEL, "REVEL_dan_YP")
 
 
-ggsave(file.path(OUT_DIR,'Figure6/unseen_sankey_REVEL_GeneSpecific.png',preclass_REVEL_YP_sankey, dpi = 300, device = 'png', bg = 'transparent'))
+ggsave(file.path(OUT_DIR, 'figure_6/unseen_sankey_REVEL_GeneSpecific.png'), preclass_REVEL_YP_sankey, dpi = 300, device = 'png', bg = 'transparent', create.dir = TRUE)
 
-ggsave(file.path(OUT_DIR,'Figure6/cm_REVEL_unseen_GeneSpecific.png',cm_REVEL_preclass_YP, dpi = 300, device = 'png', bg = 'transparent', height = 4, width = 6))
+ggsave(file.path(OUT_DIR, 'figure_6/cm_REVEL_unseen_GeneSpecific.png'), cm_REVEL_preclass_YP, dpi = 300, device = 'png', bg = 'transparent', height = 4, width = 6, create.dir = TRUE)
 
 
 ```

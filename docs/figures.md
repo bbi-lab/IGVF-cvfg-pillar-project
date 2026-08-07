@@ -155,3 +155,50 @@ See `docs/build_figure4_data.md` for what's actually reconstructed vs.
 carried forward, and the known discrepancies (ClinVar/gnomAD drift since the
 original figure, and `finalout_4f`'s row-count mismatch in panel f).
 
+## Figure 5/6
+
+Directory: `Main_Figures/Figure5_6/`. Two independent scripts, run separately:
+
+- `Figure5_6.Rmd` -- Fig 5a/b (controls and ClinGen-repo sankeys, confusion
+  matrices, and REVEL/AlphaMissense/MutPred2 metric bar charts) plus Fig
+  6a/c/d/e (VUS reclassification sankey + confusion matrix, three-ring donut
+  plots by points bin, gnomAD sankey + confusion matrix, and
+  unobserved-variant sankey + confusion matrix). Reads
+  `Supplementary_Data_5.xlsx` under `data/output/supplementary_data/` -- the
+  same workbook the Extended Data Figures use; see `docs/mave_dataset_stats.md`
+  for how it's built.
+- `Figure_6b.R` -- Fig 6b's per-gene odds-ratio forest plot, faceted by points
+  bin and disease group. Reads `IGVFFI3804AVJR.csv.gz`, downloaded separately
+  from https://data.igvf.org/tabular-files/IGVFFI3804AVJR/ (nothing in this
+  repo produces it) and expected in the same directory as the script.
+
+Like Extended Data Figures, both need the `r-figures` Docker service
+(`ggsankey`, `ggforce`, `patchwork`, `ggh4x`, `extrafont`/Arial, `cairo_pdf`)
+rather than a local R install -- see the one-time `docker compose build
+r-figures` in that section above.
+
+### Steps
+
+```bash
+# Figure_6b.R: place IGVFFI3804AVJR.csv.gz in this directory first (see link
+# above). Writes fig6b.pdf/fig6b.svg into the same directory.
+docker compose run --rm -w /usr/src/app/Main_Figures/Figure5_6 \
+  r-figures Figure_6b.R
+
+# Figure5_6.Rmd
+docker compose run --rm -w /usr/src/app/Main_Figures/Figure5_6 \
+  r-figures -e 'rmarkdown::render("Figure5_6.Rmd")'
+```
+
+`Figure5_6.Rmd`'s first chunk sets `DATA_DIR`/`OUT_DIR` to
+`/usr/src/app/data/output[/figures]` -- the container's mount point, not a
+path relative to the `.Rmd` like `Extended_data_figures.Rmd`'s
+`DATA_DIR = "../data/output"`. Keep that in mind if you ever run this `.Rmd`
+outside the `r-figures` container (e.g. RStudio on macOS): those two lines
+will need to point at wherever `data/output` actually lives instead.
+
+Fig 5's plots save through `save_my_plot()` to `data/output/figures/figure_5/`;
+Fig 6a/6c/6d/6e's plots (VUS, three-ring donut, gnomAD, and unobserved
+sankeys/confusion matrices) save via direct `ggsave()` calls to
+`data/output/figures/figure_6/`.
+
