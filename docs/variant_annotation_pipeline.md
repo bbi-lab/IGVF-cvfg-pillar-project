@@ -306,7 +306,7 @@ Unlike the other four, it isn't a port of a `variant-annotation` script:
 it's a Dockerized port of the `get_simplified_consequence` cell from the
 archived `notebooks/analysis/Integrated_variant_effect_dataset_pipeline.ipynb`
 notebook, reading a small CVFG-specific VEP-term-to-SO-summary-term mapping
-committed at `data/input/consequence/extended_ensembl_consequence.csv.gz`
+committed at `data/input/reference/extended_ensembl_consequence.csv.gz`
 (hence needing both the repo bind mount and the `VARIANT_DATA_DIR` `/work`
 mount, like `flag_variants`'s `--filtering-dir`).
 

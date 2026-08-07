@@ -18,7 +18,7 @@ Notes:
     to the same value used for the variant-annotation pipeline steps so both
     containers see the same staged data.
   - --consequence-map-file defaults to
-    data/input/consequence/extended_ensembl_consequence.csv.gz, which
+    data/input/reference/extended_ensembl_consequence.csv.gz, which
     resolves against this project's own bind mount (/usr/src/app), not /work.
   - Add --rebuild-image to force rebuilding the image.
   - Add --no-build-cache with --rebuild-image for a clean rebuild.

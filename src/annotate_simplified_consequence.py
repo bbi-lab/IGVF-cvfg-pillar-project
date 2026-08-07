@@ -59,7 +59,7 @@ import click
 import pandas as pd
 
 DEFAULT_CONSEQUENCE_COL = "vep.most_severe_mutational_consequence"
-DEFAULT_CONSEQUENCE_MAP_FILE = Path("data/input/consequence/extended_ensembl_consequence.csv.gz")
+DEFAULT_CONSEQUENCE_MAP_FILE = Path("data/input/reference/extended_ensembl_consequence.csv.gz")
 DEFAULT_SPLICEAI_DS_AG_COL = "spliceai.ds_ag"
 DEFAULT_SPLICEAI_DS_AL_COL = "spliceai.ds_al"
 DEFAULT_SPLICEAI_DS_DG_COL = "spliceai.ds_dg"

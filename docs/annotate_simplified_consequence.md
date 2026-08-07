@@ -62,7 +62,7 @@ pipeline data.
 | Option | Default | Description |
 |---|---|---|
 | `--consequence-col` | `vep.most_severe_mutational_consequence` | Column with pipe-delimited VEP consequence term(s) per DNA candidate |
-| `--consequence-map-file` | `data/input/consequence/extended_ensembl_consequence.csv.gz` | CSV mapping `VEP output term` to `SO summary term`, with an `Importance` column for resolving duplicates |
+| `--consequence-map-file` | `data/input/reference/extended_ensembl_consequence.csv.gz` | CSV mapping `VEP output term` to `SO summary term`, with an `Importance` column for resolving duplicates |
 
 Raises `click.ClickException` if `--consequence-col` isn't present in the
 input file.

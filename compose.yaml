@@ -72,7 +72,7 @@ services:
       - .:/usr/src/app
       - ${VARIANT_DATA_DIR:-./data}:/work
 
-  # Reads the committed data/input/consequence/extended_ensembl_consequence.csv.gz
+  # Reads the committed data/input/reference/extended_ensembl_consequence.csv.gz
   # (this project's own bind mount) plus staged cvfg_variants.*.tsv (the
   # VARIANT_DATA_DIR /work mount), so it needs both, same as flag-variants
   # and recalculate-clingen-classification above.
