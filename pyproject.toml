@@ -21,6 +21,8 @@ dependencies = [
     "scipy>=1.13",
     "statsmodels>=0.14",
     "tqdm>=4.66",
+    "seaborn (>=0.13.2,<0.14.0)",
+    "vl-convert-python (>=1.9.0.post1,<2.0.0)",
 ]
 
 [project.optional-dependencies]
