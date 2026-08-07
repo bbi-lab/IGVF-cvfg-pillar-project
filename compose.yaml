@@ -2,6 +2,12 @@ x-tools-image: &tools-image
   build: .
   image: igvf-cvfg-pillar-project-tools:local
 
+x-r-tools-image: &r-tools-image
+  build:
+    context: .
+    dockerfile: Dockerfile.r
+  image: igvf-cvfg-pillar-project-r-tools:local
+
 services:
   # Shares the VARIANT_DATA_DIR env var with the variant-annotation pipeline
   # (see scripts/run_variant_annotation_pipeline.sh) so both containers read
@@ -129,5 +135,20 @@ services:
       - tools
     entrypoint: ["python", "-m", "src.load_excalibr_calibrations"]
     command: []
+    volumes:
+      - .:/usr/src/app
+
+  # Generic runner for the manuscript's R figure scripts (Main_Figures/**/*.R,
+  # Main_Figures/**/*.Rmd, Extended_Data_Figures/**). These scripts read/write
+  # relative filenames (e.g. `read_csv("IGVFFI3804AVJR.csv.gz")`), assuming
+  # cwd is the script's own directory, so override --workdir per invocation:
+  #   docker compose run --rm -w /usr/src/app/Main_Figures/Figure5_6 \
+  #     r-figures Figure_6b.R
+  r-figures:
+    <<: *r-tools-image
+    profiles:
+      - tools
+    entrypoint: ["Rscript"]
+    command: ["--help"]
     volumes:
       - .:/usr/src/app
