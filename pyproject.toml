@@ -25,6 +25,8 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+    "nbstripout>=0.7",
+    "pre-commit>=3.8",
     "ruff>=0.6",
 ]
 notebooks = [
