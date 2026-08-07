@@ -1,7 +1,7 @@
 """Historical per-dataset author-reported functional class label mapping.
 
 `FUNC_CLASS_LABEL_MAP` was used by `annotate_func_class` in
-`Analysis/Variant_Classification_analysis.ipynb` to translate each dataset's
+`notebooks/analysis/Variant_Classification_analysis.ipynb` to translate each dataset's
 author-reported functional classification labels (e.g. "depleted",
 "loss-of-function", "Amorphic") into this project's standardized functional
 class ontology (Normal, Abnormal, Indeterminate).

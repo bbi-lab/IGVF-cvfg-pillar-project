@@ -1,8 +1,8 @@
 """Shared input/output directory layout for the OddsPath/ExCALIBR pipeline.
 
-`get_data_paths` is used by `Analysis/OddsPath_calculations.ipynb`,
-`Analysis/Variant_Classification_analysis.ipynb`, and
-`Analysis/OddsPath_classifications.ipynb` (and is intended for scripts that
+`get_data_paths` is used by `notebooks/analysis/OddsPath_calculations.ipynb`,
+`notebooks/analysis/Variant_Classification_analysis.ipynb`, and
+`notebooks/analysis/OddsPath_classifications.ipynb` (and is intended for scripts that
 work with the same data, not just notebooks), all of which read from and
 write to a common set of directories under a caller-supplied `data_dir`
 (each caller resolves its own `PROJECT_ROOT`/`data_dir` since that depends

@@ -1,8 +1,8 @@
 """Deduplication priority order for MAVE assays that share a gene.
 
 `ASSAY_PRIORITY_LIST` is used by the OddsPath calibration pipeline
-(`Analysis/OddsPath_classifications.ipynb` and
-`Analysis/Variant_Classification_analysis.ipynb`) to resolve variants that
+(`notebooks/analysis/OddsPath_classifications.ipynb` and
+`notebooks/analysis/Variant_Classification_analysis.ipynb`) to resolve variants that
 have functional scores from more than one assay covering the same gene.
 Each call site builds `{name: i for i, name in enumerate(ASSAY_PRIORITY_LIST)}`,
 maps it onto a `Dataset` column (assays not in the list fall back to
