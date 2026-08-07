@@ -11,7 +11,7 @@
 #   - exports CVFG_PROJECT_DIR (this repo's root) so the "Flag variants" step
 #     below can find its own Dockerized wrapper regardless of cwd,
 #   - and gzips the two final integrated_variant_effect_dataset files into
-#     data/mave_data/ once this script finishes.
+#     data/output/maves/ once this script finishes.
 # See docs/variant_annotation_pipeline.md for the full data flow and why
 # VARIANT_DATA_DIR is repurposed this way.
 #

@@ -103,11 +103,12 @@ services:
     volumes:
       - .:/usr/src/app
 
-  # Reads only the already-committed data/mave_data/ files, so it doesn't
-  # need the /work staging mount that flag-variants uses. Unlike
-  # flag-variants, every CLI arg is optional (defaults point at
-  # data/mave_data/), so the default command is empty -- not --help -- so a
-  # bare `docker compose run mave-dataset-stats` computes stats immediately.
+  # Reads only locally-generated data/output/maves/ and
+  # data/output/supplementary_data/ files, so it doesn't need the /work
+  # staging mount that flag-variants uses. Unlike flag-variants, every CLI
+  # arg is optional (defaults point at data/output/), so the default command
+  # is empty -- not --help -- so a bare `docker compose run mave-dataset-stats`
+  # computes stats immediately.
   mave-dataset-stats:
     <<: *tools-image
     profiles:
@@ -117,9 +118,10 @@ services:
     volumes:
       - .:/usr/src/app
 
-  # Reads the committed data/mave_calibration/ JSON files and overwrites the
-  # ExCALIBR_calibrations sheet of the committed Supplementary_Data_4.xlsx in
-  # place, so like mave-dataset-stats it only needs the repo bind mount --
+  # Reads the locally-generated data/input/mave_calibration/excalibr/ JSON
+  # files and overwrites the ExCALIBR_calibrations sheet of the
+  # locally-generated data/output/supplementary_data/Supplementary_Data_4.xlsx
+  # in place, so like mave-dataset-stats it only needs the repo bind mount --
   # no /work staging mount.
   load-excalibr-calibrations:
     <<: *tools-image

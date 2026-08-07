@@ -83,7 +83,7 @@ data/intermediate/variant_annotation/data/ (gitignored; mounted as the
                                              VARIANT_DATA_DIR for the run)
         |  scripts/variant_annotation_pipeline.sh runs Steps 1-21
         v
-data/mave_data/                            (final gzipped outputs, tracked)
+data/output/maves/                         (final gzipped outputs, gitignored)
 ```
 
 `data/raw_mave_data/README.md` documents exactly which files are required
@@ -103,7 +103,7 @@ This:
    to this repo's root, `cd`s into the `variant-annotation` checkout, and runs
    `scripts/variant_annotation_pipeline.sh` from there.
 3. Gzips the two final `integrated_variant_effect_dataset*.tsv` files into
-   `data/mave_data/`.
+   `data/output/maves/`.
 
 `scripts/variant_annotation_pipeline.sh` itself is not meant to be run
 directly -- it assumes the working directory and environment variables the
@@ -129,7 +129,7 @@ scripts/run_variant_annotation_pipeline.sh --step 9
 This still stages `data/raw_mave_data/` and exports `VARIANT_DATA_DIR`/
 `CVFG_PROJECT_DIR` exactly as a full run does (so step 9's inputs resolve the
 same way they would mid-pipeline), but runs only `step_9` and skips the final
-gzip into `data/mave_data/` -- even `--step 21` only writes its outputs to
+gzip into `data/output/maves/` -- even `--step 21` only writes its outputs to
 the staged intermediate directory. Its output lands at
 `data/intermediate/variant_annotation/data/cvfg_variants.9.tsv`. The step
 must already have its input file present from a previous run (full or

@@ -50,16 +50,8 @@ data/intermediate/
 # Generated/large data directories -- kept as empty folders in git via a
 # .gitkeep placeholder so the expected paths exist on a fresh clone, but their
 # actual contents (regenerated or hand-supplied locally) aren't tracked.
-data/mave_calibration/*
-!data/mave_calibration/excalibr/
-data/mave_calibration/excalibr/*
-!data/mave_calibration/excalibr/.gitkeep
-
-data/mave_data/*
-!data/mave_data/.gitkeep
-
-data/supplementary_data/*
-!data/supplementary_data/.gitkeep
+data/input/mave_calibration/excalibr/*
+!data/input/mave_calibration/excalibr/.gitkeep
 
 data/output/*
 !data/output/supplementary_data/

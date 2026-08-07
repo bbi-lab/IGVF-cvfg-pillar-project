@@ -7,15 +7,15 @@ Usage: src/scripts/run_load_excalibr_calibrations.sh [json-dir] [workbook] [flag
 Examples:
   src/scripts/run_load_excalibr_calibrations.sh
   src/scripts/run_load_excalibr_calibrations.sh \
-    data/mave_calibration/excalibr/exc_pp_calib_final_fixedmapping_clinvar/json \
-    data/supplementary_data/Supplementary_Data_4.xlsx
+    data/input/mave_calibration/excalibr/exc_pp_calib_final_fixedmapping_clinvar/json \
+    data/output/supplementary_data/Supplementary_Data_4.xlsx
 
 Notes:
   - Defaults to
-    data/mave_calibration/excalibr/exc_pp_calib_final_fixedmapping_clinvar/json
-    and data/supplementary_data/Supplementary_Data_4.xlsx (both bind-mounted
-    at /usr/src/app since this service only reads/writes the repo's
-    checked-in files, unlike flag-variants).
+    data/input/mave_calibration/excalibr/exc_pp_calib_final_fixedmapping_clinvar/json
+    and data/output/supplementary_data/Supplementary_Data_4.xlsx (both
+    bind-mounted at /usr/src/app since this service only reads/writes
+    data/input/ and data/output/ files, unlike flag-variants).
   - Paths are interpreted relative to /usr/src/app in the container.
   - Overwrites the ExCALIBR_calibrations sheet of the workbook in place; all
     other sheets are left untouched.

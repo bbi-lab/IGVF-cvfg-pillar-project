@@ -5,9 +5,9 @@ calibrations into Supplementary Data 4, so the workbook stays in sync with
 the latest calibration run without hand-editing spreadsheet rows.
 
 It reads every `*.json` calibration file in a directory (default:
-`data/mave_calibration/excalibr/exc_pp_calib_final_fixedmapping_clinvar/json/`)
+`data/input/mave_calibration/excalibr/exc_pp_calib_final_fixedmapping_clinvar/json/`)
 and writes one row per file into the `ExCALIBR_calibrations` sheet of a
-workbook (default: `data/supplementary_data/Supplementary_Data_4.xlsx`),
+workbook (default: `data/output/supplementary_data/Supplementary_Data_4.xlsx`),
 **overwriting that sheet's existing contents in place**. All other sheets,
 the sheet's tab position, and its column widths are left untouched.
 
@@ -38,8 +38,8 @@ Locally (with the Poetry environment):
 
 ```bash
 poetry run python -m src.load_excalibr_calibrations \
-  data/mave_calibration/excalibr/exc_pp_calib_final_fixedmapping_clinvar/json \
-  data/supplementary_data/Supplementary_Data_4.xlsx
+  data/input/mave_calibration/excalibr/exc_pp_calib_final_fixedmapping_clinvar/json \
+  data/output/supplementary_data/Supplementary_Data_4.xlsx
 ```
 
 Both positional arguments default to the paths above, so a bare invocation
@@ -53,6 +53,6 @@ src/scripts/run_load_excalibr_calibrations.sh [json-dir] [workbook]
 ```
 
 Like `run_mave_dataset_stats.sh`, this wrapper doesn't map paths against a
-`/work` staging mount -- the script only reads/writes the repo's checked-in
-files, which are already available at `/usr/src/app` via the whole-repo bind
-mount.
+`/work` staging mount -- the script only reads/writes `data/input/`/
+`data/output/` files, which are already available at `/usr/src/app` via the
+whole-repo bind mount.

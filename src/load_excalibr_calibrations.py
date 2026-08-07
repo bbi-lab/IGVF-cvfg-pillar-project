@@ -2,9 +2,9 @@
 """Load exCALIBR MAVE calibrations into Supplementary Data 4.
 
 Reads every `*.json` calibration file produced by exCALIBR (default:
-`data/mave_calibration/excalibr/exc_pp_calib_final_fixedmapping_clinvar/json/`)
+`data/input/mave_calibration/excalibr/exc_pp_calib_final_fixedmapping_clinvar/json/`)
 and writes one row per file into the `ExCALIBR_calibrations` sheet of a
-workbook (default: `data/supplementary_data/Supplementary_Data_4.xlsx`),
+workbook (default: `data/output/supplementary_data/Supplementary_Data_4.xlsx`),
 overwriting that sheet's existing contents in place. Other sheets are left
 untouched.
 
@@ -26,8 +26,8 @@ from pathlib import Path
 import click
 import openpyxl
 
-DEFAULT_JSON_DIR = Path("data/mave_calibration/excalibr/exc_pp_calib_final_fixedmapping_clinvar/json")
-DEFAULT_WORKBOOK = Path("data/supplementary_data/Supplementary_Data_4.xlsx")
+DEFAULT_JSON_DIR = Path("data/input/mave_calibration/excalibr/exc_pp_calib_final_fixedmapping_clinvar/json")
+DEFAULT_WORKBOOK = Path("data/output/supplementary_data/Supplementary_Data_4.xlsx")
 
 SHEET_NAME = "ExCALIBR_calibrations"
 RANGE_POINTS = [-8, -7, -6, -5, -4, -3, -2, -1, 1, 2, 3, 4, 5, 6, 7, 8]

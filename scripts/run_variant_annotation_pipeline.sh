@@ -11,7 +11,7 @@ set -euo pipefail
 #   data/raw_mave_data/  --(staged, non-destructively)-->
 #   data/intermediate/variant_annotation/data/  --(mounted as VARIANT_DATA_DIR)-->
 #   variant_annotation_pipeline.sh Steps 1-21  -->
-#   data/mave_data/*.tsv.gz
+#   data/output/maves/*.tsv.gz
 #
 # Usage:
 #   scripts/run_variant_annotation_pipeline.sh                     # full pipeline
@@ -24,7 +24,7 @@ set -euo pipefail
 # data/cvfg_variants.<N-1>.tsv and writes data/cvfg_variants.<N>.tsv, except
 # step 21, which writes the final integrated MAVE dataset files directly; see
 # that script's header for the full step list) and skips the final gzip into
-# data/mave_data/ either way, since even --step 21 only writes its outputs to
+# data/output/maves/ either way, since even --step 21 only writes its outputs to
 # the staged intermediate directory.
 #
 # --prepare-gnomad-cache builds/refreshes Step 7's local gnomAD Hail table
@@ -157,10 +157,10 @@ echo "Running scripts/variant_annotation_pipeline.sh in $va_dir (VARIANT_DATA_DI
 
 expanded="$stage_dir/data/integrated_variant_effect_dataset.tsv"
 condensed="$stage_dir/data/integrated_variant_effect_dataset.condensed.tsv"
-out_dir="$CVFG_PROJECT_DIR/data/mave_data"
+out_dir="$CVFG_PROJECT_DIR/data/output/maves"
 mkdir -p "$out_dir"
 
-echo "Gzipping final outputs into data/mave_data/ ..."
+echo "Gzipping final outputs into data/output/maves/ ..."
 gzip -kf -c "$expanded" > "$out_dir/integrated_variant_effect_dataset.tsv.gz"
 gzip -kf -c "$condensed" > "$out_dir/integrated_variant_effect_dataset.condensed.tsv.gz"
 
