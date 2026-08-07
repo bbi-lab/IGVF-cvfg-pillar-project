@@ -145,7 +145,7 @@ FUNC_CLASS_LABEL_MAP = {
         "likely nonfunctional": "Abnormal",
         "nonfunctional": "Abnormal",
     },
-    "CARD11_Meitlis_2020_SGE_Ibrutinib_DN": {
+    "CARD11_Meitlis_2020_SGE_Ibrutinib_GoF": {
         "likely not gain of function": "Normal",
         "not definitive": "Indeterminate",
         "not gain of function": "Normal",
