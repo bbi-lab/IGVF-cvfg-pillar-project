@@ -17,10 +17,9 @@ integrated MAVE dataset produced upstream of this figure) and splits out the
 SGE genes (`BARD1, PALB2, BRCA2, RAD51D, XRCC2, CTCF, SFPQ`) and VAMP-seq
 genes (`G6PD, TSC2, F9`; `F9` keeps only its heavy-chain-antibody dataset)
 into three xlsx files under `data/intermediate/figures/figure_2/`:
-`20260101_SGEsubset.xlsx`, `20260101_VAMPseqsubset_wDups.xlsx`, and
-`20260101_CAVAseqsubset.xlsx` (the concatenation of the first two --
-not currently read by anything else in this directory). Every panel
-notebook below reads the first two of these.
+`SGEsubset.xlsx`, `VAMPseqsubset_wDups.xlsx`, and `CAVAseqsubset.xlsx` (the
+concatenation of the first two -- not currently read by anything else in
+this directory). Every panel notebook below reads the first two of these.
 
 ```bash
 poetry run jupyter nbconvert --to notebook --execute \
@@ -34,8 +33,7 @@ poetry run jupyter nbconvert --to notebook --execute \
 
 - `PP_ClinVarPrecisionRecall.ipynb` -- precision/recall of SGE and VAMP-seq
   against ClinVar, with Wilson-interval CIs. Saves
-  `data/output/figures/figure_2/<YYYYMMDD>_PillarProject_PRvsClinVar_wErrorBar_grey.svg`
-  (filename is date-stamped by the run date, not fixed).
+  `data/output/figures/figure_2/PillarProject_PRvsClinVar_wErrorBar_grey.svg`.
 - `PP_Fig2_Heatmaps.ipynb` -- three charts in the figure's center column,
   despite its own docstring claiming "all" heatmaps: a RAD51D SGE
   amino-acid-position heatmap, a RAD51D SGE genomic-position map (a second,
@@ -49,14 +47,13 @@ poetry run jupyter nbconvert --to notebook --execute \
   `data/output/figures/figure_2/`.
 - `PP_ResolutionOverview.ipynb` -- the VAMP-seq vs. SGE genomic-position and
   amino-acid-change coverage bar chart. Saves
-  `data/output/figures/figure_2/20260120_vampseq_sge_bars.svg`.
+  `data/output/figures/figure_2/vampseq_sge_bars.svg`.
 - `PP_SeqFunctionMap.ipynb` -- the RAD51D sequence-function map. Saves
-  `data/output/figures/figure_2/20251204_RAD51D_X9_draft_SeqFunc_map_extended.svg`.
+  `data/output/figures/figure_2/RAD51D_X9_draft_SeqFunc_map_extended.svg`.
 - `PP_StackedHistograms.ipynb` -- stacked score histograms (with a ClinVar
   density overlay) for both assays, plus per-gene SGE insets. Saves two SVGs
   under `data/output/figures/figure_2/Histogram_wStripplot/` and one
-  `data/output/figures/figure_2/20260120_sge_histogram_inset_<gene>.svg` per
-  SGE gene.
+  `data/output/figures/figure_2/sge_histogram_inset_<gene>.svg` per SGE gene.
 
 ```bash
 for nb in PP_ClinVarPrecisionRecall PP_Fig2_Heatmaps PP_ResolutionOverview PP_SeqFunctionMap PP_StackedHistograms; do
@@ -265,7 +262,7 @@ The notebook resolves its own `PROJECT_ROOT` as `..` relative to the kernel's
 working directory; `nbconvert` sets that to the notebook's own directory
 (`Extended_Data_Figures/`) automatically, so `PROJECT_ROOT` lands on the repo
 root without needing to set the env var it also supports. Writes
-`clinvar_discordance_per_gene_011126.png` to
+`clinvar_discordance_per_gene.png` to
 `data/output/figures/extended_data_figure_5/`, plus a side-effect
 `executed_extended_data_figure_5.ipynb` (nbconvert's copy of the notebook
 with outputs attached) in `Extended_Data_Figures/` -- delete it afterward if
