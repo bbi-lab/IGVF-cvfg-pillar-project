@@ -2,11 +2,11 @@
 
 This repository contains the data-processing pipeline and figure-generation
 code behind the paper *"A scalable approach to resolving variants of
-uncertain significance."* It harmonizes variant-effect measurements from ~83
-published multiplexed assays of variant effect (MAVE) datasets, maps them to
-genomic coordinates, annotates them with ClinVar/gnomAD/predictor evidence,
-runs the OddsPath/ACMG-AMP classification analysis described in the paper,
-and generates the manuscript's main and extended data figures.
+uncertain significance."* It harmonizes variant-effect measurements from 91
+multiplexed assays of variant effect (MAVE) datasets, maps them to genomic
+coordinates, annotates them with ClinVar/gnomAD/predictor evidence, runs the
+OddsPath/ACMG-AMP classification analysis described in the paper, and
+generates the manuscript's main and extended data figures.
 
 > **Preprint:** *A scalable approach to resolving variants of uncertain
 > significance.* bioRxiv (2026).
@@ -136,9 +136,9 @@ classification files (Supplementary Data 5).
 
 This stage still lives in Jupyter notebooks under `notebooks/analysis/`
 rather than `src/` scripts — converting them is a deliberately deferred item
-on the [Roadmap](#roadmap) below. Each notebook has a
-companion `README_*.md` in the same directory documenting its inputs,
-methods, and outputs in detail — read those before running or modifying one.
+on the [Roadmap](#roadmap) below. Each notebook has a companion
+`README_*.md` in the same directory documenting its inputs, methods, and
+outputs in detail — read those before running or modifying one.
 
 Run in this order:
 
@@ -173,9 +173,22 @@ poetry install --all-extras
 poetry run python -m ipykernel install --user --name igvf-cvfg-pillar-project \
   --display-name "IGVF CVFG Pillar Project (Poetry)"
 
-poetry run python -m src.load_excalibr_calibrations   # refresh Supplementary Data 4
-poetry run jupyter lab                                # then run the three notebooks above, in order
+# Refresh Supplementary Data 4 from the latest exCALIBR calibrations
+poetry run python -m src.load_excalibr_calibrations
+
+# Run the three notebooks above, in order
+for nb in OddsPath_calculations OddsPath_classifications Variant_Classification_analysis; do
+  poetry run jupyter nbconvert --to notebook --execute \
+    --ExecutePreprocessor.kernel_name=igvf-cvfg-pillar-project \
+    --ExecutePreprocessor.timeout=600 \
+    --output executed_${nb}.ipynb \
+    notebooks/analysis/${nb}.ipynb
+done
 ```
+
+Each `nbconvert --execute` leaves a side-effect `executed_<name>.ipynb` next
+to the original (nbconvert's copy with outputs attached) — delete these if
+you don't want them in the working tree.
 
 Outputs land under `data/output/supplementary_data/` (`Supplementary_Data_4.xlsx`,
 `Supplementary_Data_5.xlsx`) and `data/output/predictor_calibration/` (the
@@ -209,25 +222,108 @@ As with Stage 2, notebooks here are still notebooks, not yet converted to
 
 ### Running it
 
-```bash
-# Python figure notebooks
-poetry install --all-extras
-poetry run jupyter nbconvert --to notebook --execute \
-  --ExecutePreprocessor.kernel_name=igvf-cvfg-pillar-project \
-  --output executed_<notebook>.ipynb \
-  Main_Figures/<figure_dir>/<notebook>.ipynb
+One-time setup:
 
-# R figure scripts (one-time image build, then per script)
+```bash
+poetry install --all-extras
+poetry run python -m ipykernel install --user --name igvf-cvfg-pillar-project \
+  --display-name "IGVF CVFG Pillar Project (Poetry)"
 docker compose build r-figures
-docker compose run --rm -w /usr/src/app/<figure_dir> r-figures <script>.R
-docker compose run --rm -w /usr/src/app/<figure_dir> \
-  r-figures -e 'rmarkdown::render("<script>.Rmd")'
 ```
 
-See [`docs/figures.md`](docs/figures.md) for the exact commands, inputs, and
-output paths for every individual figure and panel — including several
-figure-specific gotchas (missing output directories, date-stamped filenames,
-figures that only reconstruct from a cached intermediate).
+#### Figure 2
+
+```bash
+mkdir -p data/output/figures/figure_2/Histogram_wStripplot
+
+# 1. Prep notebook (run first; everything else in this figure depends on it)
+poetry run jupyter nbconvert --to notebook --execute \
+  --ExecutePreprocessor.kernel_name=igvf-cvfg-pillar-project \
+  --ExecutePreprocessor.timeout=600 \
+  --output executed_PP_ProcessBigDataFrame.ipynb \
+  Main_Figures/Figure_2/PP_ProcessBigDataFrame.ipynb
+
+# 2. Panel notebooks (independent of each other; all read step 1's output)
+for nb in PP_ClinVarPrecisionRecall PP_Fig2_Heatmaps PP_ResolutionOverview PP_SeqFunctionMap PP_StackedHistograms; do
+  poetry run jupyter nbconvert --to notebook --execute \
+    --ExecutePreprocessor.kernel_name=igvf-cvfg-pillar-project \
+    --ExecutePreprocessor.timeout=600 \
+    --output executed_${nb}.ipynb \
+    Main_Figures/Figure_2/${nb}.ipynb
+done
+
+# 3. Figure_2i.R -- place IGVFFI3804AVJR.csv.gz in Main_Figures/Figure_2/ first
+docker compose run --rm -w /usr/src/app/Main_Figures/Figure_2 \
+  r-figures Figure_2i.R
+```
+
+#### Figure 3
+
+Not yet documented — see `Main_Figures/Figure_3/curation_summary_figure3.Rmd`
+and its `Figure3a/c/d.csv.gz` inputs.
+
+#### Figure 4
+
+```bash
+# 1. Rebuild figure4_data.json.gz, carrying forward fields that can't be
+#    regenerated (see docs/build_figure4_data.md)
+poetry run python -m src.build_figure4_data \
+  --cached-json Main_Figures/Figure_4/old_figure4_data.json.gz
+
+# 2. Execute the notebook to produce fig4.png
+poetry run jupyter nbconvert --to notebook --execute \
+  --ExecutePreprocessor.kernel_name=igvf-cvfg-pillar-project \
+  --ExecutePreprocessor.timeout=600 \
+  --output executed_figure4.ipynb \
+  Main_Figures/Figure_4/figure4.ipynb
+```
+
+#### Figure 5/6
+
+```bash
+# Figure_6b.R -- place IGVFFI3804AVJR.csv.gz in Main_Figures/Figure5_6/ first
+docker compose run --rm -w /usr/src/app/Main_Figures/Figure5_6 \
+  r-figures Figure_6b.R
+
+# Figure5_6.Rmd
+docker compose run --rm -w /usr/src/app/Main_Figures/Figure5_6 \
+  r-figures -e 'rmarkdown::render("Figure5_6.Rmd")'
+```
+
+#### Extended Data Figure 2
+
+```bash
+# Place IGVFFI3804AVJR.csv.gz in Extended_Data_Figures/ first
+docker compose run --rm -w /usr/src/app/Extended_Data_Figures \
+  r-figures Extended_Data_Figure_2.R
+```
+
+#### Extended Data Figure 5
+
+```bash
+mkdir -p data/output/figures/extended_data_figure_5
+
+poetry run jupyter nbconvert --to notebook --execute \
+  --ExecutePreprocessor.kernel_name=igvf-cvfg-pillar-project \
+  --ExecutePreprocessor.timeout=600 \
+  --output executed_extended_data_figure_5.ipynb \
+  Extended_Data_Figures/Extended_Data_Figure_5.ipynb
+```
+
+#### Extended Data Figures 4-9 (`Extended_data_figures.Rmd`)
+
+```bash
+docker compose run --rm -w /usr/src/app/Extended_Data_Figures \
+  r-figures -e 'rmarkdown::render("Extended_data_figures.Rmd")'
+```
+
+Every `nbconvert --execute`/`rmarkdown::render()` call above leaves a
+side-effect artifact next to the source (an `executed_<name>.ipynb` copy, or
+a rendered `.html`) — delete these if you don't want them in the working
+tree. See [`docs/figures.md`](docs/figures.md) for output paths for every
+individual panel and several figure-specific gotchas (date-stamped
+filenames, figures that only reconstruct from a cached intermediate, output
+directories that aren't created automatically).
 
 ---
 
