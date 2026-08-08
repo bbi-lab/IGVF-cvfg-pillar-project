@@ -202,3 +202,114 @@ Fig 6a/6c/6d/6e's plots (VUS, three-ring donut, gnomAD, and unobserved
 sankeys/confusion matrices) save via direct `ggsave()` calls to
 `data/output/figures/figure_6/`.
 
+## Extended Data Figures
+
+Directory: `Extended_Data_Figures/`. Ext. Data Figs 2 and 5 are standalone
+scripts, documented in their own subsections below; `Extended_data_figures.Rmd`
+covers Figs 4-9 and is documented further down.
+
+### Extended Data Figure 2
+
+`Extended_Data_Figure_2.R` -- odds-ratio forest plots for gene-specific vs.
+genome-wide predictor calibration (top) and per-assay ExCALIBR classification
+(bottom), faceted by gene/disease group. Plain `Rscript`, not an `.Rmd` --
+same `tidyverse`/`patchwork`/`ggh4x`/`extrafont` dependencies and `r-figures`
+Docker service as `Figure_6b.R` (see Figure 5/6 above). Reads
+`IGVFFI3804AVJR.csv.gz` from its own directory, downloaded separately from
+https://data.igvf.org/tabular-files/IGVFFI3804AVJR/ (nothing in this repo
+produces it).
+
+```bash
+# Place IGVFFI3804AVJR.csv.gz in this directory first (see link above).
+docker compose run --rm -w /usr/src/app/Extended_Data_Figures \
+  r-figures Extended_Data_Figure_2.R
+```
+
+Unlike every other figure script in this doc, it `ggsave()`s straight to
+`Extended Data Figure 2.pdf` in its own directory (`Extended_Data_Figures/`),
+not under `data/output/figures/`.
+
+### Extended Data Figure 5
+
+`Extended_Data_Figure_5.ipynb` -- a Python notebook (unlike everything else
+in this directory), not R. Flags genes with excess ClinVar pathogenic/benign
+discordance against REVEL gene-specific calls: computes each gene's
+leave-one-out background discordance rate, tests observed vs. expected with a
+binomial test + BH FDR correction, and scatter-plots discordance rate vs.
+variant count, colored by significance.
+
+Reads `data/output/predictor_calibration/gene_specific/controls_REVEL_GeneSpecific.csv`,
+written by `notebooks/analysis/Variant_Classification_analysis.ipynb` -- see
+`notebooks/analysis/README_Variant_Classification_analysis.md` for how to
+produce it. No R/Docker dependency here; it only needs the Poetry environment
+(`pandas`, `numpy`, `scipy`, `statsmodels`, `matplotlib`).
+
+```bash
+# One-time environment setup (skip if already done -- see Figure 4 above)
+poetry install --all-extras
+poetry run python -m ipykernel install --user --name igvf-cvfg-pillar-project \
+  --display-name "IGVF CVFG Pillar Project (Poetry)"
+
+# The savefig() target directory isn't created for you -- make it first if
+# it doesn't already exist.
+mkdir -p data/output/figures/extended_data_figure_5
+
+poetry run jupyter nbconvert --to notebook --execute \
+  --ExecutePreprocessor.kernel_name=igvf-cvfg-pillar-project \
+  --ExecutePreprocessor.timeout=600 \
+  --output executed_extended_data_figure_5.ipynb \
+  Extended_Data_Figures/Extended_Data_Figure_5.ipynb
+```
+
+The notebook resolves its own `PROJECT_ROOT` as `..` relative to the kernel's
+working directory; `nbconvert` sets that to the notebook's own directory
+(`Extended_Data_Figures/`) automatically, so `PROJECT_ROOT` lands on the repo
+root without needing to set the env var it also supports. Writes
+`clinvar_discordance_per_gene_011126.png` to
+`data/output/figures/extended_data_figure_5/`, plus a side-effect
+`executed_extended_data_figure_5.ipynb` (nbconvert's copy of the notebook
+with outputs attached) in `Extended_Data_Figures/` -- delete it afterward if
+you don't want it in the working tree.
+
+### Extended Data Figures 4-9 (`Extended_data_figures.Rmd`)
+
+`Extended_data_figures.Rmd` builds Ext. Data Figs 4-9 (Sankey diagrams,
+confusion matrices, VUS reclassification plots, and multi-ring donut plots)
+from `Supplementary_Data_5.xlsx` / `Supplementary_Data_6.xlsx` under
+`data/output/supplementary_data/` (its `DATA_DIR = "../data/output"`
+constant, resolved relative to the `.Rmd`'s own directory) -- see
+`docs/mave_dataset_stats.md` for how those two workbooks get built.
+
+Unlike the Python `src/` steps, this script needs R packages
+(`ggsankey` from GitHub, `ggforce`, Arial via `extrafont`, `cairo_pdf`
+output) that aren't part of the Poetry environment. Run it with the
+`r-figures` Docker service (`Dockerfile.r`) rather than a local R install.
+
+### Steps
+
+```bash
+# One-time image build (skip if the image already exists)
+docker compose build r-figures
+
+# Render the whole .Rmd -- knits every chunk in order and writes each
+# figure's PNGs via ggsave()/save_my_plot()
+docker compose run --rm -w /usr/src/app/Extended_Data_Figures \
+  r-figures -e 'rmarkdown::render("Extended_data_figures.Rmd")'
+```
+
+`-w` overrides the service's default working directory (see the `r-figures`
+comment in `compose.yaml`) because the `.Rmd` reads/writes paths like
+`../data/output/...` assuming its own directory is cwd. The repo is
+bind-mounted into the container, so the rendered `Extended_data_figures.html`
+and every chunk's saved PNGs land directly in your working tree, not just
+inside the container.
+
+Every chunk writes under `data/output/figures/`, but not to the same
+subfolder -- the fig4/6 controls and ClinGen chunks save through
+`save_my_plot()` to `OUT_DIR = "../data/output/figures/extended_data_figures"`
+(i.e. `data/output/figures/extended_data_figures/Ext_Figure3_5/`), while the
+later VUS/gnomAD/donut chunks call `ggsave()` directly with hardcoded
+`../data/output/figures/extended_data_figure_6/` and
+`../data/output/figures/extended_data_figures/` paths. Check both
+`extended_data_figures/` and `extended_data_figure_6/` under
+`data/output/figures/` if a figure you expect isn't where you thought.
