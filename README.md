@@ -18,10 +18,8 @@ The pipeline runs in three stages, each covered in its own section below:
 2. [Data analysis / variant classification and table preparation](#2-data-analysis--variant-classification-and-table-preparation)
 3. [Figure preparation](#3-figure-preparation)
 
-For agent/contributor-facing conventions (repo layout, coding style, the
-notebook-to-script migration in progress, roadmap) see [AGENTS.md](AGENTS.md)
-— this README is the user-facing overview of what the pipeline does and how
-to run it.
+See [Roadmap](#roadmap) below for the current state of the notebook-to-script
+migration and other in-progress hardening work.
 
 ---
 
@@ -138,7 +136,7 @@ classification files (Supplementary Data 5).
 
 This stage still lives in Jupyter notebooks under `notebooks/analysis/`
 rather than `src/` scripts — converting them is a deliberately deferred item
-on the [roadmap in AGENTS.md](AGENTS.md#roadmap). Each notebook has a
+on the [Roadmap](#roadmap) below. Each notebook has a
 companion `README_*.md` in the same directory documenting its inputs,
 methods, and outputs in detail — read those before running or modifying one.
 
@@ -207,7 +205,7 @@ separately from https://data.igvf.org/tabular-files/IGVFFI3804AVJR/ (nothing
 in this repo produces it) and placed in the figure's own directory.
 
 As with Stage 2, notebooks here are still notebooks, not yet converted to
-`src/` scripts (see [AGENTS.md](AGENTS.md#roadmap)).
+`src/` scripts (see [Roadmap](#roadmap) below).
 
 ### Running it
 
@@ -254,11 +252,39 @@ Files included in this GitHub repository are:
 
 ## Software Requirements
 
-- **Python 3.12** — dependencies are Poetry-managed (`pyproject.toml`); see
-  [AGENTS.md](AGENTS.md#environment-poetry--ruff) for setup
-  (`poetry install --all-extras`).
+- **Python 3.12** — dependencies are Poetry-managed (`pyproject.toml`):
+  ```bash
+  poetry env use python3.12   # one-time, only if `poetry env use` picks the wrong interpreter
+  poetry install --all-extras
+  ```
+  This creates an in-project `.venv/` with the pipeline dependencies plus
+  the `dev` (Ruff, nbstripout, pre-commit), `tests` (pytest), and
+  `notebooks` (JupyterLab/ipykernel) extras.
 - **Docker and Docker Compose** — required for the variant-annotation
   pipeline (Stage 1) and the R figure scripts (Stage 3, `r-figures` service,
   R 4.4.2 via `rocker/r-ver`). A local R install is not required.
 - Additional per-script package dependencies are declared in
   `pyproject.toml` (Python) or the top of each `.R`/`.Rmd` file (R).
+
+## Roadmap
+
+In rough order:
+
+1. ~~Stand up a reproducible local environment (Poetry).~~ (done)
+2. Convert notebooks in `notebooks/analysis/`, `Main_Figures/`, and
+   `Extended_Data_Figures/` to `src/` scripts + tests. **Deliberately
+   skipped for now** — not blocking the work below.
+3. ~~Replace the archived `Integrated_variant_effect_dataset_pipeline.ipynb`
+   notebook with the Dockerized variant-annotation pipeline~~ (done: see
+   [Data preparation and variant annotation](#1-data-preparation-and-variant-annotation)
+   above). Still open: actually populate `data/raw_mave_data/` and do a full
+   end-to-end run to confirm the data flow works as designed (it's been
+   reviewed but not yet run against real data).
+4. ~~Reconcile a `Data/`/`data/` casing collision that arose on
+   case-insensitive filesystems.~~ (done)
+5. Dockerize the remaining pipeline stages (notebook conversions from step 2,
+   once done) the same way.
+6. Document all manual/ad hoc data-processing steps currently living only in
+   people's heads or notebook comments (e.g. the `additional notes` column
+   mentioned in
+   [`notebooks/analysis/README_Integrated_variant_effect_dataset_pipeline.md`](notebooks/analysis/README_Integrated_variant_effect_dataset_pipeline.md)).
