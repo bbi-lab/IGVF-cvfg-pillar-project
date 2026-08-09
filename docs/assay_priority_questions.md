@@ -19,7 +19,7 @@ when it does and doesn't track the strongest evidence.
 
 ### Where this lives
 
-`Variant_Classification_analysis.ipynb`, cell 91:
+`Variant_Classification_analysis.ipynb`, cell 92:
 
 ```python
 VUS_no_dup = (
@@ -29,7 +29,7 @@ VUS_no_dup = (
 )
 ```
 
-Compare to the `controls_aa`/`clingen_aa` path (cells 82–85, 107–108), which
+Compare to the `controls_aa`/`clingen_aa` path (cells 83–86, 108–109), which
 does use the priority list:
 
 ```python
@@ -42,7 +42,7 @@ controls_aa_drop_REVEL_YP = (
 )
 ```
 
-And to `catch_mis_2` (cell 88), which is the "keep whichever row actually has
+And to `catch_mis_2` (cell 89), which is the "keep whichever row actually has
 evidence" version, correct in spirit but only ever applied to the
 `controls`/`ClinGen` tables, never to `VUS`:
 
@@ -80,8 +80,8 @@ sorts first alphabetically by `VariantNotes` (with nulls pushed last).
 that report a variant's effect via a protein-coding change (`aa_pos`,
 `aa_ref`, `aa_alt`) rather than genomic coordinates directly. `controls_aa`
 and `clingen_aa` are the aa-assay subset of the `controls` (cell 76: ClinVar
-P/LP and B/LB) and `ClinGen_Repo` (cell 104) frames, split off from their
-nt counterparts at cells 79 and 105.
+P/LP and B/LB) and `ClinGen_Repo` (cell 105) frames, split off from their
+nt counterparts at cells 80 and 106.
 
 `controls` and `ClinGen_Repo` are the only two categories that get this
 split-by-assay-type treatment, and each goes through three dedup passes, not
@@ -90,9 +90,9 @@ and deduped again:
 
 | Stage | Cells (`controls` / `ClinGen_Repo`) | Input | Sort key | Uses `assay_priority`? |
 |---|---|---|---|---|
-| 1. nt subset dedup | 80 / 106 | `controls_nuc` / `clingen_nuc` | `VariantNotes` (same weak sort as `VUS`) | no |
-| 2. aa subset dedup | 85 / 108 | `controls_aa` / `clingen_aa` | `assay_priority` | **yes** — the one place `ASSAY_PRIORITY_LIST` is used |
-| 3. merge nt+aa survivors, dedup again | 89 / 111 | `pd.concat([stage-1 output, stage-2 output])` | `catch_mis_2`, signed `Fxn_points` | no |
+| 1. nt subset dedup | 81 / 107 | `controls_nuc` / `clingen_nuc` | `VariantNotes` (same weak sort as `VUS`) | no |
+| 2. aa subset dedup | 86 / 109 | `controls_aa` / `clingen_aa` | `assay_priority` | **yes** — the one place `ASSAY_PRIORITY_LIST` is used |
+| 3. merge nt+aa survivors, dedup again | 90 / 112 | `pd.concat([stage-1 output, stage-2 output])` | `catch_mis_2`, signed `Fxn_points` | no |
 
 Stage 3 exists because stages 1 and 2 each only guarantee one row *per
 assay type*. If the same physical variant was scored by both an nt assay and
@@ -103,13 +103,13 @@ This is the same nt-vs-aa collision `VUS` has (see below); `controls`/
 `assay_priority` or absolute value) choice about how to resolve it. `VUS`
 does not.
 
-Stage 3's output feeds directly into `dfs` (cell 112) as
+Stage 3's output feeds directly into `dfs` (cell 113) as
 `controls_REVEL/AM/MP2_GeneSpecific` and `ClinGen_Repo_REVEL/AM/MP2_GeneSpecific`
 — those Supplementary Data 5 tabs.
 
 `VUS`, `gnomAD`, and `Unobserved` (`Unseen` in the notebook) skip stages 1–3
 entirely — nt and aa rows are deduped together, in one pass, on genomic
-coordinates only, via a single `VariantNotes` sort (cells 91, 102, 96). None
+coordinates only, via a single `VariantNotes` sort (cells 92, 103, 97). None
 of the three ever look at `assay_priority`. Their outputs map straight to
 the `VUS_*`, `gnomAD_*`, and `Unobserved_*` tabs.
 
@@ -145,7 +145,7 @@ wrong in one particular, describable direction.
 **(1) `assay_priority` only covers the aa half.** `ASSAY_PRIORITY_LIST` isn't
 an aa-only list — it ranks nt assays too, and its own docstring flags
 "BRCA2_Hu_2024 was and remains prioritized over BRCA2_IGVF and the Sahu
-assays" as an open question. But stage 1 (nt, cells 80/106) never consults
+assays" as an open question. But stage 1 (nt, cells 81/107) never consults
 it — only stage 2 (aa) does. Confirmed live: 981 `controls`-category BRCA2
 variants are scored by more than one nt-level assay (`BRCA2_Hu_2024`, the
 `Sahu_2023_exon13_*` family, `BRCA2_IGVF`, `BRCA2_Huang_2025_SGE`), and on
@@ -180,7 +180,7 @@ a single assay type this doesn't happen — see
 [Effect on VUS classification](#effect-on-vus-classification).
 
 **`gnomAD`, `Unobserved`: same bias, unquantified.** Same code pattern as
-`VUS` (cells 102, 96: single `VariantNotes` sort over nt+aa rows together),
+`VUS` (cells 103, 97: single `VariantNotes` sort over nt+aa rows together),
 so the same nt-over-aa bias applies whenever one of their variants is
 scored by both an nt and an aa assay. Not separately checked here — nobody's
 counted how many `gnomAD`/`Unobserved` variants actually hit that collision.
@@ -216,12 +216,12 @@ at cell 67 and reloaded at cell 68. Cell 74 then drops every row tagged
 `start_lost_variant_not_measured` from the shared `sankey_f` — before any
 category is split off, so `controls`, `ClinGen_Repo`, `VUS`, `gnomAD`, and
 `Unobserved` all inherit the same cleanup. By the time `VUS` is filtered out
-at cell 90, the only `VariantNotes` values left are `First_max_fxn_pts`,
+at cell 91, the only `VariantNotes` values left are `First_max_fxn_pts`,
 `max_fxn_pts`, or blank/`NaN`.
 
 ### Effect on VUS classification
 
-Whichever row cell 91 keeps determines which assay's `Fxn_points` and
+Whichever row cell 92 keeps determines which assay's `Fxn_points` and
 calibration feed `Total_Points_GeneSpecific_*`, and from there
 `Class_GeneSpecific_REVEL/AM/MP2`. So does it pick the row with the
 strongest evidence? Mostly, yes — and the failure mode is specific, not
@@ -229,12 +229,12 @@ random.
 
 Checked against `integrated_variant_effect_dataset_analysis.csv.gz`,
 reproducing cells 69/74/75 (drop SFPQ, drop conflicting/splice/start-lost,
-drop `Flag='*'`) and grouping exactly as cell 91 does (`Gene`, `hg38_start`,
+drop `Flag='*'`) and grouping exactly as cell 92 does (`Gene`, `hg38_start`,
 `ref_allele`, `alt_allele`, nt and aa rows together, ties broken by original
 row order): 4,573 VUS coordinate-groups are scored by more than one assay —
 3,652 by assays of the same type (all-nt or all-aa), 921 by a mix of both.
 
-Comparing cell 91's pick to the row with the highest absolute `Fxn_points`
+Comparing cell 92's pick to the row with the highest absolute `Fxn_points`
 (what the `max_fxn_pts`/`First_max_fxn_pts` tags are themselves supposed to
 mark): they disagree on 149 groups, and every one of the 149 is a
 mixed-type group — zero disagreements among the 3,652 same-type groups.
@@ -255,7 +255,7 @@ larger value). Cell 91 keeps `Findlay_2018` — `Likely Pathogenic` — purely
 because `First_max_fxn_pts` outsorts `max_fxn_pts`; `Adamovich_2022_HDR`'s
 `Fxn_points` of 8 would classify as `Pathogenic`.
 
-Comparing cell 91's pick to the other two candidate sort keys:
+Comparing cell 92's pick to the other two candidate sort keys:
 
 | Alternative | Picks a different row | `Class_GeneSpecific_REVEL` flips | AM flips | MP2 flips |
 |---|---|---|---|---|
@@ -334,7 +334,7 @@ does happen for that gene in general.
 
 The dataset-wide check in [Effect on VUS classification](#effect-on-vus-classification)
 replaces that single-gene spot check: 921 VUS are scored by both an nt and
-an aa assay, cell 91 keeps the nt row in every one of those groups by
+an aa assay, cell 92 keeps the nt row in every one of those groups by
 construction, and 46/84/68 of them get a different REVEL/AM/MP2
 classification than they would if the stronger-evidence row were kept
 instead. That's happening today, not just in some future collision case —
@@ -343,8 +343,8 @@ all multi-assay VUS.
 
 ### Suggested fix
 
-Replace the `VariantNotes`-sort dedup in cell 91 (and the identical pattern
-at cells 96 and 102) with either:
+Replace the `VariantNotes`-sort dedup in cell 92 (and the identical pattern
+at cells 97 and 103) with either:
 
 - `catch_mis_2`, fixed to sort on `Fxn_points.abs()` rather than the signed
   value, applied the same way `controls`/`ClinGen_Repo` apply it at their
@@ -358,8 +358,8 @@ at cells 96 and 102) with either:
   higher), not strictly a superset fix.
 
 Either way, stop sorting on `VariantNotes` strings for this purpose, and
-consider giving `controls`/`ClinGen_Repo`'s nt stage (cells 80/106) and
-their stage-3 merge (cells 89/111) the same fix — they inherit the identical
+consider giving `controls`/`ClinGen_Repo`'s nt stage (cells 81/107) and
+their stage-3 merge (cells 90/112) the same fix — they inherit the identical
 tag-sort problem for nt-subset ties, and stage 3's signed-value sort has the
 same "signed, not absolute" inconsistency as `catch_mis_2` itself.
 
@@ -522,3 +522,167 @@ unreviewed):**
 89. `PALB2_Boonen_2026`
 90. `PALB2_Boonen_2026_SGE`
 91. `TP53_Funk_2025`
+
+## 3. `CONTROLS_CLINGEN_DEDUP_STRATEGY`: implemented options and empirical comparison
+
+`Variant_Classification_analysis.ipynb` cell 79 now exposes a hard-coded
+`CONTROLS_CLINGEN_DEDUP_STRATEGY` parameter that governs which record wins
+the `controls`/`ClinGen_Repo` aa-subset dedup (cells 86/109) and the nt+aa
+merge (`catch_mis_2`, defined at cell 89, called at cells 90/112) — the two
+decision points discussed in [section 1](#1-vus-reclassification-dedup-doesnt-use-assay-priority)
+above. `VUS`, `gnomAD`, and `Unobserved` are untouched by this parameter —
+they keep the existing `VariantNotes`-tag dedup (greatest absolute
+`Fxn_points`, per [Implications](#implications)) unconditionally.
+
+### Effective sort order
+
+`current` is not a single global ranking — it's the same three-stage
+pipeline described in the [stage table](#controls_aaclingen_aa-what-aa-means-here-and-who-else-uses-it)
+above, with a *different* comparison at each stage. `abs_max` and
+`nt_then_abs_max` collapse this into one consistent ranking applied
+uniformly to every candidate assay row (nt and aa together):
+
+| Strategy | Scope | Ranked comparisons (1st → last) |
+|---|---|---|
+| `current` | aa-subset only (multiple aa assays scoring the same aa-level variant) | 1. Rank in `ASSAY_PRIORITY_LIST` (lower number = higher priority; an assay absent from the list gets priority `9999`) |
+| `current` | nt-subset only (multiple nt assays scoring the same nt-level variant) | 1. `VariantNotes` tag order — in practice equivalent to greatest **absolute** `Fxn_points` within the nt-only group, but implemented as an alphabetical string sort (see [Alphabetical, not evidence-based](#alphabetical-not-evidence-based)) |
+| `current` | nt+aa merge (the aa-subset winner vs. the nt-subset winner, when both exist for the same variant) | 1. Greatest **signed** `Fxn_points` — a positive value always beats a negative one regardless of magnitude; between two negatives, the value closer to zero wins |
+| `abs_max` | all candidates, nt and aa together | 1. Greatest **absolute** `Fxn_points` |
+| `nt_then_abs_max` | all candidates, nt and aa together | 1. NT-type row over AA-type row, unconditionally → 2. Greatest **absolute** `Fxn_points` (tie-break within whichever type won step 1) |
+
+Net effect: `abs_max` is mathematically equivalent to running a single
+"greatest absolute `Fxn_points` wins" comparison across every nt and aa
+candidate for a variant at once (the three-stage nt/aa split becomes
+unobservable). `nt_then_abs_max` is the same, except an nt-type candidate
+always wins over an aa-type candidate irrespective of either one's
+`Fxn_points` — the same nt-over-aa bias `VUS`/`gnomAD`/`Unobserved` already
+have by accident (see [VUS: systematic nt-over-aa bias](#known-problems-by-category)),
+applied to `controls`/`ClinGen_Repo` on purpose instead.
+
+### Empirical comparison
+
+Ran the full pipeline once per strategy against the real dataset (1,354,282
+input rows) and compared the resulting `controls`/`ClinGen_Repo`
+`*_GeneSpecific` tables pairwise, matching rows across runs by
+(`Gene`, `Chrom`, `hg38_start`, `ref_allele`, `alt_allele`). Reproducibility
+was checked directly — `current` was run twice and the six output tables
+were byte-identical both times — so the pipeline is fully deterministic and
+the differences below reflect the strategy, not run-to-run noise.
+
+| Category | Rows matched across all 3 runs | Dataset pick differs: current→abs_max / current→nt_then_abs_max / abs_max→nt_then_abs_max | `Class_GeneSpecific_*` flips: current→abs_max / current→nt_then_abs_max / abs_max→nt_then_abs_max |
+|---|---|---|---|
+| `controls` × REVEL | 11,359 | 350 / 355 / 17 | 29 / 31 / 12 |
+| `controls` × MP2 | 9,387 | 175 / 165 / 12 | 19 / 11 / 8 |
+| `controls` × AM | 11,190 | 238 / 244 / 14 | 16 / 23 / 13 |
+| `ClinGen_Repo` × REVEL | 435 | 99 / 100 / 1 | 3 / 4 / 1 |
+| `ClinGen_Repo` × MP2 | 128 | 26 / 26 / 0 | 0 / 0 / 0 |
+| `ClinGen_Repo` × AM | 442 | 102 / 103 / 1 | 2 / 3 / 1 |
+
+**Most of these "dataset pick differs" cases are tie artifacts, not policy
+differences — and this is where they concentrate.** For every row where
+`current` and `abs_max` disagree, compare `abs(Fxn_points)` of the two picks:
+if they're equal, switching sort key couldn't have changed *which value*
+wins, only *which tied row with that value* gets reported — an
+implementation-detail of an unstable sort over exactly-equal keys, the same
+category of problem as [Alphabetical, not evidence-based](#alphabetical-not-evidence-based)
+above, just now affecting the abs-value sort instead of the tag-string
+sort. Splitting each category this way:
+
+| Category | current→abs_max: tie-artifact / genuine | flips within tie-artifact / genuine | current→nt_then_abs_max: tie-artifact / genuine | flips within tie-artifact / genuine |
+|---|---|---|---|---|
+| `controls` × REVEL | 306 / 44 | 0 / 29 | 305 / 50 | 0 / 31 |
+| `controls` × MP2 | 141 / 34 | 0 / 19 | 140 / 25 | 0 / 11 |
+| `controls` × AM | 202 / 36 | 0 / 16 | 201 / 43 | 0 / 23 |
+| `ClinGen_Repo` × REVEL | 96 / 3 | 0 / 3 | 96 / 4 | 0 / 4 |
+| `ClinGen_Repo` × MP2 | 25 / 1 | 0 / 0 | 25 / 1 | 0 / 0 |
+| `ClinGen_Repo` × AM | 99 / 3 | 0 / 2 | 99 / 4 | 0 / 3 |
+
+**Every single classification flip, in every category, falls in the
+"genuine" column — zero flips come from a tie-artifact row.** That's
+expected (a tie in `Fxn_points` alone doesn't guarantee identical total
+points if predictor evidence also differs by row, but empirically here it
+always landed in the same points bucket either way) and it means the tie
+vs. genuine split is exactly the useful signal: raw "dataset pick differs"
+counts wildly overstate how much the strategy choice actually matters.
+
+**Where the *genuine* (non-tied) differences and all flips concentrate:**
+`PALB2`, `BRCA1`, and `TP53` — nowhere else. `LDLR` and `GCK`, despite
+dominating the *raw* pick-differs counts (73–180 and 23–71 changed picks
+respectively, across predictors — see the [open questions above](#2-open-questions-on-assay-priority-order-for-oddspath-calibration)),
+contribute **zero** genuine differences and zero flips in every category
+checked; every one of their pick changes is a tie artifact.
+
+| current→abs_max, genuine diffs / flips | REVEL | MP2 | AM |
+|---|---|---|---|
+| `PALB2` | 27 / 16 | 22 / 13 | 21 / 11 |
+| `BRCA1` | 12 / 11 | 6 / 6 | 9 / 5 |
+| `TP53` | 5 / 2 | 6 / 0 | 6 / 0 |
+
+Confirmed why `LDLR`/`GCK` are all tie artifacts: `LDLR` Q53\* (chr19:11100312,
+stop-gain, reachable via `C>T`, `CAG>TAA`, or `CAG>TGA`) is scored `Fxn_points`
+4 by *both* `LDLR_Tabet_2025_uptake` and `LDLR_Tabet_2025_abundance` at the
+identical genomic coordinates — a real tie between two of the three
+`Tabet_2025` assays this doc's [open question 2](#2-open-questions-on-assay-priority-order-for-oddspath-calibration)
+already flags as having no reviewed priority order. `assay_priority` and
+`abs(Fxn_points)` both fail to break this tie (they're comparing identical
+values), so which dataset name ends up recorded is an unstable-sort
+artifact regardless of strategy — exactly the scenario that open question
+is asking someone to resolve with a real ranking.
+
+**Two verified examples of the genuine (non-tied) `PALB2` differences**
+(`controls` × REVEL; both confirmed against the raw per-assay-row data —
+each variant has exactly one nt-type and one aa-type candidate, no
+degenerate-codon duplicates):
+
+- `PALB2` chr16:23623123 A>G (`F948L`): `current`'s *signed* merge sort
+  keeps `PALB2_Boonen_2026` (aa, `Fxn_points` −1) over `PALB2_IGVF` (nt,
+  `Fxn_points` −5), since −1 > −5 → *Likely Benign*. `abs_max` correctly
+  compares magnitudes (1 < 5) and keeps the IGVF row → *Benign*.
+- `PALB2` chr16:23603614 T>C (`T1136A`): same pattern — `current` keeps
+  Boonen (`Fxn_points` 0) over IGVF (`Fxn_points` −8) → *Likely Benign*;
+  `abs_max` keeps IGVF's −8 → *Benign*.
+
+Both are direct instances of the [stage-3 sign bias](#known-problems-by-category)
+documented above (a positive/less-negative value always beats a more
+negative one under `current`, regardless of magnitude), now shown to
+reproduce on real `controls` data, not just the single BRCA1 example given
+there.
+
+**Caveat on `BRCA1`.** Unlike the two `PALB2` examples, `BRCA1`'s genuine-diff
+rows are harder to attribute cleanly: `BRCA1_Adamovich_2022_HDR` reports the
+*same* `Fxn_points` for a given amino-acid change across multiple
+degenerate-codon representations (e.g. `E1794*` is scored `Fxn_points` 8 at
+three different genomic positions/alleles: chr17:43049147 C>A,
+43049145 CTC>TTA, and 43049145 CTC>TCA). `current`'s and `abs_max`'s
+*internal* aa-stage tie-break among those three rows is itself an unstable
+sort over equal keys — so which one aa-side value ends up competing against
+`BRCA1_Findlay_2018` at the merge step, and at *which* genomic coordinates,
+can differ by strategy independently of the sign-vs-magnitude question. This
+doesn't affect `nt_then_abs_max`, whose rule ("nt always wins") doesn't care
+which aa row would have won that internal tie — so `nt_then_abs_max`'s
+`BRCA1` numbers are reliably attributable to the deliberate nt-over-aa
+policy, but a full per-row audit would be needed to say the same for
+`current`-vs-`abs_max`'s `BRCA1` numbers. `TP53`'s genuine diffs weren't
+individually audited.
+
+**Caveat: rows that can't be matched across runs at all (~10–16% of
+`controls`, ~0–1% of `ClinGen_Repo`).** 1,291/12,650 (REVEL), 1,767/11,154
+(MP2), and 1,510/12,700 (AM) `controls` rows have no exact (`Gene`, `Chrom`,
+`hg38_start`, `ref_allele`, `alt_allele`) counterpart in one of the other two
+runs (`ClinGen_Repo`: 3/438, 0/128, 4/446) — a more extreme version of the
+same degenerate-codon mechanism above, where the tied candidate that "wins"
+under one strategy sits at genomic coordinates the other strategy's winner
+doesn't share at all, so the two rows can't even be matched up for
+comparison. Confirmed directly: `G6PD` codon 355 (`I355I`, synonymous) has
+two candidate rows both scored `Fxn_points` 0 by `G6PD_IGVF` — chrX:154532789
+G>T and chrX:154532789 G>A — and `current` vs. `abs_max` surface different
+ones as the group's representative. None of this is a symptom of the
+strategy parameter or something introduced by it: the aa-level group key
+(`Gene`, `aa_pos`, `aa_ref`, `aa_alt`, transcript) doesn't include the
+underlying nucleotide change, so it already collapses these cases into one
+group before stage 2 runs, regardless of strategy. Fixing it would mean
+changing the aa-level group key itself, which is out of scope here.
+
+The notebook ships with `CONTROLS_CLINGEN_DEDUP_STRATEGY = "current"` (today's
+default; logically identical to the pre-parameter code), and none of the
+comparison or reproducibility-check runs above wrote to `data/output/`.
