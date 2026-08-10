@@ -22,7 +22,8 @@ for the `ASSAY_PRIORITY_LIST`-specific background this doc builds on.
   evidence disagrees with predictor evidence.
 - **[Gene-specific special-casing](#gene-specific-special-casing)** --
   `F9`/`TP53`'s alternate calibration, `SFPQ`'s exclusion, `CHEK2`'s QC
-  flag, and the 2018-vs-2025 ClinVar vintage switch.
+  flag, `LDLR`'s assay-priority-by-position override, and the
+  2018-vs-2025 ClinVar vintage switch.
 - **[Deduplication strategy](#deduplication-strategy)** -- how the
   pipeline picks one representative record when the same variant is
   scored by more than one assay. By far the largest section, and the
@@ -270,6 +271,34 @@ its `Flag` set to `'*'` -- which then gets removed by the same
 flagged for any other reason, regardless of gene. A second column from
 that file, `Filter_Hypercomplement`, is merged in alongside `Filter_CI`
 but never used for anything.
+
+### `LDLR`: `+VLDL` uptake assay prioritized in two LA modules
+
+Within LA module 2 (`aa_pos` 66-106) and LA module 6 (`aa_pos` 234-272), a
+row filter runs immediately after `pp` is loaded, before any other
+processing: for any amino-acid substitution in those two ranges where
+`LDLR_Tabet_2025_presence_VLDL` (LDL uptake measured in the *presence* of
+excess VLDL, i.e. "+VLDL") has a measurement, the corresponding rows from
+`LDLR_Tabet_2025_uptake` ("−VLDL" uptake, without VLDL) and
+`LDLR_Tabet_2025_abundance` (a cell-surface abundance assay) are dropped
+for that same substitution. Substitutions in those ranges that `+VLDL`
+doesn't cover keep their `uptake`/`abundance` data unchanged -- this is a
+priority with fallback, not a blanket exclusion of the other two assays.
+Per the original investigator, `+VLDL` is less subject to a blind spot the
+other two assays have specifically in these two modules; the same
+prioritization was deliberately *not* extended to LA module 1.
+
+Unlike the other special-casing in this section, this rule runs on raw,
+per-assay rows before dedup, category split, or `ASSAY_PRIORITY_LIST` ever
+run, so it applies identically regardless of dedup strategy and to all
+five variant categories alike -- `controls`/`ClinGen_Repo` and
+`VUS`/`gnomAD`/`Unobserved` equally. Confirmed directly against the
+current data: 10,780 rows (5,392 `abundance`, 5,388 `uptake`) are dropped
+by this rule, and every remaining LA2/LA6 substitution that had `+VLDL`
+coverage has `LDLR_Tabet_2025_presence_VLDL` as its only surviving assay
+in that position range -- `uptake`/`abundance` are retained only for the
+substitutions `+VLDL` didn't cover (21 substitutions in each module, per
+the reclassification-stage data).
 
 ### `BRCA1`/`PTEN`/`MSH2`/`TP53`: 2018 vs. 2025 ClinVar vintage
 
@@ -733,82 +762,161 @@ setting for either parameter going forward.
 
 ### Comparing `v1` to the decided approach
 
-> **These numbers are carried over as-is from the empirical comparison in**
-> [`docs/assay_priority_questions.md`, section 3](assay_priority_questions.md#3-controls_clingen_dedup_strategy-implemented-options-and-empirical-comparison)
-> **and are stale -- pending a rerun.** They were computed before
-> `ASSAY_PRIORITY_LIST` was trimmed to section-1-only, before
-> `VUS_GNOMAD_UNOBSERVED_DEDUP_STRATEGY` existed, and before `"current"`
-> was renamed to `"v1"` (the rename doesn't itself change any number here
-> -- same code, same data -- but the `ASSAY_PRIORITY_LIST` trim does, since
-> it changes what `"v1"` actually does for `controls`/`ClinGen_Repo`'s
-> aa-stage tie-break). We'll refresh these counts and add the
-> VUS/gnomAD/Unobserved comparison later.
+Ran the full pipeline twice, both times against the same input data as
+production (`data/output/maves/integrated_variant_effect_dataset.tsv.gz`)
+but with the eight datasets added after `v1` was written excluded from the
+very start (`BRCA2_Huang_2025_SGE`, `CHEK2_McCarthy-Leo_2024`,
+`LDLR_Tabet_2025_uptake`, `LDLR_Tabet_2025_abundance`,
+`LDLR_Tabet_2025_presence_VLDL`, `PALB2_Boonen_2026`,
+`PALB2_Boonen_2026_SGE`, `TP53_Funk_2025`) -- once with both
+`CONTROLS_CLINGEN_DEDUP_STRATEGY` and `VUS_GNOMAD_UNOBSERVED_DEDUP_STRATEGY`
+set to `"v1"` (results at
+`data/output/reclassification/integrated_variant_effect_dataset_analysis.v1.csv.gz`
+and `data/output/supplementary_data/Supplementary_Data_5.v1.xlsx`), and once
+with both left at current defaults (`nt_then_abs_max` / `abs_max`; results at
+`data/output/reclassification/integrated_variant_effect_dataset_analysis.current_no_new_data.csv.gz`
+and `data/output/supplementary_data/Supplementary_Data_5.current_no_new_data.xlsx`).
+Both runs share the identical restricted input and category-assignment code
+path -- the eight-dataset exclusion happens in a cell immediately after `pp`
+is loaded, before any other processing -- so the only thing that differs
+between them is the two dedup-strategy parameters.
 
-Ran the full pipeline once per `CONTROLS_CLINGEN_DEDUP_STRATEGY` value
-against the real dataset (1,354,282 input rows) and compared the resulting
-`controls`/`ClinGen_Repo` `*_GeneSpecific` tables pairwise, matching rows
-across runs by (`Gene`, `Chrom`, `hg38_start`, `ref_allele`, `alt_allele`).
-Reproducibility was checked directly -- `v1` was run twice and the six
-output tables were byte-identical both times.
+**`VUS`, `gnomAD`, and `Unobserved` have zero unmatched rows in either
+direction, in every predictor.** This is exactly what the theoretical
+argument in [Question 1](#question-1-two-distinct-snvs-producing-the-same-protein-change)
+predicts: those three categories' dedup (`dedup_vus_gnomad_unobserved`)
+groups by genomic coordinates only, never amino-acid coordinates, so it
+structurally can't produce an unmatched row from a strategy difference --
+confirmed here by identical row counts and a 1:1 key match between `v1`
+and current defaults across the board.
 
-| Category | Rows matched across all 3 runs | Dataset pick differs: v1→abs_max / v1→nt_then_abs_max / abs_max→nt_then_abs_max | `Class_GeneSpecific_*` flips: v1→abs_max / v1→nt_then_abs_max / abs_max→nt_then_abs_max |
-|---|---|---|---|
-| `controls` × REVEL | 11,359 | 350 / 355 / 17 | 29 / 31 / 12 |
-| `controls` × MP2 | 9,387 | 175 / 165 / 12 | 19 / 11 / 8 |
-| `controls` × AM | 11,190 | 238 / 244 / 14 | 16 / 23 / 13 |
-| `ClinGen_Repo` × REVEL | 435 | 99 / 100 / 1 | 3 / 4 / 1 |
-| `ClinGen_Repo` × MP2 | 128 | 26 / 26 / 0 | 0 / 0 / 0 |
-| `ClinGen_Repo` × AM | 442 | 102 / 103 / 1 | 2 / 3 / 1 |
+| Category | `v1` rows | current rows (excl. new datasets) | matched | unmatched (`v1`-only / current-only) | dataset pick differs | `Class_*` flips |
+|---|---|---|---|---|---|---|
+| `controls` × REVEL | 11,026 | 11,026 | 10,119 | 907 / 907 | 115 | 16 |
+| `controls` × MP2 | 9,969 | 9,975 | 8,688 | 1,281 / 1,287 | 69 | 8 |
+| `controls` × AM | 11,059 | 11,056 | 9,916 | 1,143 / 1,140 | 62 | 15 |
+| `ClinGen_Repo` × REVEL | 293 | 293 | 290 | 3 / 3 | 5 | 1 |
+| `ClinGen_Repo` × MP2 | 97 | 97 | 97 | 0 / 0 | 8 | 0 |
+| `ClinGen_Repo` × AM | 299 | 299 | 295 | 4 / 4 | 22 | 1 |
+| `VUS` × REVEL | 16,711 | 16,711 | 16,711 | 0 / 0 | 303 | 9 |
+| `VUS` × MP2 | 16,367 | 16,367 | 16,367 | 0 / 0 | 288 | 14 |
+| `VUS` × AM | 16,760 | 16,760 | 16,760 | 0 / 0 | 306 | 18 |
+| `gnomAD` × REVEL | 32,737 | 32,737 | 32,737 | 0 / 0 | 721 | 10 |
+| `gnomAD` × MP2 | 31,759 | 31,759 | 31,759 | 0 / 0 | 678 | 11 |
+| `gnomAD` × AM | 32,849 | 32,849 | 32,849 | 0 / 0 | 723 | 14 |
+| `Unobserved` × REVEL | 88,270 | 88,270 | 88,270 | 0 / 0 | 3,160 | 0 |
+| `Unobserved` × MP2 | 87,354 | 87,354 | 87,354 | 0 / 0 | 3,136 | 0 |
+| `Unobserved` × AM | 88,308 | 88,308 | 88,308 | 0 / 0 | 3,161 | 0 |
 
-**Most "dataset pick differs" cases turned out to be tie artifacts, not
-policy differences.** Splitting each `v1`-vs-other comparison into rows
-where the two strategies picked the same `abs(Fxn_points)` value (a tie
-artifact -- switching sort key only changed *which* tied row got reported)
-versus rows where the picked value's magnitude genuinely differed:
+**`controls`/`ClinGen_Repo`'s unmatched rows are genuinely about the two
+dedup strategies differing**, not a category-assignment side effect: both
+runs share the identical category-assignment code path, differing only in
+`CONTROLS_CLINGEN_DEDUP_STRATEGY`/`VUS_GNOMAD_UNOBSERVED_DEDUP_STRATEGY`.
+Rows are matched between the two runs by (`Gene`, `Chrom`, `hg38_start`, `ref_allele`,
+`alt_allele`) -- i.e. by genomic position, which is also each row's final
+dedup key. When `v1`'s `assay_priority`-ranked aa-stage winner and the
+`abs(Fxn_points)`-ranked aa-stage winner for the same amino-acid
+substitution come from two *different* SNVs (see
+[Question 1](#question-1-two-distinct-snvs-producing-the-same-protein-change)),
+each run reports a different SNV's genomic coordinates as that
+substitution's representative row, and a coordinate-keyed join sees one row
+vanish from each side's key set rather than "the dataset pick changed."
+Confirmed on real data: `HMBS` chr11:119093175 G>A (`HMBS_van_Loggerenberg_2023_combined`,
+aa, `Fxn_points`=1, `NP_000181.2:p.Gly326=`) is `v1`'s pick for that
+synonymous substitution; current defaults instead pick a *different* SNV at
+the same position, chr11:119093175 G>T (`HMBS_van_Loggerenberg_2023_erythroid`,
+aa, `Fxn_points`=1, same `hgvs_p`) -- so the coordinate-keyed join sees
+neither row as a match for the other, even though both strategies agree on
+the winning evidence magnitude. This also explains why `controls`/`ClinGen_Repo`
+row *counts* differ only slightly between the two runs: a handful of these
+SNV-representative swaps change which row's ClinVar star count/summary
+makes a group eligible for `controls` at all, so the two strategies can each
+pick up a few rows the other doesn't -- `controls` × MP2 has 9,975 current
+rows vs. 9,969 `v1` rows, `controls` × AM has 11,056 vs. 11,059, roughly
+symmetric either way rather than one strategy consistently yielding more
+rows than the other.
 
-| Category | v1→abs_max: tie-artifact / genuine | flips within tie-artifact / genuine | v1→nt_then_abs_max: tie-artifact / genuine | flips within tie-artifact / genuine |
-|---|---|---|---|---|
-| `controls` × REVEL | 306 / 44 | 0 / 29 | 305 / 50 | 0 / 31 |
-| `controls` × MP2 | 141 / 34 | 0 / 19 | 140 / 25 | 0 / 11 |
-| `controls` × AM | 202 / 36 | 0 / 16 | 201 / 43 | 0 / 23 |
-| `ClinGen_Repo` × REVEL | 96 / 3 | 0 / 3 | 96 / 4 | 0 / 4 |
-| `ClinGen_Repo` × MP2 | 25 / 1 | 0 / 0 | 25 / 1 | 0 / 0 |
-| `ClinGen_Repo` × AM | 99 / 3 | 0 / 2 | 99 / 4 | 0 / 3 |
+**As found previously, tie artifacts account for most "dataset pick
+differs" cases, and every classification flip is genuine.** Splitting
+each category's differing picks into tie artifacts (`abs(Fxn_points)`
+unchanged, only *which* tied row got reported changed) versus genuine
+differences (magnitude actually changed):
 
-Every classification flip, in every category, fell in the "genuine"
-column -- zero flips came from a tie-artifact row. Raw "dataset pick
-differs" counts substantially overstate how much the strategy choice
-actually matters.
+| Category | tie-artifact / genuine picks | flips within tie-artifact / genuine |
+|---|---|---|
+| `controls` × REVEL | 93 / 22 | 0 / 16 |
+| `controls` × MP2 | 58 / 11 | 0 / 8 |
+| `controls` × AM | 41 / 21 | 0 / 15 |
+| `ClinGen_Repo` × REVEL | 4 / 1 | 0 / 1 |
+| `ClinGen_Repo` × MP2 | 8 / 0 | 0 / 0 |
+| `ClinGen_Repo` × AM | 21 / 1 | 0 / 1 |
+| `VUS` × REVEL | 279 / 24 | 0 / 9 |
+| `VUS` × MP2 | 264 / 24 | 0 / 14 |
+| `VUS` × AM | 282 / 24 | 0 / 18 |
+| `gnomAD` × REVEL | 703 / 18 | 0 / 10 |
+| `gnomAD` × MP2 | 661 / 17 | 0 / 11 |
+| `gnomAD` × AM | 705 / 18 | 0 / 14 |
+| `Unobserved` × REVEL | 3,160 / 0 | 0 / 0 |
+| `Unobserved` × MP2 | 3,136 / 0 | 0 / 0 |
+| `Unobserved` × AM | 3,161 / 0 | 0 / 0 |
 
-**The genuine differences and all flips concentrated in `PALB2`, `BRCA1`,
-and `TP53` -- nowhere else.** `LDLR` and `GCK` dominated the *raw*
-pick-differs counts (73-180 and 23-71 changed picks respectively, across
-predictors) but contributed **zero** genuine differences and zero flips in
-every category checked -- every one of their pick changes was a tie
-artifact, confirming the [open question](assay_priority_questions.md#2-open-questions-on-assay-priority-order-for-oddspath-calibration)
-that `LDLR`'s assays have no reviewed priority order and frequently score
-identically for the same variant.
+Zero flips came from a tie-artifact pick in any of the fifteen
+category/predictor combinations. (`Unobserved` has no ClinVar/ClinGen
+classification, so `Class_*` doesn't apply there -- all its dataset-pick
+differences are tie artifacts and none can flip anything.)
 
-| v1→abs_max, genuine diffs / flips | REVEL | MP2 | AM |
-|---|---|---|---|
-| `PALB2` | 27 / 16 | 22 / 13 | 21 / 11 |
-| `BRCA1` | 12 / 11 | 6 / 6 | 9 / 5 |
-| `TP53` | 5 / 2 | 6 / 0 | 6 / 0 |
+**Almost every genuine difference and every flip is `BRCA1`, with one
+`SCN5A` exception in `gnomAD`.** Grouping genuine (non-tie-artifact) flips
+by gene:
 
-Two `PALB2` differences were verified directly against the raw
-per-assay-row data (clean cases -- exactly one nt- and one aa-type
-candidate, no degenerate-codon duplicates), confirming the sign-bias
-mechanism above reproduces on real `controls` data: chr16:23623123 A>G
-(`F948L`) -- `v1` keeps `PALB2_Boonen_2026` (aa, `Fxn_points` −1) over
-`PALB2_IGVF` (nt, `Fxn_points` −5) since −1 > −5 → *Likely Benign*;
-`abs_max` correctly keeps the stronger −5 → *Benign*. `BRCA1`'s
-genuine-diff rows were harder to attribute cleanly (see the full writeup
-in `docs/assay_priority_questions.md` for why), and `TP53`'s weren't
-individually audited.
+| Category | Genuine flips | Gene breakdown |
+|---|---|---|
+| `controls` × REVEL / MP2 / AM | 16 / 8 / 15 | 100% `BRCA1` |
+| `ClinGen_Repo` × REVEL / AM | 1 / 1 | 100% `BRCA1` |
+| `VUS` × REVEL / MP2 / AM | 9 / 14 / 18 | 100% `BRCA1` |
+| `gnomAD` × REVEL / MP2 / AM | 10 / 11 / 14 | `BRCA1` (9/10/13) + `SCN5A` (1/1/1) |
 
-No VUS/gnomAD/Unobserved comparison exists yet -- `VUS_GNOMAD_UNOBSERVED_DEDUP_STRATEGY`
-didn't exist when this comparison was run. That, and a rerun against the
-trimmed `ASSAY_PRIORITY_LIST`, are still pending.
+Two mechanisms account for essentially the entire effect:
+
+1. **`catch_mis_2`'s nt/aa merge, `BRCA1`.** `BRCA1_Findlay_2018` (nt) and
+   `BRCA1_Adamovich_2022_HDR`/`_Cisplatin_Resistance` (aa) frequently
+   cover the same genomic position with comparable-magnitude
+   `Fxn_points`. `v1`'s signed-descending sort lets an aa-type row beat
+   an nt-type row whenever its signed value is greater -- including a
+   less-negative aa value beating a more-negative nt value. E.g.
+   chr17:43070959 A>G: `v1` keeps `BRCA1_Adamovich_2022_HDR` (aa,
+   `Fxn_points`=0) over `BRCA1_Findlay_2018` (nt, `Fxn_points`=−5) since
+   0 > −5, classifying it *Uncertain*; `nt_then_abs_max` keeps Findlay's
+   nt row regardless of sign, classifying it *Likely Benign*. This is the
+   same sign-bias mechanism described under [Why "greatest absolute
+   value" rather than signed value](#why-greatest-absolute-value-rather-than-signed-value),
+   now confirmed to be almost entirely responsible for the real-world
+   `BRCA1` classification differences in every category that includes
+   this gene's variants.
+2. **`dedup_vus_gnomad_unobserved`'s magnitude comparison, `SCN5A`.**
+   Unlike `controls`/`ClinGen_Repo`, `VUS`/`gnomAD`/`Unobserved` dedup all
+   candidates for a genomic position in one pass regardless of
+   resolution. One `gnomAD` position has two aa-type candidates from
+   different assays: `SCN5A_Glazer_2020` (`Fxn_points`=0) and
+   `SCN5A_Ma_2024` (`Fxn_points`=3). `v1`'s `VariantNotes`-alphabetical
+   sort picks Glazer (*Uncertain*); `abs_max` correctly picks the larger
+   magnitude, Ma_2024 (*Likely Pathogenic*).
+
+`PALB2` and `TP53` -- flagged as differing genes in the earlier
+`assay_priority_questions.md` comparison -- don't appear in either the
+raw dataset-pick-differs or the genuine-flip breakdown here: their new
+post-`v1` datasets (`PALB2_Boonen_2026`, `PALB2_Boonen_2026_SGE`,
+`TP53_Funk_2025`) are excluded from both sides in this comparison, and
+whatever remaining evidence they have from `v1`-era datasets doesn't
+produce a dataset-pick difference under either strategy. `LDLR` has zero
+rows in this comparison at all -- every `LDLR` dataset postdates `v1` and
+is excluded from both sides. `GCK`, `HMBS`, `BRCA1`, `PAX6`, and `ASPA`
+dominate the *raw* `controls`/`ClinGen_Repo` pick-differs counts (1-54
+changed picks each, across predictors -- `GCK` alone accounts for 54/34/7
+of `controls`'s REVEL/MP2/AM picks-differ counts) but, aside from `BRCA1`'s
+already-counted genuine differences above, contribute zero genuine
+differences and zero flips -- every other gene's pick change is a tie
+artifact.
 
 ## Outputs
 
