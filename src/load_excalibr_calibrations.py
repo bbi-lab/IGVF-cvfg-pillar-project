@@ -2,7 +2,7 @@
 """Load exCALIBR MAVE calibrations into Supplementary Data 4.
 
 Reads every `*.json` calibration file produced by exCALIBR (default:
-`data/input/mave_calibration/excalibr/exc_pp_calib_final_fixedmapping_clinvar/json/`)
+`data/input/mave_calibration/excalibr/json/`)
 and writes one row per file into the `ExCALIBR_calibrations` sheet of a
 workbook (default: `data/output/supplementary_data/Supplementary_Data_4.xlsx`),
 overwriting that sheet's existing contents in place. Other sheets are left
@@ -10,11 +10,13 @@ untouched.
 
 Each file's name (minus `.json`) becomes the `dataset` column. `point_ranges`
 supplies the sixteen `range_-8` .. `range_8` columns: a point with no range is
-left blank, and a populated range is written as its two endpoints separated
-by a space, with `-Infinity`/`Infinity` rendered as `-inf`/`inf`. `relax`,
-`clinvar_2018`, and `scoreset_flipped` are 0/1 in the source JSON and are
-written as Excel booleans; `prior`, `n_c`, and `benign_method` are copied
-through as-is.
+left blank, and a point with one or more (possibly disjoint) ranges is
+written as its endpoints separated by a space, with `-Infinity`/`Infinity`
+rendered as `-inf`/`inf`; a point with more than one range has each one
+written this way and joined with `, ` (e.g. `"-0.56 -0.52, 0.46 inf"`),
+sorted by lower endpoint. `relax`, `clinvar_2018`, and `scoreset_flipped` are
+0/1 in the source JSON and are written as Excel booleans; `prior`, `n_c`, and
+`benign_method` are copied through as-is.
 
 Usage:
     python -m src.load_excalibr_calibrations [JSON_DIR] [WORKBOOK]
@@ -26,7 +28,7 @@ from pathlib import Path
 import click
 import openpyxl
 
-DEFAULT_JSON_DIR = Path("data/input/mave_calibration/excalibr/exc_pp_calib_final_fixedmapping_clinvar/json")
+DEFAULT_JSON_DIR = Path("data/input/mave_calibration/excalibr/json")
 DEFAULT_WORKBOOK = Path("data/output/supplementary_data/Supplementary_Data_4.xlsx")
 
 SHEET_NAME = "ExCALIBR_calibrations"
@@ -49,15 +51,17 @@ def format_endpoint(value):
 def format_range(point_ranges, point):
     """Return the "low high" string for one point, or None if it has no range.
 
-    Raises ValueError if the point has more than one range entry.
+    A point with more than one (possibly disjoint) range -- e.g.
+    DDX3X_Radford_2023, whose +1 and -1 points each cover two separate score
+    intervals -- has each range formatted the same way and joined with ", ",
+    sorted by lower endpoint.
     """
     entries = point_ranges.get(str(point), [])
-    if len(entries) > 1:
-        raise ValueError(f"point {point} has {len(entries)} range entries, expected at most 1")
     if not entries:
         return None
-    low, high = entries[0]
-    return f"{format_endpoint(low)} {format_endpoint(high)}"
+    return ", ".join(
+        f"{format_endpoint(low)} {format_endpoint(high)}" for low, high in sorted(entries, key=lambda pair: pair[0])
+    )
 
 
 def load_calibration_row(json_path):

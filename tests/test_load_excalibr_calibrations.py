@@ -76,13 +76,24 @@ def test_load_all_calibrations_formats_ranges_and_booleans(json_dir):
     assert gene_b["scoreset_flipped"] is True
 
 
-def test_load_all_calibrations_rejects_multi_entry_range(tmp_path):
+def test_load_all_calibrations_formats_multiple_ranges(tmp_path):
     json_dir = tmp_path / "json"
     json_dir.mkdir()
-    _write_json(json_dir, "GENE_C", point_ranges={"1": [[0.0, 1.0], [1.0, 2.0]]})
+    _write_json(
+        json_dir,
+        "GENE_C",
+        point_ranges={
+            "1": [[0.46, float("inf")], [-0.56, -0.52]],
+            "-1": [[float("-inf"), -1.0]],
+        },
+    )
 
-    with pytest.raises(ValueError, match="more than one|expected at most 1"):
-        load_all_calibrations(json_dir)
+    rows = load_all_calibrations(json_dir)
+    gene_c = {row["dataset"]: row for row in rows}["GENE_C"]
+
+    # Sorted by lower endpoint regardless of source order.
+    assert gene_c["range_1"] == "-0.56 -0.52, 0.46 inf"
+    assert gene_c["range_-1"] == "-inf -1.0"
 
 
 def test_write_calibrations_sheet_overwrites_only_target_sheet(json_dir, workbook_path):

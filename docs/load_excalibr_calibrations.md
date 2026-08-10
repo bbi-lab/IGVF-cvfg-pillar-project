@@ -5,7 +5,7 @@ calibrations into Supplementary Data 4, so the workbook stays in sync with
 the latest calibration run without hand-editing spreadsheet rows.
 
 It reads every `*.json` calibration file in a directory (default:
-`data/input/mave_calibration/excalibr/exc_pp_calib_final_fixedmapping_clinvar/json/`)
+`data/input/mave_calibration/excalibr/json/`)
 and writes one row per file into the `ExCALIBR_calibrations` sheet of a
 workbook (default: `data/output/supplementary_data/Supplementary_Data_4.xlsx`),
 **overwriting that sheet's existing contents in place**. All other sheets,
@@ -25,12 +25,15 @@ the sheet's tab position, and its column widths are left untouched.
 | `scoreset_flipped` | `scoreset_flipped` (0/1 -> Excel `FALSE`/`TRUE`) |
 
 `point_ranges` is a JSON object keyed by point value (`"-8"` .. `"-1"`, `"1"`
-.. `"8"`; there is no `"0"` key) whose value is an array of at most one
-`[low, high]` pair. A point with an empty array is written as a blank cell; a
-point with one pair is written as `"<low> <high>"`, with `-Infinity` and
-`Infinity` rendered as `-inf` and `inf`. The script raises `ValueError` (a
-`click.ClickException` from the CLI) if any point has more than one entry,
-since the sheet has only one column per point.
+.. `"8"`; there is no `"0"` key) whose value is an array of `[low, high]`
+pairs -- usually at most one, but a point can have more than one disjoint
+range (e.g. `DDX3X_Radford_2023`, whose +1 and -1 points each cover two
+separate score intervals). A point with an empty array is written as a blank
+cell; a point with one pair is written as `"<low> <high>"`, with `-Infinity`
+and `Infinity` rendered as `-inf` and `inf`; a point with more than one pair
+has each one formatted the same way and joined with `", "`, sorted by lower
+endpoint (e.g. `"-0.56 -0.52, 0.46 inf"`) -- the sheet still has only one
+column per point, so multiple ranges share a cell rather than a column.
 
 ## Usage
 
@@ -38,7 +41,7 @@ Locally (with the Poetry environment):
 
 ```bash
 poetry run python -m src.load_excalibr_calibrations \
-  data/input/mave_calibration/excalibr/exc_pp_calib_final_fixedmapping_clinvar/json \
+  data/input/mave_calibration/excalibr/json \
   data/output/supplementary_data/Supplementary_Data_4.xlsx
 ```
 

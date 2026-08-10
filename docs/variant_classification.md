@@ -68,6 +68,17 @@ comes from ExCALIBR score-interval calibrations for most genes, with
 several gene-specific exceptions -- see
 [Gene-specific special-casing](#gene-specific-special-casing) below.
 
+A given evidence-strength point value can correspond to more than one
+disjoint score interval -- currently only `DDX3X_Radford_2023`, whose `+1`
+and `-1` points each cover two separate ranges. `Supplementary_Data_4`'s
+`ExCALIBR_calibrations` sheet still has one `range_<point>` column per point
+value, but a cell can hold a comma-separated list of `"<low> <high>"` ranges
+instead of just one (`src/load_excalibr_calibrations.py`'s `format_range`);
+`get_points_from_intervals` in `Variant_Classification_analysis.ipynb`
+(the cell computing `ExC_points_2025`/`ExC_points_2018`) checks a score
+against every comma-separated range in a cell and returns that point value
+if any of them contains it.
+
 ## Handling conflicting evidence
 
 The deduplication strategies described below resolve *which record to
