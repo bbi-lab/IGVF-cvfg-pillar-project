@@ -10,11 +10,18 @@ untouched.
 
 Unlike `load_excalibr_calibrations`, no reformatting happens: the CSV
 already matches the sheet's column layout, so each row is copied through
-as-is (sorted by `Dataset`), with missing values (`NaN`) written as blank
-cells rather than the literal string `"nan"`. `OddsNormal`/`OddsAbnormal`
-can legitimately hold a string (e.g. `"No benign controls"`) instead of a
-number, when a dataset lacks the controls needed to compute a likelihood
-ratio -- these pass through unchanged, same as the source CSV.
+as-is (sorted by `Dataset`), with truly missing values written as blank
+cells. That's not the same as the literal text "None", which several
+columns can legitimately hold as a real value -- e.g. `Pseudocount Details`
+defaults to "None" (not blank) when no pseudocount was needed, and
+`KCNQ4_Zheng_2022_v12_homozygous`'s `Evidence Code Abnormal` is deliberately
+overridden to "None" in the notebook (masked, not missing) -- so this script
+reads the CSV with pandas' default NA-string recognition turned off to keep
+that word intact instead of silently collapsing it to a blank cell.
+`OddsNormal`/`OddsAbnormal` can also legitimately hold a string (e.g.
+`"No benign controls"`) instead of a number, when a dataset lacks the
+controls needed to compute a likelihood ratio -- these pass through
+unchanged, same as the source CSV.
 
 Usage:
     python -m src.load_oddspath_calibrations [CSV] [WORKBOOK]
@@ -74,7 +81,15 @@ def load_all_calibrations(csv_path):
     a schema change in `OddsPath_calculations.ipynb` fails loudly instead of
     silently writing a mismatched sheet.
     """
-    df = pd.read_csv(csv_path)
+    # keep_default_na=False/na_values=[""]: pandas' default NA sentinels
+    # include the bare word "None" (also "NA", "null", etc.), but the
+    # notebook writes that word deliberately as a real value -- e.g.
+    # Pseudocount Details defaults to the string "None" when no pseudocount
+    # was added, and KCNQ4_Zheng_2022_v12_homozygous's Evidence Code
+    # Abnormal is explicitly overridden to "None" (masked, not missing; see
+    # the notebook cell just above `all_vars.to_csv(...)`). Only a truly
+    # empty cell should become a blank sheet cell.
+    df = pd.read_csv(csv_path, keep_default_na=False, na_values=[""])
     if list(df.columns) != COLUMNS:
         raise ValueError(f"{csv_path} has columns {list(df.columns)}, expected {COLUMNS}")
 

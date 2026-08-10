@@ -25,6 +25,11 @@ def csv_path(tmp_path):
         path,
         [
             {
+                # Mirrors KCNQ4_Zheng_2022_v12_homozygous: the notebook writes
+                # the literal string "None" both as Pseudocount Details'
+                # default (no pseudocount added) and as a deliberate,
+                # explicit override of Evidence Code Abnormal (masked, not
+                # missing) -- neither should collapse to a blank cell.
                 "Dataset": "GENE_B",
                 "Total Controls": 14,
                 "OddsNormal": 2.0,
@@ -36,9 +41,9 @@ def csv_path(tmp_path):
                 "True Path in Abnormal": 0,
                 "Total Assay Normal": 140,
                 "True Path in Normal": 4,
-                "Pseudocount Details": None,
+                "Pseudocount Details": "None",
                 "Evidence Code Normal": "Indeterminate",
-                "Evidence Code Abnormal": None,
+                "Evidence Code Abnormal": "None",
             },
             {
                 "Dataset": "GENE_A",
@@ -52,9 +57,28 @@ def csv_path(tmp_path):
                 "True Path in Abnormal": 120,
                 "Total Assay Normal": 2694,
                 "True Path in Normal": 2,
-                "Pseudocount Details": None,
+                "Pseudocount Details": "Added 1 misclassified benign variant to abnormal function class",
                 "Evidence Code Normal": "BS3_strong",
                 "Evidence Code Abnormal": "PS3_strong",
+            },
+            {
+                # A genuinely missing value (empty CSV cell) should still
+                # become a blank sheet cell, distinct from the literal
+                # string "None" above.
+                "Dataset": "GENE_C",
+                "Total Controls": 0,
+                "OddsNormal": "No controls",
+                "OddsAbnormal": "No controls",
+                "Pathogenic Controls": 0,
+                "Benign Controls": 0,
+                "Prior Probability Pathogenic": 0,
+                "Total Assay Abnormal": 0,
+                "True Path in Abnormal": 0,
+                "Total Assay Normal": 0,
+                "True Path in Normal": 0,
+                "Pseudocount Details": "No controls",
+                "Evidence Code Normal": None,
+                "Evidence Code Abnormal": None,
             },
         ],
     )
@@ -77,16 +101,24 @@ def workbook_path(tmp_path):
 def test_load_all_calibrations_sorts_and_blanks_missing_values(csv_path):
     rows = load_all_calibrations(csv_path)
 
-    assert [row["Dataset"] for row in rows] == ["GENE_A", "GENE_B"]
-
-    gene_b = rows[1]
-    assert gene_b["OddsAbnormal"] == "No functionally abnormal controls"
-    assert gene_b["Pseudocount Details"] is None
-    assert gene_b["Evidence Code Abnormal"] is None
+    assert [row["Dataset"] for row in rows] == ["GENE_A", "GENE_B", "GENE_C"]
 
     gene_a = rows[0]
     assert gene_a["OddsAbnormal"] == pytest.approx(192.5806)
     assert gene_a["Evidence Code Normal"] == "BS3_strong"
+
+    # The literal string "None" is a real, deliberate value (see
+    # KCNQ4_Zheng_2022_v12_homozygous) and must survive as text, not collapse
+    # into a blank cell the way pandas' default NA-string recognition would.
+    gene_b = rows[1]
+    assert gene_b["OddsAbnormal"] == "No functionally abnormal controls"
+    assert gene_b["Pseudocount Details"] == "None"
+    assert gene_b["Evidence Code Abnormal"] == "None"
+
+    # A genuinely empty CSV cell is still blanked out to Python None.
+    gene_c = rows[2]
+    assert gene_c["Evidence Code Normal"] is None
+    assert gene_c["Evidence Code Abnormal"] is None
 
 
 def test_load_all_calibrations_rejects_mismatched_columns(tmp_path):
@@ -106,14 +138,20 @@ def test_write_calibrations_sheet_overwrites_only_target_sheet(csv_path, workboo
     values = list(sheet.iter_rows(values_only=True))
     assert values[0] == tuple(COLUMNS)
     datasets = [row[0] for row in values[1:]]
-    assert datasets == ["GENE_A", "GENE_B"]
+    assert datasets == ["GENE_A", "GENE_B", "GENE_C"]
     assert "STALE_DATASET" not in datasets
     assert workbook["Other Sheet"]["A1"].value == "untouched"
 
     gene_b_row = dict(zip(COLUMNS, values[2]))
-    assert gene_b_row["Pseudocount Details"] is None
+    assert gene_b_row["Pseudocount Details"] == "None"
+    assert gene_b_row["Evidence Code Abnormal"] == "None"
+
+    gene_c_row = dict(zip(COLUMNS, values[3]))
+    assert gene_c_row["Evidence Code Abnormal"] is None
     # openpyxl round-trips a written None back as None, not NaN.
-    assert not isinstance(gene_b_row["Pseudocount Details"], float) or not math.isnan(gene_b_row["Pseudocount Details"])
+    assert not isinstance(gene_c_row["Evidence Code Abnormal"], float) or not math.isnan(
+        gene_c_row["Evidence Code Abnormal"]
+    )
 
 
 def test_main_cli_reports_row_count(csv_path, workbook_path):
@@ -121,4 +159,4 @@ def test_main_cli_reports_row_count(csv_path, workbook_path):
     result = runner.invoke(main, [str(csv_path), str(workbook_path)])
 
     assert result.exit_code == 0
-    assert "Wrote 2 row(s)" in result.output
+    assert "Wrote 3 row(s)" in result.output
