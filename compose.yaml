@@ -138,6 +138,21 @@ services:
     volumes:
       - .:/usr/src/app
 
+  # Reads the locally-generated data/output/mave_calibration/
+  # OddsPath_calibrations.csv.gz and overwrites the OddsPath_calibrations
+  # sheet of the locally-generated data/output/supplementary_data/
+  # Supplementary_Data_4.xlsx in place -- the OddsPath counterpart to
+  # load-excalibr-calibrations above, same reasoning for only needing the
+  # repo bind mount.
+  load-oddspath-calibrations:
+    <<: *tools-image
+    profiles:
+      - tools
+    entrypoint: ["python", "-m", "src.load_oddspath_calibrations"]
+    command: []
+    volumes:
+      - .:/usr/src/app
+
   # Generic runner for the manuscript's R figure scripts
   # (notebooks/figures/**/*.R, notebooks/figures/**/*.Rmd). These scripts
   # read/write relative filenames (e.g. `read_csv("IGVFFI3804AVJR.csv.gz")`),

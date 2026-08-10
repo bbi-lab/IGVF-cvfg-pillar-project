@@ -144,9 +144,14 @@ Run in this order:
 
 1. **`OddsPath_calculations.ipynb`** — OddsPath likelihood-ratio
    calculations per dataset, following Brnich et al. (2019).
-2. **`OddsPath_classifications.ipynb`** — turns those OddsPath values into
+2. **`src/load_oddspath_calibrations.py`** — loads that notebook's output
+   (`data/output/mave_calibration/OddsPath_calibrations.csv.gz`) into the
+   `OddsPath_calibrations` sheet of Supplementary Data 4, analogous to
+   `src/load_excalibr_calibrations.py` below. See
+   [`docs/load_oddspath_calibrations.md`](docs/load_oddspath_calibrations.md).
+3. **`OddsPath_classifications.ipynb`** — turns those OddsPath values into
    ACMG/AMP evidence points.
-3. **`Variant_Classification_analysis.ipynb`** — combines functional
+4. **`Variant_Classification_analysis.ipynb`** — combines functional
    evidence (via exCALIBR calibrations or OddsPath) with computational
    predictor evidence (REVEL, AlphaMissense, MutPred2; genome-wide and
    gene-specific), assigns final classifications, deduplicates variants
@@ -154,7 +159,8 @@ Run in this order:
    files that become Supplementary Data 5. See
    [`notebooks/analysis/README_Variant_Classification_analysis.md`](notebooks/analysis/README_Variant_Classification_analysis.md).
 
-Two `src/` scripts support this stage and are already converted:
+Two more `src/` scripts support this stage (beyond `load_oddspath_calibrations.py`
+above) and are already converted:
 
 - **`src/load_excalibr_calibrations.py`** — loads exCALIBR JSON calibrations
   (`data/input/mave_calibration/excalibr/json/`) into Supplementary Data 4
@@ -176,8 +182,18 @@ poetry run python -m ipykernel install --user --name igvf-cvfg-pillar-project \
 # Refresh Supplementary Data 4 from the latest exCALIBR calibrations
 poetry run python -m src.load_excalibr_calibrations
 
-# Run the three notebooks above, in order
-for nb in OddsPath_calculations OddsPath_classifications Variant_Classification_analysis; do
+# 1. OddsPath likelihood-ratio calculations
+poetry run jupyter nbconvert --to notebook --execute \
+  --ExecutePreprocessor.kernel_name=igvf-cvfg-pillar-project \
+  --ExecutePreprocessor.timeout=600 \
+  --output executed_OddsPath_calculations.ipynb \
+  notebooks/analysis/OddsPath_calculations.ipynb
+
+# 2. Refresh Supplementary Data 4's OddsPath_calibrations sheet from that run
+poetry run python -m src.load_oddspath_calibrations
+
+# 3-4. Remaining notebooks above, in order
+for nb in OddsPath_classifications Variant_Classification_analysis; do
   poetry run jupyter nbconvert --to notebook --execute \
     --ExecutePreprocessor.kernel_name=igvf-cvfg-pillar-project \
     --ExecutePreprocessor.timeout=600 \
