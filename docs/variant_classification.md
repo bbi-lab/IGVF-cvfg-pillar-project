@@ -325,6 +325,169 @@ one DNA-level classification is ever produced for it, so there's no
 double-counting risk. The only question is which of possibly several
 scores to trust for that variant.
 
+### What double-counting avoidance means in practice
+
+"Avoid double-counting" is easy to state abstractly but has real,
+sometimes surprising consequences for which records actually survive into
+the output. Two questions pin it down concretely. Both were confirmed by
+running the actual `controls_nuc`/`controls_aa`/`catch_mis_2`/
+`dedup_vus_gnomad_unobserved` code (not just read from source) against
+small constructed inputs representing a hypothetical amino-acid change
+`Gene:p.A100V` reachable by two different nucleotide substitutions --
+call them **SNV1** (say chr1:1000 G>A) and **SNV2** (chr1:1003 C>T). These
+are two distinct ClinVar records / two distinct rows of input data. (That
+more than one nucleotide-level event can map to the same amino-acid
+outcome is independently confirmed real in this dataset -- see the
+`BRCA1_Adamovich_2022_HDR`/`G6PD_IGVF`/`LDLR_Tabet_2025` examples in
+[Comparing `v1` to the decided approach](#comparing-v1-to-the-decided-approach)
+and this doc's [Open questions](#open-questions).)
+
+**A single assay never gives SNV1 and SNV2 different aa evidence in this
+dataset.** Checked directly: of every (aa-group, `Dataset`) combination
+where one assay's rows span more than one genomic coordinate for the same
+amino-acid outcome (229,083 such combinations), **none** report more than
+one distinct `Fxn_points` value across those coordinates -- makes sense,
+since an aa-resolution assay is measuring the protein consequence, and
+different codons reaching the same one get scored identically. So for
+SNV1's and SNV2's aa evidence to genuinely differ, as the worked example
+below needs, that evidence has to come from **two different aa-resolution
+assays** scoring the same amino-acid change -- not the same assay
+reporting inconsistent results for it.
+
+#### Question 1: two distinct SNVs producing the same protein change
+
+| Assay coverage for this gene | `controls`/`ClinGen_Repo` result | `VUS`/`gnomAD`/`Unobserved` result |
+|---|---|---|
+| (a) nt-resolution only | Both SNV1 and SNV2 survive, each via its own nt evidence. No interaction between them -- nt-level dedup groups by exact genomic coordinates, so two different SNVs are never in the same group. | Same: both survive independently, for the same reason. |
+| (b) nt- *and* aa-resolution | **Both SNV1 and SNV2 still survive -- but only because each has its own nt-resolution record to fall back on.** Under `"nt_then_abs_max"` (the default), each one's *own* aa evidence may never even be compared to its own nt evidence -- see the worked trace below. | Both survive, **each independently choosing its own strongest evidence** (nt or aa, whichever has the greater absolute value under the default `"abs_max"`). SNV1 and SNV2 never interact, because dedup here always groups by exact genomic coordinates, never by amino-acid coordinates. |
+| (c) aa-resolution only | **Only one of SNV1/SNV2 survives.** The aa-level dedup stage groups by (`Gene`, `aa_pos`, `aa_ref`, `aa_alt`, transcript) -- not by genomic coordinates -- so SNV1's and SNV2's aa-assay rows collide in the *same* group and get reduced to one row before stage 3 ever runs. **The other SNV is completely absent from the output**, not merely outscored -- there is no row for it at all. | **Both SNV1 and SNV2 survive.** Dedup groups by genomic coordinates only, so an aa-only variant still gets its own group; two different SNVs sharing an aa outcome never collide. |
+
+**Case (b), worked through precisely.** Construct SNV1 with nt evidence
+`Fxn_points=3` and aa evidence `5` from `Dataset P`; SNV2 with nt evidence
+`6` and aa evidence `8` from `Dataset Q` (a *different* aa-resolution
+assay -- see above for why it has to be a different one) -- i.e. for
+*each* SNV individually, its own aa evidence is the stronger one:
+
+- **`controls`/`ClinGen_Repo`, any strategy:** stage 2 (aa dedup) first
+  picks a single winner *across both SNVs' aa rows*, using the configured
+  strategy (assay priority under `"v1"`; magnitude under `"abs_max"`/
+  `"nt_then_abs_max"`) -- say SNV2's aa row (`8`) wins that contest. SNV1's
+  aa row (`5`) is discarded *right there*, before stage 3 -- it never gets
+  a chance to compete against SNV1's own nt row (`3`). Stage 3 then merges:
+  SNV2's surviving aa row (`8`) collides with SNV2's own nt row (`6`) at
+  the same coordinates -- under `"nt_then_abs_max"` the nt row wins
+  regardless of magnitude, so the final SNV2 record uses `6`, not `8`.
+  SNV1's nt row (`3`) has no competitor left (its aa row is already gone)
+  and survives untouched. **Final: SNV1 → `3`, SNV2 → `6` -- both from nt
+  evidence, and neither variant ever got the benefit of comparing its own
+  nt and aa evidence to each other**, because the choice was made one
+  level up, across SNVs, first.
+- **`VUS`/`gnomAD`/`Unobserved`, `"abs_max"` (the default):** each SNV's
+  own nt and aa rows are in the *same* group (same coordinates), and
+  nothing from the other SNV is in that group. SNV1 compares `3` vs. `5`
+  and keeps `5`; SNV2 compares `6` vs. `8` and keeps `8`. **Final: SNV1 →
+  `5`, SNV2 → `8`** -- see below for why "correctly compared" needs a
+  caveat here too.
+
+**A sharper way to see the cost.** Since SNV1 and SNV2 cause the exact
+same protein change, `Dataset P`'s `5` and `Dataset Q`'s `8` aren't really
+"SNV1's evidence" and "SNV2's evidence" as separate, competing
+quantities -- they're two independent measurements *of the same thing*
+(whether the shared amino-acid substitution disrupts function), and the
+strongest available evidence for that shared consequence is `8`, full
+stop, regardless of which SNV a given ClinVar record happens to describe.
+`controls`/`ClinGen_Repo`'s aa-stage dedup effectively recognizes this --
+it compares every row sharing the amino-acid identity, across both
+datasets, and correctly identifies `8` as the strongest one available.
+What it does *not* do is recognize that this shared, strongest evidence is
+equally relevant to *any* SNV producing that protein change. Instead, the
+winning row carries forward whatever specific genomic coordinates its
+assay happened to use (`Dataset Q`'s, which match SNV2) -- so only SNV2
+ever gets to weigh `8` against its own nt evidence at the merge stage.
+**SNV1 doesn't lose a fair fight against stronger evidence; it never gets
+to make its case with the strongest available evidence for its own
+protein consequence at all**, because that evidence happened to be filed
+under someone else's genomic coordinates. Stated more precisely than "aa
+loses to nt when they collide": a variant's aa evidence can be taken out
+of contention by a *different* variant's measurement of the identical
+protein change, before its own nt-vs-aa comparison ever happens. This
+holds under **all three strategies** (`"v1"`, `"abs_max"`,
+`"nt_then_abs_max"`) -- switching strategy only changes *which* SNV
+inherits the shared evidence and *which* type wins the merge, never
+whether one SNV gets frozen out of it entirely.
+
+**This may well be the intended trade-off, not a cost to eliminate.**
+`controls`/`ClinGen_Repo` feed calibration/validation exercises where each
+control is meant to contribute one independent data point. If SNV1's and
+SNV2's aa evidence were *both* separately counted as "the assay correctly
+scored a pathogenic control" whenever they share a protein consequence,
+a single underlying measurement (`Dataset Q`'s `8`) would inflate the
+assay's apparent ClinVar concordance by being credited twice for what is,
+functionally, one observation. Collapsing to one row per amino-acid group
+before computing any calibration-relevant count is a defensible way to
+prevent exactly that. Framed this way, the aa-stage dedup is arguably
+doing the *right* thing at the amino-acid level -- the open question is
+what it does downstream of that decision (below).
+
+**Which SNV wins, exactly, and does ClinVar/ClinGen evidence quality ever
+factor in?** Checked directly: **no.** The aa-stage sort key is
+`assay_priority` (`"v1"`) or `abs(Fxn_points)` (`"abs_max"`/
+`"nt_then_abs_max"`) -- see [Three-stage pipeline](#three-stage-pipeline-for-controlsclingen_repo-under-v1)
+below -- neither one references ClinVar star count, review status, or
+ClinGen curation quality anywhere. The *only* ClinVar-quality check that
+happens before the aa-stage dedup is a coarse, group-level, binary gate
+(`summarize_clnstar`, cell 84): it requires *at least one* row in the
+aa-group to have a "1+ star" review status (`criteria provided, single
+submitter` counts exactly the same as `reviewed by expert panel` for this
+purpose), and it excludes the *entire* group if some rows are "1+ star"
+and others are "0 star" (tagged `has_clinvar_star_conflict`). Once a group
+clears that bar, **which specific SNV's row goes on to win the aa-stage
+dedup, and therefore which SNV's own ClinVar star count/review
+status/significance ends up representing the group in the final output,
+is decided entirely by the *functional* assay data** -- with no
+preference for the SNV backed by the more authoritative ClinVar/ClinGen
+record. If SNV1 is `reviewed by expert panel` with weaker functional
+evidence and SNV2 is `criteria provided, single submitter` with stronger
+functional evidence, SNV2 wins and its (weaker) ClinVar review status is
+what the output reports -- SNV1's stronger clinical evidence doesn't
+factor into the choice at all. **Whether it should** -- e.g. preferring
+the more authoritatively-reviewed ClinVar record when functional evidence
+doesn't clearly discriminate, or weighting it into the tie-break directly
+-- is an open question; see [Open questions](#open-questions).
+
+**`VUS`/`gnomAD`/`Unobserved` has the same underlying limitation, just in
+milder form.** Its single-pass dedup avoids the cross-SNV *collision*
+problem above (SNV1 and SNV2 never compete for a single output row), but
+it doesn't pool aa evidence across genomic representations of the same
+amino-acid change either: grouping strictly by each SNV's own coordinates
+means SNV1 only ever sees `Dataset P`'s `5`, never `Dataset Q`'s stronger
+`8` -- even though `Q`'s measurement is just as much about the protein
+consequence SNV1 causes as it is about SNV2's. No part of this pipeline
+pools aa-level evidence across the genomic representations of a shared
+amino-acid change; `controls`/`ClinGen_Repo`'s aa-stage dedup is the
+*closest* thing to that, and even it only benefits whichever one SNV
+happens to inherit the winning row's coordinates.
+
+#### Question 2: one ClinVar record, scored by both an nt- and an aa-resolution assay
+
+This is the simple case that [Decided approach](#decided-approach) below
+is about. Confirmed directly:
+
+| | `controls`/`ClinGen_Repo` | `VUS`/`gnomAD`/`Unobserved` |
+|---|---|---|
+| Result | Exactly one record survives: the **nt**-resolution one, under `"nt_then_abs_max"` (the default) -- *even if the aa-resolution evidence has the larger magnitude*. | Exactly one record survives: **whichever has the greater absolute value**, nt or aa -- under `"abs_max"` (the default), resolution doesn't matter, only magnitude. |
+
+Worked example (nt evidence `3`, aa evidence `5`, one physical variant):
+`controls`/`ClinGen_Repo` under `"nt_then_abs_max"` keeps the nt row (`3`),
+discarding the larger aa value (`5`) -- the deliberate, by-design cost of
+avoiding double-counting for this category (see
+[Why "greatest absolute value" rather than signed value](#why-greatest-absolute-value-rather-than-signed-value)
+for why the tie-break itself uses magnitude, and
+[Decided approach](#decided-approach) for why nt is preferred outright
+here in the first place). `VUS`/`gnomAD`/`Unobserved` under `"abs_max"`
+keeps the aa row (`5`) instead, since there's no double-counting risk to
+guard against for these categories and the larger value wins outright.
+
 ### Decided approach
 
 #### ClinVar controls / ClinGen Evidence Repository controls
@@ -718,3 +881,45 @@ for a different exclusion rule.
    omission) that isn't apparent from the code -- e.g. something about how
    nt-level ClinVar conflicts are already handled upstream, elsewhere in
    the pipeline, that would make a redundant check here unnecessary?
+
+### Should ClinVar/ClinGen evidence quality factor into which SNV represents a shared protein consequence?
+
+When two distinct ClinVar-classified SNVs produce the same amino-acid
+change and both have aa-resolution evidence, `controls`/`ClinGen_Repo`'s
+aa-stage dedup collapses them to one representative row -- plausibly the
+right thing to do, so a single functional measurement doesn't get counted
+as two independent calibration hits (see
+[What double-counting avoidance means in practice](#what-double-counting-avoidance-means-in-practice)).
+That representative is chosen **purely by the functional assay data**
+(`assay_priority` under `"v1"`, `abs(Fxn_points)` under `"abs_max"`/
+`"nt_then_abs_max"`) -- confirmed directly, neither sort key references
+ClinVar/ClinGen evidence at all. The only clinical-quality check that runs
+first is coarse and binary: does *at least one* row in the amino-acid
+group have a "1+ star" ClinVar review status, with no mix of "1+ star" and
+"0 star" rows in the same group. Within the "1+ star" bucket, a
+single-submitter record and an expert-panel-reviewed record are
+indistinguishable to this gate.
+
+So today, if SNV1 carries the stronger ClinVar/ClinGen evidence (say,
+expert-panel-reviewed) but SNV2's assay row has the larger functional
+score, SNV2 wins -- and SNV2's own (weaker) ClinVar star count/review
+status/significance is what ends up representing the group in the final
+`controls`/`ClinGen_Repo` output, not SNV1's.
+
+**Open questions:**
+
+1. Should the choice instead prefer the SNV with the more authoritative
+   ClinVar/ClinGen record -- e.g. as a tie-break when functional evidence
+   is close, or unconditionally, on the theory that calibration integrity
+   depends on the *clinical* truth label being as reliable as possible,
+   independent of which functional measurement happens to be strongest?
+2. Or is functional-evidence-only selection actually preferable -- e.g.
+   because a stronger functional signal is itself a proxy for a
+   cleaner/more reliable measurement, and ClinVar review status doesn't
+   necessarily track how *functionally* informative a given variant's
+   assay data is?
+3. Does this matter in practice today, or -- like the `assay_priority` and
+   `clinvar_conflict_flag_18_25` gaps above -- is it a real mechanism with
+   negligible current impact? Nobody's checked how often SNV1/SNV2-style
+   collisions with meaningfully different ClinVar review status actually
+   occur in the current `controls`/`ClinGen_Repo` data.
