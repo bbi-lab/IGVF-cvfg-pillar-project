@@ -836,6 +836,49 @@ rows vs. 9,969 `v1` rows, `controls` × AM has 11,056 vs. 11,059, roughly
 symmetric either way rather than one strategy consistently yielding more
 rows than the other.
 
+**Nearly all of `controls`/`ClinGen_Repo`'s unmatched rows are this same
+re-keying, not a genuinely different set of variants.** Matching each
+category's unmatched rows across runs by amino-acid identity (`Gene`,
+`hgvs_p`) instead of genomic position finds a same-substitution counterpart
+for almost every one of them -- confirming they're the HMBS-style
+mechanism above, not unrelated variants that happen to appear on only one
+side:
+
+| Category | unmatched (`v1` / current) | re-keyed to the same substitution | true orphans (`v1` / current) | of re-keyed: dataset differs | of re-keyed: `Class_*` flips |
+|---|---|---|---|---|---|
+| `controls` × REVEL | 907 / 907 | 905 | 2 / 2 | 30 | 0 |
+| `controls` × MP2 | 1,281 / 1,287 | 1,276 | 5 / 11 | 54 | 0 |
+| `controls` × AM | 1,143 / 1,140 | 1,138 | 5 / 2 | 24 | 0 |
+| `ClinGen_Repo` × REVEL | 3 / 3 | 3 | 0 / 0 | 0 | 0 |
+| `ClinGen_Repo` × MP2 | 0 / 0 | 0 | 0 / 0 | 0 | 0 |
+| `ClinGen_Repo` × AM | 4 / 4 | 4 | 0 / 0 | 0 | 0 |
+
+Folding the re-keyed rows' own dataset/`Class_*` comparison into the main
+table's "dataset pick differs" / "`Class_*` flips" columns gives a fuller
+picture of how often the two strategies actually disagree on evidence for
+the *same* substitution, independent of which SNV ends up representing it:
+
+| Category | dataset pick differs (genomic-key + re-keyed) | `Class_*` flips (genomic-key + re-keyed) |
+|---|---|---|
+| `controls` × REVEL | 115 + 30 = 145 | 16 + 0 = 16 |
+| `controls` × MP2 | 69 + 54 = 123 | 8 + 0 = 8 |
+| `controls` × AM | 62 + 24 = 86 | 15 + 0 = 15 |
+| `ClinGen_Repo` × REVEL | 5 + 0 = 5 | 1 + 0 = 1 |
+| `ClinGen_Repo` × MP2 | 8 + 0 = 8 | 0 + 0 = 0 |
+| `ClinGen_Repo` × AM | 22 + 0 = 22 | 1 + 0 = 1 |
+
+Even after folding in every re-keyed row, **zero additional classification
+flips appear** -- the re-keyed rows change which dataset/SNV is on record
+for a substitution far more often (24-54 of them) than they change its
+evidence tier. What's left after re-keying -- 0-11 rows per
+category/predictor -- are true orphans with no same-substitution
+counterpart on the other side at all: cases where the winning SNV's *own*
+ClinVar star count/summary is what made its aa-group eligible for
+`controls`/`ClinGen_Repo` in the first place, so switching which SNV wins
+changes category membership itself, not just which row represents an
+already-shared substitution. `VUS`/`gnomAD`/`Unobserved` need no such
+reconciliation -- they already have zero unmatched rows to begin with.
+
 **As found previously, tie artifacts account for most "dataset pick
 differs" cases, and every classification flip is genuine.** Splitting
 each category's differing picks into tie artifacts (`abs(Fxn_points)`
