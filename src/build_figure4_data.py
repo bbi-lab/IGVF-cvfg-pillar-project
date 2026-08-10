@@ -1,4 +1,4 @@
-"""Rebuild Main_Figures/Figure_4/figure4_data.json.gz from current pipeline outputs.
+"""Rebuild notebooks/figures/figure_4/figure4_data.json.gz from current pipeline outputs.
 
 `figure4.ipynb` only *loads* that cache; nothing in the repo previously built it.
 This script reconstructs the parts that a current pipeline run can actually
@@ -53,7 +53,7 @@ Two notes on drift from the original figure:
       and confirm with the paper authors before changing it.
 
 Usage:
-    python -m src.build_figure4_data --cached-json Main_Figures/Figure_4/old_figure4_data.json.gz \\
+    python -m src.build_figure4_data --cached-json notebooks/figures/figure_4/old_figure4_data.json.gz \\
         [--integrated-dataset PATH] [--excalibr-json-dir PATH] [--supplementary-data-4 PATH] \\
         [--output PATH]
 
@@ -70,7 +70,7 @@ import click
 import numpy as np
 import pandas as pd
 
-FIGURE_4_DIR = Path(__file__).resolve().parent.parent / "Main_Figures" / "Figure_4"
+FIGURE_4_DIR = Path(__file__).resolve().parent.parent / "notebooks" / "figures" / "figure_4"
 sys.path.insert(0, str(FIGURE_4_DIR))
 from data_utils import Scoreset
 from plot_utils import fig_json_encoder, fig_json_hook

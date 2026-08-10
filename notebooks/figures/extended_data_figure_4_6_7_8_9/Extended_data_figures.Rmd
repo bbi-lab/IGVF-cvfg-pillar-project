@@ -18,8 +18,8 @@ options(warn = 0)
 
 ```{r}
 
-DATA_DIR = "../data/output"
-OUT_DIR = "../data/output/figures/extended_data_figures"
+DATA_DIR = "../../../data/output"
+OUT_DIR = "../../../data/output/figures/extended_data_figures"
 ```
 
 ```{r}
@@ -869,13 +869,13 @@ cm_AM_VUS_YP <- make_uncertain_confusion(VUS_AM_YP, Class_AM, "AM_GeneSpecific")
 
 cm_MP2_VUS_YP <- make_uncertain_confusion(VUS_MP2_YP, Class_MP2, "MP2_GeneSpecific")
 
-ggsave("../data/output/figures/extended_data_figure_6/sankey_VUS_AM_GeneSpecific.png",sankey_VUS_AM_YP, dpi = 300, device = 'png', bg = 'transparent')
+ggsave("../../../data/output/figures/extended_data_figure_6/sankey_VUS_AM_GeneSpecific.png",sankey_VUS_AM_YP, dpi = 300, device = 'png', bg = 'transparent')
 
-ggsave("../data/output/figures/extended_data_figure_6/sankey_VUS_MP2_GeneSpecific.png",sankey_VUS_MP2_YP, dpi = 300, device = 'png', bg = 'transparent')
+ggsave("../../../data/output/figures/extended_data_figure_6/sankey_VUS_MP2_GeneSpecific.png",sankey_VUS_MP2_YP, dpi = 300, device = 'png', bg = 'transparent')
 
 sankey_VUS_REVEL_YP_points <- make_sankey_VUS(VUS_REVEL_YP, Conflicting_REVEL, colors_custom)
 
-ggsave("../data/output/figures/extended_data_figure_6/sankey_VUS_REVEL_YP_final_points.png",sankey_VUS_REVEL_YP_points, dpi = 300, device = 'png', bg = 'transparent')       
+ggsave("../../../data/output/figures/extended_data_figure_6/sankey_VUS_REVEL_YP_final_points.png",sankey_VUS_REVEL_YP_points, dpi = 300, device = 'png', bg = 'transparent')       
 
 ```
 
@@ -952,7 +952,7 @@ xy = ggplot(plot_df, aes(x = pct_vus_remaining, y = Gene)) +
     axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)
   )
 
-ggsave('../data/output/figures/extended_data_figures/rank_based_plot.png',xy, dpi = 300, device = 'png', bg = 'transparent')
+ggsave('../../../data/output/figures/extended_data_figures/rank_based_plot.png',xy, dpi = 300, device = 'png', bg = 'transparent')
 
 ```
 
@@ -1014,7 +1014,7 @@ xx = ggplot(heat_df_all, aes(x = Points, y = Gene, fill = prop)) +
     strip.text = element_text(face = "bold")
   )
 
-ggsave('../data/output/figures/extended_data_figures/points_heatmap.png',xx, dpi = 300, device = 'png', bg = 'transparent')
+ggsave('../../../data/output/figures/extended_data_figures/points_heatmap.png',xx, dpi = 300, device = 'png', bg = 'transparent')
 
 
 
@@ -1036,7 +1036,7 @@ VUS_REVEL_YP$Conflicting_REVEL <- ifelse(
 
 sankey_VUS_REVEL_YP_points <- make_sankey_VUS(VUS_REVEL_YP, Conflicting_REVEL, colors_custom)
 
-ggsave('../data/output/figures/extended_data_figures/VUS_sankey_REVEL_YP_points.png',sankey_VUS_REVEL_YP_points, dpi = 300, device = 'png', bg = 'transparent')
+ggsave('../../../data/output/figures/extended_data_figures/VUS_sankey_REVEL_YP_points.png',sankey_VUS_REVEL_YP_points, dpi = 300, device = 'png', bg = 'transparent')
 
 
 #gnomAD points sankey
@@ -1108,7 +1108,7 @@ gnomad_REVEL_YP$Conflicting_REVEL <- ifelse(
 
 sankey_gnomad_REVEL_YP_points = make_sankey_gnomad(gnomad_REVEL_YP, Conflicting_REVEL, colors_custom)
 
-ggsave('../data/output/figures/extended_data_figures/gnomad_sankey_REVEL_points.png',sankey_gnomad_REVEL_YP_points, dpi = 300, device = 'png', bg = 'transparent')
+ggsave('../../../data/output/figures/extended_data_figures/gnomad_sankey_REVEL_points.png',sankey_gnomad_REVEL_YP_points, dpi = 300, device = 'png', bg = 'transparent')
 
 #unobserved
 
@@ -1179,7 +1179,7 @@ preclass_REVEL_YP$Conflicting_REVEL <- ifelse(
 
 preclass_REVEL_YP_sankey_points = make_sankey_preclass(preclass_REVEL_YP, Conflicting_REVEL, colors_custom)
 
-ggsave('../data/output/figures/extended_data_figures/preclass_sankey_REVEL_points.png',preclass_REVEL_YP_sankey_points, dpi = 300, device = 'png', bg = 'transparent')
+ggsave('../../../data/output/figures/extended_data_figures/preclass_sankey_REVEL_points.png',preclass_REVEL_YP_sankey_points, dpi = 300, device = 'png', bg = 'transparent')
 
 ```
 
@@ -1503,9 +1503,9 @@ path_plot
 unc_plot
 ben_plot
 
-ggsave('../data/output/figures/extended_data_figure_6/pie_path_REVEL_gnomad_GeneSpecific_nolab.png',path_plot_no_lab, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7)
-ggsave('../data/output/figures/extended_data_figure_6/pie_ben_REVEL_gnomad_GeneSpecific_nolab.png',unc_plot_no_lab, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7)
-ggsave('../data/output/figures/extended_data_figure_6/pie_unc_REVEL_gnomad_GeneSpecific_nolab.png',ben_plot_no_lab, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7)
+ggsave('../../../data/output/figures/extended_data_figure_6/pie_path_REVEL_gnomad_GeneSpecific_nolab.png',path_plot_no_lab, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7)
+ggsave('../../../data/output/figures/extended_data_figure_6/pie_ben_REVEL_gnomad_GeneSpecific_nolab.png',unc_plot_no_lab, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7)
+ggsave('../../../data/output/figures/extended_data_figure_6/pie_unc_REVEL_gnomad_GeneSpecific_nolab.png',ben_plot_no_lab, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7)
 
 
 ```
@@ -1587,9 +1587,9 @@ unc_plot_pc
 ben_plot_pc
 
 
-ggsave('../data/output/figures/extended_data_figure_6/pie_path_REVEL_preclass_GeneSpecific_nolab.png',path_plot_no_lab_pc, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7)
-ggsave('../data/output/figures/extended_data_figure_6/pie_ben_REVEL_preclass_GeneSpecific_nolab.png',unc_plot_no_lab_pc, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7)
-ggsave('../data/output/figures/extended_data_figure_6/pie_unc_REVEL_preclass_GeneSpecific_nolab.png',ben_plot_no_lab_pc, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7)
+ggsave('../../../data/output/figures/extended_data_figure_6/pie_path_REVEL_preclass_GeneSpecific_nolab.png',path_plot_no_lab_pc, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7)
+ggsave('../../../data/output/figures/extended_data_figure_6/pie_ben_REVEL_preclass_GeneSpecific_nolab.png',unc_plot_no_lab_pc, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7)
+ggsave('../../../data/output/figures/extended_data_figure_6/pie_unc_REVEL_preclass_GeneSpecific_nolab.png',ben_plot_no_lab_pc, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7)
 
 
 

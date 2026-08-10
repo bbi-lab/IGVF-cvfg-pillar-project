@@ -1,5 +1,5 @@
 # R environment for the manuscript's figure-generation scripts
-# (Main_Figures/**/*.R, Main_Figures/**/*.Rmd, Extended_Data_Figures/**).
+# (notebooks/figures/**/*.R, notebooks/figures/**/*.Rmd).
 #
 # Runs on Linux, where grDevices::cairo_pdf() links against the system
 # libcairo2 package directly -- unlike the CRAN macOS build of R, which links
@@ -53,10 +53,10 @@ RUN /usr/lib/update-notifier/package-data-downloader \
     && fc-cache -f
 
 # CRAN packages used across the figure scripts (see library()/require() calls
-# under Main_Figures/ and Extended_Data_Figures/). rocker/r-ver:4.4.2 pins its
+# under notebooks/figures/). rocker/r-ver:4.4.2 pins its
 # default repo to a Posit Package Manager snapshot dated 2025-02-27 (predates
 # ggplot2 4.0.0, released September 2025) -- override to a later snapshot so
-# we get ggplot2 >= 4.0, required by Main_Figures/Figure5_6/Figure_6b.R's
+# we get ggplot2 >= 4.0, required by notebooks/figures/figure_5_6/Figure_6b.R's
 # theme(geom = element_geom(...)), which doesn't exist before 4.0. Deliberately
 # still a *dated* p3m.dev snapshot (not the rolling cloud.r-project.org
 # mirror): that live mirror only serves source packages and choked on
@@ -80,7 +80,7 @@ RUN install2.r --error --skipinstalled --repos https://p3m.dev/cran/2025-10-15 \
     remotes
 
 # ggsankey has no CRAN release; install from GitHub (per
-# Extended_Data_Figures/README_Extended_data_figures.md).
+# notebooks/figures/extended_data_figure_4_6_7_8_9/README_Extended_data_figures.md).
 RUN Rscript -e 'remotes::install_github("davidsjoberg/ggsankey")'
 
 # Populate extrafont's font database at build time (font_import() scans

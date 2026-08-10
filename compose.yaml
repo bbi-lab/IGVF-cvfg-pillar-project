@@ -138,11 +138,12 @@ services:
     volumes:
       - .:/usr/src/app
 
-  # Generic runner for the manuscript's R figure scripts (Main_Figures/**/*.R,
-  # Main_Figures/**/*.Rmd, Extended_Data_Figures/**). These scripts read/write
-  # relative filenames (e.g. `read_csv("IGVFFI3804AVJR.csv.gz")`), assuming
-  # cwd is the script's own directory, so override --workdir per invocation:
-  #   docker compose run --rm -w /usr/src/app/Main_Figures/Figure5_6 \
+  # Generic runner for the manuscript's R figure scripts
+  # (notebooks/figures/**/*.R, notebooks/figures/**/*.Rmd). These scripts
+  # read/write relative filenames (e.g. `read_csv("IGVFFI3804AVJR.csv.gz")`),
+  # assuming cwd is the script's own directory, so override --workdir per
+  # invocation:
+  #   docker compose run --rm -w /usr/src/app/notebooks/figures/figure_5_6 \
   #     r-figures Figure_6b.R
   r-figures:
     <<: *r-tools-image

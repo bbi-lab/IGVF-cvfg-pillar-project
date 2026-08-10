@@ -199,9 +199,9 @@ per-gene control files also used by Extended Data Figure 5).
 ## 3. Figure preparation
 
 The third stage generates the manuscript's main and extended data figures
-from Stage 2's outputs. Each figure directory under `Main_Figures/` and
-`Extended_Data_Figures/` contains its own plotting notebook(s)/script(s) and
-any small supporting inputs.
+from Stage 2's outputs. Each figure directory under `notebooks/figures/`
+contains its own plotting notebook(s)/script(s) and any small supporting
+inputs.
 
 Two toolchains are in play, depending on the figure:
 
@@ -241,7 +241,7 @@ poetry run jupyter nbconvert --to notebook --execute \
   --ExecutePreprocessor.kernel_name=igvf-cvfg-pillar-project \
   --ExecutePreprocessor.timeout=600 \
   --output executed_PP_ProcessBigDataFrame.ipynb \
-  Main_Figures/Figure_2/PP_ProcessBigDataFrame.ipynb
+  notebooks/figures/figure_2/PP_ProcessBigDataFrame.ipynb
 
 # 2. Panel notebooks (independent of each other; all read step 1's output)
 for nb in PP_ClinVarPrecisionRecall PP_Fig2_Heatmaps PP_ResolutionOverview PP_SeqFunctionMap PP_StackedHistograms; do
@@ -249,17 +249,17 @@ for nb in PP_ClinVarPrecisionRecall PP_Fig2_Heatmaps PP_ResolutionOverview PP_Se
     --ExecutePreprocessor.kernel_name=igvf-cvfg-pillar-project \
     --ExecutePreprocessor.timeout=600 \
     --output executed_${nb}.ipynb \
-    Main_Figures/Figure_2/${nb}.ipynb
+    notebooks/figures/figure_2/${nb}.ipynb
 done
 
-# 3. Figure_2i.R -- place IGVFFI3804AVJR.csv.gz in Main_Figures/Figure_2/ first
-docker compose run --rm -w /usr/src/app/Main_Figures/Figure_2 \
+# 3. Figure_2i.R -- place IGVFFI3804AVJR.csv.gz in notebooks/figures/figure_2/ first
+docker compose run --rm -w /usr/src/app/notebooks/figures/figure_2 \
   r-figures Figure_2i.R
 ```
 
 #### Figure 3
 
-Not yet documented — see `Main_Figures/Figure_3/curation_summary_figure3.Rmd`
+Not yet documented — see `notebooks/figures/figure_3/curation_summary_figure3.Rmd`
 and its `Figure3a/c/d.csv.gz` inputs.
 
 #### Figure 4
@@ -268,33 +268,33 @@ and its `Figure3a/c/d.csv.gz` inputs.
 # 1. Rebuild figure4_data.json.gz, carrying forward fields that can't be
 #    regenerated (see docs/build_figure4_data.md)
 poetry run python -m src.build_figure4_data \
-  --cached-json Main_Figures/Figure_4/old_figure4_data.json.gz
+  --cached-json notebooks/figures/figure_4/old_figure4_data.json.gz
 
 # 2. Execute the notebook to produce fig4.png
 poetry run jupyter nbconvert --to notebook --execute \
   --ExecutePreprocessor.kernel_name=igvf-cvfg-pillar-project \
   --ExecutePreprocessor.timeout=600 \
   --output executed_figure4.ipynb \
-  Main_Figures/Figure_4/figure4.ipynb
+  notebooks/figures/figure_4/figure4.ipynb
 ```
 
 #### Figure 5/6
 
 ```bash
-# Figure_6b.R -- place IGVFFI3804AVJR.csv.gz in Main_Figures/Figure5_6/ first
-docker compose run --rm -w /usr/src/app/Main_Figures/Figure5_6 \
+# Figure_6b.R -- place IGVFFI3804AVJR.csv.gz in notebooks/figures/figure_5_6/ first
+docker compose run --rm -w /usr/src/app/notebooks/figures/figure_5_6 \
   r-figures Figure_6b.R
 
 # Figure5_6.Rmd
-docker compose run --rm -w /usr/src/app/Main_Figures/Figure5_6 \
+docker compose run --rm -w /usr/src/app/notebooks/figures/figure_5_6 \
   r-figures -e 'rmarkdown::render("Figure5_6.Rmd")'
 ```
 
 #### Extended Data Figure 2
 
 ```bash
-# Place IGVFFI3804AVJR.csv.gz in Extended_Data_Figures/ first
-docker compose run --rm -w /usr/src/app/Extended_Data_Figures \
+# Place IGVFFI3804AVJR.csv.gz in notebooks/figures/extended_data_figure_2/ first
+docker compose run --rm -w /usr/src/app/notebooks/figures/extended_data_figure_2 \
   r-figures Extended_Data_Figure_2.R
 ```
 
@@ -307,13 +307,13 @@ poetry run jupyter nbconvert --to notebook --execute \
   --ExecutePreprocessor.kernel_name=igvf-cvfg-pillar-project \
   --ExecutePreprocessor.timeout=600 \
   --output executed_extended_data_figure_5.ipynb \
-  Extended_Data_Figures/Extended_Data_Figure_5.ipynb
+  notebooks/figures/extended_data_figure_5/Extended_Data_Figure_5.ipynb
 ```
 
 #### Extended Data Figures 4-9 (`Extended_data_figures.Rmd`)
 
 ```bash
-docker compose run --rm -w /usr/src/app/Extended_Data_Figures \
+docker compose run --rm -w /usr/src/app/notebooks/figures/extended_data_figure_4_6_7_8_9 \
   r-figures -e 'rmarkdown::render("Extended_data_figures.Rmd")'
 ```
 
@@ -367,8 +367,8 @@ Files included in this GitHub repository are:
 In rough order:
 
 1. ~~Stand up a reproducible local environment (Poetry).~~ (done)
-2. Convert notebooks in `notebooks/analysis/`, `Main_Figures/`, and
-   `Extended_Data_Figures/` to `src/` scripts + tests. **Deliberately
+2. Convert notebooks in `notebooks/analysis/` and `notebooks/figures/` to
+   `src/` scripts + tests. **Deliberately
    skipped for now** — not blocking the work below.
 3. ~~Replace the archived `Integrated_variant_effect_dataset_pipeline.ipynb`
    notebook with the Dockerized variant-annotation pipeline~~ (done: see

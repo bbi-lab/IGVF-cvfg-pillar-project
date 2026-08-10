@@ -1,7 +1,7 @@
 # build_figure4_data
 
-Rebuilds `Main_Figures/Figure_4/figure4_data.json.gz`, the cache
-`Main_Figures/Figure_4/figure4.ipynb` loads before calling `plot_figure4()`.
+Rebuilds `notebooks/figures/figure_4/figure4_data.json.gz`, the cache
+`notebooks/figures/figure_4/figure4.ipynb` loads before calling `plot_figure4()`.
 Nothing in the repo previously generated that cache — it was committed
 pre-built. This script reconstructs the parts a current pipeline run can
 support, and carries the rest forward unchanged from a prior cache.
@@ -18,7 +18,7 @@ support, and carries the rest forward unchanged from a prior cache.
 ## What can't be rebuilt (must be carried forward)
 
 Pass `--cached-json` pointing at a prior `figure4_data.json.gz` (e.g.
-`Main_Figures/Figure_4/old_figure4_data.json.gz`) to carry these fields
+`notebooks/figures/figure_4/old_figure4_data.json.gz`) to carry these fields
 forward unchanged. There is currently no other source for them:
 
 - **Panel a's density-band fit** — `fits`, and `indv_summary`'s
@@ -34,7 +34,7 @@ forward unchanged. There is currently no other source for them:
 - **Panel d's cartoon** — `prior`, `Post_p`, `Post_b`, `p_data`, `b_data`.
   This panel is illustrative: the posterior curves it actually plots
   (`1 - x**2` and `exp(3x)/exp(3)`) are hardcoded in
-  `Main_Figures/Figure_4/plot_utils.py`'s `plot_panel_d`, not derived from
+  `notebooks/figures/figure_4/plot_utils.py`'s `plot_panel_d`, not derived from
   these inputs. There's no recorded recipe for the original synthetic
   `p_data`/`b_data`/`Post_p`/`Post_b` values.
 
@@ -70,9 +70,9 @@ Running without `--cached-json` raises immediately and lists these fields.
 
 ```bash
 poetry run python -m src.build_figure4_data \
-    --cached-json Main_Figures/Figure_4/old_figure4_data.json.gz
+    --cached-json notebooks/figures/figure_4/old_figure4_data.json.gz
 ```
 
 Optional flags: `--integrated-dataset`, `--excalibr-json-dir`,
 `--supplementary-data-4`, `--output` (defaults to
-`Main_Figures/Figure_4/figure4_data.json.gz`).
+`notebooks/figures/figure_4/figure4_data.json.gz`).
