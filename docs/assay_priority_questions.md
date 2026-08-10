@@ -4,7 +4,7 @@
 
 ### Summary
 
-`src/lib/assay_priority.py`'s `ASSAY_PRIORITY_LIST` exists to resolve variants
+`src/lib/assay_priority_v1.py`'s `ASSAY_PRIORITY_LIST` exists to resolve variants
 scored by more than one assay for the same gene. It's only wired into the
 `controls_aa`/`clingen_aa` calibration-diagnostic tables in
 `notebooks/analysis/Variant_Classification_analysis.ipynb` and
@@ -365,62 +365,91 @@ same "signed, not absolute" inconsistency as `catch_mis_2` itself.
 
 ## 2. Open questions on assay priority order for OddsPath calibration
 
+> **Update:** `ASSAY_PRIORITY_LIST` was trimmed to *only* the original
+> preprint submission's priority order (what this doc calls "section 1"
+> below) — the two further sections of unreviewed, best-guess orderings
+> for assays added before and after the preprint submission were removed
+> from the live list entirely. See `src/lib/assay_priority_v1.py` and
+> [`docs/variant_classification.md`](variant_classification.md). The
+> "Open questions" discussion and "Current order" list below have been
+> updated to match, but other numeric examples elsewhere in this doc (e.g.
+> "priority 50", "170/1,147") were computed against the pre-trim,
+> 91-entry list and are now stale illustrations of a mechanism, not live
+> counts — see [`docs/variant_classification.md`](variant_classification.md)
+> for the comparison to be refreshed against the trimmed list.
+
 ### What this order is for
 
 `ASSAY_PRIORITY_LIST` is consulted in exactly one place in the pipeline
-today: the amino-acid-level dedup for `controls` and `ClinGen_Repo` (stage 2
-in [section 1](#controls_aaclingen_aa-what-aa-means-here-and-who-else-uses-it)).
-When an aa-type variant there has functional scores from more than one MAVE
-assay for the same gene, this list is the tie-breaker — the score from
-whichever assay ranks highest is kept, the rest are dropped.
+today: the amino-acid-level dedup for `controls` and `ClinGen_Repo` under
+the `"v1"` `CONTROLS_CLINGEN_DEDUP_STRATEGY` (stage 2 in
+[section 1](#controls_aaclingen_aa-what-aa-means-here-and-who-else-uses-it)),
+which is no longer the default strategy — see
+[`docs/variant_classification.md`](variant_classification.md). When an
+aa-type variant there has functional scores from more than one MAVE assay
+for the same gene, this list is the tie-breaker — the score from whichever
+listed assay ranks highest is kept; if none of the competing assays are on
+the list (or more than one shares the same absent-assay fallback), the tie
+is broken by an unstable sort, not by any considered order.
 
 It is *not* consulted for `VUS`, `gnomAD`, or `Unobserved` at all, and not
 even for `controls`/`ClinGen_Repo`'s own nucleotide-level dedup — despite
 ranking nt-type assays too (see
 [Known problems by category](#known-problems-by-category)). So whether a
-given gene's ordering below is actually deciding anything in production
-right now depends on whether its overlapping assays are aa-type or nt-type:
-`LDLR`, `HMBS`, and `PAX6` are all aa-type, so their ordering is live.
-`BRCA2` and `CBS`'s overlapping assays are nt-type, so their ordering
-currently has no effect at all until the nt-side gap above is fixed — for
-those two, question 1 and part of question 3 below are "which order should
-this become," not "which order is currently deciding anything."
+given gene's ordering below was ever actually deciding anything depended on
+whether its overlapping assays were aa-type or nt-type: `LDLR`, `HMBS`, and
+`PAX6` are all aa-type, so their (now-removed) ordering was live. `BRCA2`
+and `CBS`'s overlapping assays are nt-type, so their ordering never had any
+effect regardless.
 
-The current order reflects what was used in the preprint submission
-(section 1 of the list below). It isn't specified for all genes, and new
-datasets have been added since submission.
+This order reflects what was used in the preprint submission. It was never
+specified for all genes, and new datasets have been added since
+submission — those are simply absent from the list now, rather than
+carrying a placeholder order.
 
 ### Open questions
 
-1. **BRCA2** (nt-type — not currently applied; see above). `BRCA2_Hu_2024`
-   was ranked #1 for BRCA2 in the original submission and remains #1 in the
-   current list, ahead of `BRCA2_IGVF` and all the Sahu assays
-   (`BRCA2_Sahu_2025_SGE`, the four `BRCA2_Sahu_2023_exon13_*` sets, and
-   `BRCA2_Huang_2025_SGE`). That ordering was kept by default since it was
-   never revisited. Should `BRCA2_Hu_2024` still win, or should `BRCA2_IGVF`
-   take priority? `BRCA2_IGVF` has ExCALIBR evidence but no functional
-   classes/OddsPath, so the current order may still be correct.
+1. **BRCA2** (nt-type — not consulted regardless; see above).
+   `BRCA2_Hu_2024` was ranked #1 for BRCA2 in the original submission and
+   remains the only BRCA2 assay in the list, ahead of `BRCA2_IGVF` and all
+   the Sahu assays (`BRCA2_Sahu_2025_SGE`, the four
+   `BRCA2_Sahu_2023_exon13_*` sets, and `BRCA2_Huang_2025_SGE`), which now
+   fall back to the shared unranked default rather than a specific
+   position. Should `BRCA2_Hu_2024` still win if this list were ever
+   consulted for BRCA2's nt-type assays, or should `BRCA2_IGVF` take
+   priority? `BRCA2_IGVF` has ExCALIBR evidence but no functional
+   classes/OddsPath, so `BRCA2_Hu_2024` winning by default may still be
+   correct.
 
-2. **LDLR** (aa-type — live today). Three new assays
-   (`LDLR_Tabet_2025_uptake`, `LDLR_Tabet_2025_abundance`,
-   `LDLR_Tabet_2025_presence_VLDL`) have no established priority order and
-   are currently listed in that order as a placeholder. Which one should be
+2. **LDLR** (aa-type — was live). Three assays (`LDLR_Tabet_2025_uptake`,
+   `LDLR_Tabet_2025_abundance`, `LDLR_Tabet_2025_presence_VLDL`) have no
+   established priority order and are no longer in the list at all (they
+   previously had a placeholder order; now they're all tied at the
+   unranked fallback). Confirmed empirically in
+   [section 3](#3-controls_clingen_dedup_strategy-implemented-options-and-empirical-comparison):
+   `LDLR`'s two `uptake`/`abundance` assays frequently score identically
+   for the same variant, so which one "wins" is an unstable-sort artifact
+   either way — an explicit ranking is what's actually needed here, not
+   just restoring the old placeholder order. Which one should be
    preferred?
 
-3. **CBS** (nt-type — not currently applied), **HMBS, PAX6** (aa-type —
-   live today). None of these three genes' assays were ever prioritized,
-   and they're currently listed in an arbitrary order just to keep the
-   pipeline's behavior well-defined. Better orderings for any of them are
-   welcome — for HMBS and PAX6 that ordering is already deciding output
-   today; for CBS it isn't yet, for the same reason as BRCA2.
+3. **CBS** (nt-type — not consulted regardless), **HMBS, PAX6** (aa-type —
+   was live). None of these three genes' assays were ever prioritized, and
+   none are in the list at all now (previously an arbitrary placeholder
+   order). Better orderings for any of them are welcome — for HMBS and
+   PAX6 an explicit ranking would restore this list actually deciding
+   their output; for CBS it wouldn't currently matter, for the same reason
+   as BRCA2.
 
 Feedback on any other gene's ordering is also welcome.
 
-### Current order (91 assays)
+### Current order (46 assays)
 
-1 = highest priority.
-
-**Section 1 — the original preprint submission's priority order:**
+1 = highest priority. This is the complete list — it matches the original
+preprint submission's priority order exactly (previously "section 1" of a
+longer, 91-entry list; the other two sections, covering assays added
+before and after the preprint submission, were removed — see the update
+note above).
 
 1. `BRCA1_Findlay_2018`
 2. `BRCA2_Hu_2024`
@@ -469,59 +498,10 @@ Feedback on any other gene's ordering is also welcome.
 45. `KCNQ4_Zheng_2022_current_homozygous`
 46. `KCNQ4_Zheng_2022_v12_homozygous`
 
-**Section 2 — assays that existed at the time of submission but weren't
-explicitly ranked (best-guess order, unreviewed; added to make the output
-well-defined):**
-
-47. `BRCA2_IGVF`
-48. `BRCA2_Sahu_2025_SGE`
-49. `BRCA2_Sahu_2023_exon13_SGE`
-50. `BRCA2_Sahu_2023_exon13_global_score`
-51. `BRCA2_Sahu_2023_exon13_Cisplatin_Resistance`
-52. `BRCA2_Sahu_2023_exon13_Olaparib_Resistance`
-53. `CALM1_CALM2_CALM3_Weile_2017`
-54. `CBS_Sun_2020_high_B6`
-55. `CBS_Sun_2020_low_B6`
-56. `F9_Popp_2025_heavy_chain`
-57. `F9_Popp_2025_light_chain`
-58. `F9_Popp_2025_carboxy_F9_specific`
-59. `F9_Popp_2025_carboxy_gla_motif`
-60. `F9_Popp_2025_strep_2`
-61. `HMBS_van_Loggerenberg_2023_combined`
-62. `HMBS_van_Loggerenberg_2023_erythroid`
-63. `HMBS_van_Loggerenberg_2023_ubquitous`
-64. `PAX6_McDonnell_2024_BLX_geneticin`
-65. `PAX6_McDonnell_2024_BLX_no_geneticin`
-66. `PAX6_McDonnell_2024_LE9_geneticin`
-67. `PAX6_McDonnell_2024_LE9_no_geneticin`
-68. `TARDBP_Bolognesi_Faure_2019`
-69. `TP53_Kato_2003_AIP1nWT`
-70. `TP53_Kato_2003_BAXnWT`
-71. `TP53_Kato_2003_GADD45nWT`
-72. `TP53_Kato_2003_h1433snWT`
-73. `TP53_Kato_2003_MDM2nWT`
-74. `TP53_Kato_2003_NOXAnWT`
-75. `TP53_Kato_2003_P53R2nWT`
-76. `TP53_Kato_2003_WAF1nWT`
-77. `TP53_Giacomelli_2018_combined_score`
-78. `TP53_Giacomelli_2018_p53WT_Nutlin3`
-79. `TP53_Giacomelli_2018_p53null_Nutlin3`
-80. `TP53_Giacomelli_2018_p53null_etoposide`
-81. `TP53_Boettcher_2019`
-82. `TPK1_Weile_2017`
-83. `XRCC2_IGVF`
-
-**Section 3 — assays added after submission (also a best guess,
-unreviewed):**
-
-84. `BRCA2_Huang_2025_SGE`
-85. `CHEK2_McCarthy-Leo_2024`
-86. `LDLR_Tabet_2025_uptake`
-87. `LDLR_Tabet_2025_abundance`
-88. `LDLR_Tabet_2025_presence_VLDL`
-89. `PALB2_Boonen_2026`
-90. `PALB2_Boonen_2026_SGE`
-91. `TP53_Funk_2025`
+Assays not on this list (e.g. all `BRCA2` assays other than
+`BRCA2_Hu_2024`, all `LDLR`/`CBS`/`HMBS`/`PAX6` assays, and any assay
+added after the preprint submission) fall back to the shared unranked
+`9999` priority described above.
 
 ## 3. `CONTROLS_CLINGEN_DEDUP_STRATEGY`: implemented options and empirical comparison
 
@@ -530,13 +510,18 @@ unreviewed):**
 the `controls`/`ClinGen_Repo` aa-subset dedup (cells 86/109) and the nt+aa
 merge (`catch_mis_2`, defined at cell 89, called at cells 90/112) — the two
 decision points discussed in [section 1](#1-vus-reclassification-dedup-doesnt-use-assay-priority)
-above. `VUS`, `gnomAD`, and `Unobserved` are untouched by this parameter —
-they keep the existing `VariantNotes`-tag dedup (greatest absolute
-`Fxn_points`, per [Implications](#implications)) unconditionally.
+above. `VUS`, `gnomAD`, and `Unobserved` have their own, separate
+`VUS_GNOMAD_UNOBSERVED_DEDUP_STRATEGY` parameter (same three values,
+implemented by `dedup_vus_gnomad_unobserved`) — see
+[`docs/variant_classification.md`](variant_classification.md) for the
+decided methodology and rationale for both parameters. The empirical
+comparison below predates that parameter and the `"current"` → `"v1"`
+rename (values renamed, code unchanged), and only covers
+`CONTROLS_CLINGEN_DEDUP_STRATEGY`.
 
 ### Effective sort order
 
-`current` is not a single global ranking — it's the same three-stage
+`v1` is not a single global ranking — it's the same three-stage
 pipeline described in the [stage table](#controls_aaclingen_aa-what-aa-means-here-and-who-else-uses-it)
 above, with a *different* comparison at each stage. `abs_max` and
 `nt_then_abs_max` collapse this into one consistent ranking applied
@@ -544,9 +529,9 @@ uniformly to every candidate assay row (nt and aa together):
 
 | Strategy | Scope | Ranked comparisons (1st → last) |
 |---|---|---|
-| `current` | aa-subset only (multiple aa assays scoring the same aa-level variant) | 1. Rank in `ASSAY_PRIORITY_LIST` (lower number = higher priority; an assay absent from the list gets priority `9999`) |
-| `current` | nt-subset only (multiple nt assays scoring the same nt-level variant) | 1. `VariantNotes` tag order — in practice equivalent to greatest **absolute** `Fxn_points` within the nt-only group, but implemented as an alphabetical string sort (see [Alphabetical, not evidence-based](#alphabetical-not-evidence-based)) |
-| `current` | nt+aa merge (the aa-subset winner vs. the nt-subset winner, when both exist for the same variant) | 1. Greatest **signed** `Fxn_points` — a positive value always beats a negative one regardless of magnitude; between two negatives, the value closer to zero wins |
+| `v1` | aa-subset only (multiple aa assays scoring the same aa-level variant) | 1. Rank in `ASSAY_PRIORITY_LIST` (lower number = higher priority; an assay absent from the list gets priority `9999`) |
+| `v1` | nt-subset only (multiple nt assays scoring the same nt-level variant) | 1. `VariantNotes` tag order — in practice equivalent to greatest **absolute** `Fxn_points` within the nt-only group, but implemented as an alphabetical string sort (see [Alphabetical, not evidence-based](#alphabetical-not-evidence-based)) |
+| `v1` | nt+aa merge (the aa-subset winner vs. the nt-subset winner, when both exist for the same variant) | 1. Greatest **signed** `Fxn_points` — a positive value always beats a negative one regardless of magnitude; between two negatives, the value closer to zero wins |
 | `abs_max` | all candidates, nt and aa together | 1. Greatest **absolute** `Fxn_points` |
 | `nt_then_abs_max` | all candidates, nt and aa together | 1. NT-type row over AA-type row, unconditionally → 2. Greatest **absolute** `Fxn_points` (tie-break within whichever type won step 1) |
 
@@ -565,11 +550,11 @@ Ran the full pipeline once per strategy against the real dataset (1,354,282
 input rows) and compared the resulting `controls`/`ClinGen_Repo`
 `*_GeneSpecific` tables pairwise, matching rows across runs by
 (`Gene`, `Chrom`, `hg38_start`, `ref_allele`, `alt_allele`). Reproducibility
-was checked directly — `current` was run twice and the six output tables
+was checked directly — `v1` was run twice and the six output tables
 were byte-identical both times — so the pipeline is fully deterministic and
 the differences below reflect the strategy, not run-to-run noise.
 
-| Category | Rows matched across all 3 runs | Dataset pick differs: current→abs_max / current→nt_then_abs_max / abs_max→nt_then_abs_max | `Class_GeneSpecific_*` flips: current→abs_max / current→nt_then_abs_max / abs_max→nt_then_abs_max |
+| Category | Rows matched across all 3 runs | Dataset pick differs: v1→abs_max / v1→nt_then_abs_max / abs_max→nt_then_abs_max | `Class_GeneSpecific_*` flips: v1→abs_max / v1→nt_then_abs_max / abs_max→nt_then_abs_max |
 |---|---|---|---|
 | `controls` × REVEL | 11,359 | 350 / 355 / 17 | 29 / 31 / 12 |
 | `controls` × MP2 | 9,387 | 175 / 165 / 12 | 19 / 11 / 8 |
@@ -580,7 +565,7 @@ the differences below reflect the strategy, not run-to-run noise.
 
 **Most of these "dataset pick differs" cases are tie artifacts, not policy
 differences — and this is where they concentrate.** For every row where
-`current` and `abs_max` disagree, compare `abs(Fxn_points)` of the two picks:
+`v1` and `abs_max` disagree, compare `abs(Fxn_points)` of the two picks:
 if they're equal, switching sort key couldn't have changed *which value*
 wins, only *which tied row with that value* gets reported — an
 implementation-detail of an unstable sort over exactly-equal keys, the same
@@ -588,7 +573,7 @@ category of problem as [Alphabetical, not evidence-based](#alphabetical-not-evid
 above, just now affecting the abs-value sort instead of the tag-string
 sort. Splitting each category this way:
 
-| Category | current→abs_max: tie-artifact / genuine | flips within tie-artifact / genuine | current→nt_then_abs_max: tie-artifact / genuine | flips within tie-artifact / genuine |
+| Category | v1→abs_max: tie-artifact / genuine | flips within tie-artifact / genuine | v1→nt_then_abs_max: tie-artifact / genuine | flips within tie-artifact / genuine |
 |---|---|---|---|---|
 | `controls` × REVEL | 306 / 44 | 0 / 29 | 305 / 50 | 0 / 31 |
 | `controls` × MP2 | 141 / 34 | 0 / 19 | 140 / 25 | 0 / 11 |
@@ -612,7 +597,7 @@ respectively, across predictors — see the [open questions above](#2-open-quest
 contribute **zero** genuine differences and zero flips in every category
 checked; every one of their pick changes is a tie artifact.
 
-| current→abs_max, genuine diffs / flips | REVEL | MP2 | AM |
+| v1→abs_max, genuine diffs / flips | REVEL | MP2 | AM |
 |---|---|---|---|
 | `PALB2` | 27 / 16 | 22 / 13 | 21 / 11 |
 | `BRCA1` | 12 / 11 | 6 / 6 | 9 / 5 |
@@ -634,17 +619,17 @@ is asking someone to resolve with a real ranking.
 each variant has exactly one nt-type and one aa-type candidate, no
 degenerate-codon duplicates):
 
-- `PALB2` chr16:23623123 A>G (`F948L`): `current`'s *signed* merge sort
+- `PALB2` chr16:23623123 A>G (`F948L`): `v1`'s *signed* merge sort
   keeps `PALB2_Boonen_2026` (aa, `Fxn_points` −1) over `PALB2_IGVF` (nt,
   `Fxn_points` −5), since −1 > −5 → *Likely Benign*. `abs_max` correctly
   compares magnitudes (1 < 5) and keeps the IGVF row → *Benign*.
-- `PALB2` chr16:23603614 T>C (`T1136A`): same pattern — `current` keeps
+- `PALB2` chr16:23603614 T>C (`T1136A`): same pattern — `v1` keeps
   Boonen (`Fxn_points` 0) over IGVF (`Fxn_points` −8) → *Likely Benign*;
   `abs_max` keeps IGVF's −8 → *Benign*.
 
 Both are direct instances of the [stage-3 sign bias](#known-problems-by-category)
 documented above (a positive/less-negative value always beats a more
-negative one under `current`, regardless of magnitude), now shown to
+negative one under `v1`, regardless of magnitude), now shown to
 reproduce on real `controls` data, not just the single BRCA1 example given
 there.
 
@@ -653,7 +638,7 @@ rows are harder to attribute cleanly: `BRCA1_Adamovich_2022_HDR` reports the
 *same* `Fxn_points` for a given amino-acid change across multiple
 degenerate-codon representations (e.g. `E1794*` is scored `Fxn_points` 8 at
 three different genomic positions/alleles: chr17:43049147 C>A,
-43049145 CTC>TTA, and 43049145 CTC>TCA). `current`'s and `abs_max`'s
+43049145 CTC>TTA, and 43049145 CTC>TCA). `v1`'s and `abs_max`'s
 *internal* aa-stage tie-break among those three rows is itself an unstable
 sort over equal keys — so which one aa-side value ends up competing against
 `BRCA1_Findlay_2018` at the merge step, and at *which* genomic coordinates,
@@ -662,7 +647,7 @@ doesn't affect `nt_then_abs_max`, whose rule ("nt always wins") doesn't care
 which aa row would have won that internal tie — so `nt_then_abs_max`'s
 `BRCA1` numbers are reliably attributable to the deliberate nt-over-aa
 policy, but a full per-row audit would be needed to say the same for
-`current`-vs-`abs_max`'s `BRCA1` numbers. `TP53`'s genuine diffs weren't
+`v1`-vs-`abs_max`'s `BRCA1` numbers. `TP53`'s genuine diffs weren't
 individually audited.
 
 **Caveat: rows that can't be matched across runs at all (~10–16% of
@@ -675,7 +660,7 @@ under one strategy sits at genomic coordinates the other strategy's winner
 doesn't share at all, so the two rows can't even be matched up for
 comparison. Confirmed directly: `G6PD` codon 355 (`I355I`, synonymous) has
 two candidate rows both scored `Fxn_points` 0 by `G6PD_IGVF` — chrX:154532789
-G>T and chrX:154532789 G>A — and `current` vs. `abs_max` surface different
+G>T and chrX:154532789 G>A — and `v1` vs. `abs_max` surface different
 ones as the group's representative. None of this is a symptom of the
 strategy parameter or something introduced by it: the aa-level group key
 (`Gene`, `aa_pos`, `aa_ref`, `aa_alt`, transcript) doesn't include the
@@ -683,6 +668,9 @@ underlying nucleotide change, so it already collapses these cases into one
 group before stage 2 runs, regardless of strategy. Fixing it would mean
 changing the aa-level group key itself, which is out of scope here.
 
-The notebook ships with `CONTROLS_CLINGEN_DEDUP_STRATEGY = "current"` (today's
-default; logically identical to the pre-parameter code), and none of the
-comparison or reproducibility-check runs above wrote to `data/output/`.
+None of the comparison or reproducibility-check runs above wrote to
+`data/output/`. At the time these runs were made, the notebook still
+defaulted `CONTROLS_CLINGEN_DEDUP_STRATEGY` to what's now called `"v1"`
+(logically identical to the pre-parameter code); it now defaults to
+`"nt_then_abs_max"`, the decided methodology — see
+[`docs/variant_classification.md`](variant_classification.md).
