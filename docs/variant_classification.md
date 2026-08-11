@@ -272,7 +272,7 @@ flagged for any other reason, regardless of gene. A second column from
 that file, `Filter_Hypercomplement`, is merged in alongside `Filter_CI`
 but never used for anything.
 
-### `LDLR`: `+VLDL` uptake assay prioritized in two LA modules
+### `LDLR`: `+VLDL` uptake assay prioritized in two LA modules, LA module 1 excluded entirely
 
 Within LA module 2 (`aa_pos` 66-106) and LA module 6 (`aa_pos` 234-272), a
 row filter runs immediately after `pp` is loaded, before any other
@@ -286,7 +286,8 @@ doesn't cover keep their `uptake`/`abundance` data unchanged -- this is a
 priority with fallback, not a blanket exclusion of the other two assays.
 Per the original investigator, `+VLDL` is less subject to a blind spot the
 other two assays have specifically in these two modules; the same
-prioritization was deliberately *not* extended to LA module 1.
+prioritization was deliberately *not* extended to LA module 1, which
+instead gets the blanket exclusion described below.
 
 Unlike the other special-casing in this section, this rule runs on raw,
 per-assay rows before dedup, category split, or `ASSAY_PRIORITY_LIST` ever
@@ -299,6 +300,13 @@ coverage has `LDLR_Tabet_2025_presence_VLDL` as its only surviving assay
 in that position range -- `uptake`/`abundance` are retained only for the
 substitutions `+VLDL` didn't cover (21 substitutions in each module, per
 the reclassification-stage data).
+
+Immediately after that priority rule, in the same pre-dedup step, LA
+module 1 (`aa_pos` 25-65) is dropped entirely: every `LDLR` row in that
+range is removed outright, regardless of assay, rather than having one
+assay prioritized over the others. This is a blanket exclusion, not a
+priority-with-fallback -- no LA module 1 substitution survives into
+Supplementary Data 5.
 
 ### `BRCA1`/`PTEN`/`MSH2`/`TP53`: 2018 vs. 2025 ClinVar vintage
 
