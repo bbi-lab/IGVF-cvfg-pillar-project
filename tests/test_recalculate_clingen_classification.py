@@ -111,6 +111,10 @@ def test_main_cli_writes_expected_columns(tmp_path):
                 "PS1,PS2,PS3",
                 "PS3,BP4",
             ],
+            "clingen_evidence_repository.Assertion": [
+                "Pathogenic",
+                "Uncertain significance",
+            ],
         }
     ).to_csv(input_path, sep="\t", index=False)
 
