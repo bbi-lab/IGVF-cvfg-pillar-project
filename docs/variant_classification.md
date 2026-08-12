@@ -408,7 +408,21 @@ reporting inconsistent results for it.
 |---|---|---|
 | (a) nt-resolution only | Both SNV1 and SNV2 survive, each via its own nt evidence. No interaction between them -- nt-level dedup groups by exact genomic coordinates, so two different SNVs are never in the same group. | Same: both survive independently, for the same reason. |
 | (b) nt- *and* aa-resolution | **Both SNV1 and SNV2 still survive -- but only because each has its own nt-resolution record to fall back on.** Under `"nt_then_abs_max"` (the default), each one's *own* aa evidence may never even be compared to its own nt evidence -- see the worked trace below. | Both survive, **each independently choosing its own strongest evidence** (nt or aa, whichever has the greater absolute value under the default `"abs_max"`). SNV1 and SNV2 never interact, because dedup here always groups by exact genomic coordinates, never by amino-acid coordinates. |
-| (c) aa-resolution only | **Only one of SNV1/SNV2 survives.** The aa-level dedup stage groups by (`Gene`, `aa_pos`, `aa_ref`, `aa_alt`, transcript) -- not by genomic coordinates -- so SNV1's and SNV2's aa-assay rows collide in the *same* group and get reduced to one row before stage 3 ever runs. **The other SNV is completely absent from the output**, not merely outscored -- there is no row for it at all. | **Both SNV1 and SNV2 survive.** Dedup groups by genomic coordinates only, so an aa-only variant still gets its own group; two different SNVs sharing an aa outcome never collide. |
+| (c) aa-resolution only | **`"v1"` only: only one of SNV1/SNV2 survives**, completely absent from the output, not merely outscored -- see below for `"abs_max"`/`"nt_then_abs_max"`. The aa-level dedup stage groups by (`Gene`, `aa_pos`, `aa_ref`, `aa_alt`, transcript) -- not by genomic coordinates -- so SNV1's and SNV2's aa-assay rows collide in the *same* group and get reduced to one row before stage 3 ever runs. | **Both SNV1 and SNV2 survive.** Dedup groups by genomic coordinates only, so an aa-only variant still gets its own group; two different SNVs sharing an aa outcome never collide. |
+
+**Update -- no longer true for `"abs_max"`/`"nt_then_abs_max"`.** The rest
+of this subsection (through the "open question" callout below) documents
+`controls`/`ClinGen_Repo`'s aa-stage dedup as it stood before the [aa-stage
+tie-break: ClinVar/ClinGen evidence
+quality](#aa-stage-tie-break-clinvarclingen-evidence-quality) decision --
+kept intact since it's still exactly how `"v1"` behaves, and since the
+reasoning here (why cross-SNV collision happens, why it's arguably the
+*right* thing to do at the amino-acid level) motivated that decision.
+Under current defaults, case (c)'s losing SNV is no longer dropped: both
+rows survive, tagged `Variant_Role = "primary"`/`"secondary"`, and the
+choice between them prefers ClinVar/ClinGen record quality (then recency)
+over functional magnitude -- see that section for the full mechanism and
+rationale.
 
 **Case (b), worked through precisely.** Construct SNV1 with nt evidence
 `Fxn_points=3` and aa evidence `5` from `Dataset P`; SNV2 with nt evidence
@@ -498,10 +512,14 @@ record. If SNV1 is `reviewed by expert panel` with weaker functional
 evidence and SNV2 is `criteria provided, single submitter` with stronger
 functional evidence, SNV2 wins and its (weaker) ClinVar review status is
 what the output reports -- SNV1's stronger clinical evidence doesn't
-factor into the choice at all. **Whether it should** -- e.g. preferring
-the more authoritatively-reviewed ClinVar record when functional evidence
-doesn't clearly discriminate, or weighting it into the tie-break directly
--- is an open question; see [Open questions](#open-questions).
+factor into the choice at all.
+
+**Update -- decided, for `"abs_max"`/`"nt_then_abs_max"`.** This
+description is accurate for `"v1"` (unaffected by the decision below) but
+no longer for current defaults: see [aa-stage tie-break: ClinVar/ClinGen
+evidence quality](#aa-stage-tie-break-clinvarclingen-evidence-quality),
+which now prefers the more authoritatively-reviewed ClinVar/ClinGen
+record, tie-broken by recency, ahead of functional magnitude.
 
 **`VUS`/`gnomAD`/`Unobserved` has the same underlying limitation, just in
 milder form.** Its single-pass dedup avoids the cross-SNV *collision*
@@ -550,14 +568,124 @@ guard against for these categories and the larger value wins outright.
 This is implemented as the `"nt_then_abs_max"` value of the
 `CONTROLS_CLINGEN_DEDUP_STRATEGY` notebook parameter (now the default).
 
+#### aa-stage tie-break: ClinVar/ClinGen evidence quality
+
+Point 2 above still has its own tie-break to resolve: when two *distinct
+SNVs* produce the identical amino-acid substitution and both reach the
+aa-stage dedup (`controls_aa`/`clingen_aa`, already narrowed to rows tied
+at their group's maximum `abs(Fxn_points)` and maximum predictor points --
+see [Where `ASSAY_PRIORITY_LIST` actually decides an
+outcome](#where-assay_priority_list-actually-decides-an-outcome)), which
+SNV's row represents the group? Resolves the open question of the same
+name that used to live in this doc's Open Questions section:
+
+1. **Prefer the SNV with the higher-quality ClinVar/ClinGen record.** For
+   `controls`, this ranks `clinvar_star_18_25`'s review-status text
+   (ClinVar's own star tiers): `practice guideline` > `reviewed by expert
+   panel` > `criteria provided, multiple submitters, no conflicts` >
+   `criteria provided, single submitter` / `criteria provided, conflicting
+   classifications` > everything else (0-star, including missing). For
+   `ClinGen_Repo`, every row is already a VCEP (expert-panel) assertion --
+   there's no tier to rank -- so this step is a no-op there and quality
+   effectively collapses to the date tie-break below.
+2. **Ties broken by the most recent review/record date.** `controls` uses
+   `clinvar_date_last_reviewed_18_25` (mixed-year, mirroring
+   `clinvar_star_18_25`'s own 2018-vs-2025 gene switch); `ClinGen_Repo`
+   uses non-retracted status first, then `Approval Date_ClinGen_repo`, then
+   `Published Date_ClinGen_repo`.
+3. `abs(Fxn_points)` and `Dataset` name remain as deterministic fallbacks
+   beneath quality/date -- inert today (candidates reaching this tie-break
+   are already magnitude-tied by construction) but closing off what would
+   otherwise be an undocumented dependency on pandas' stable sort order for
+   any remaining tie.
+
+This only applies under `"abs_max"`/`"nt_then_abs_max"`; `"v1"` is
+unaffected, byte-for-byte.
+
+**Multiple datasets scoring the identical physical NT variant must still
+collapse to one row -- this is a separate question from which SNV
+represents a shared amino-acid change, and `aa_dedup_or_mark` resolves it
+first, unconditionally.** Two different assays can score the exact same
+genomic variant (e.g. two conditions of the same DMS study), landing in
+the same aa-group tied on `abs(Fxn_points)` for an unrelated reason -- they
+*are* the same NT variant, not two competing ones. Before doing the
+amino-acid-level tie-break above, `aa_dedup_or_mark` first collapses any
+rows sharing the exact same `Gene`/`Chrom`/`hg38_start`/`ref_allele`/
+`alt_allele` to a single row, using the same quality/date/magnitude/dataset
+sort (in practice a no-op discriminator for quality/date here, since two
+rows for the same physical variant share the same ClinVar/ClinGen record --
+this collapse effectively falls through to `Dataset` name). This stage runs
+identically under every strategy, including `"v1"`, and doesn't change
+`"v1"`'s output: the eventual aa-group winner is always the first row
+within its own genomic-coordinate subgroup too, so removing non-first rows
+within each subgroup first can never remove the row `"v1"` would have
+picked anyway. Only *after* this collapse does the keep-all/`Variant_Role`
+marking run, across what are now genuinely distinct NT variants.
+
+This collapse compares `Gene`/`Chrom`/`hg38_start`/`ref_allele`/`alt_allele`
+as strings rather than relying on `pandas.DataFrame.duplicated`/
+`drop_duplicates` directly on the raw columns. `Chrom` in particular mixes
+`int` and `str` values for the same chromosome across rows in practice (an
+upstream merge/concat artifact -- confirmed live: `PAX6`
+`NP_001355823.1:p.Gln10Ter`'s two `_BLX_geneticin`/`_LE9_geneticin` rows at
+chr11:31802817 had `Chrom` `11` (`int`) and `'11'` (`str`) respectively),
+which silently defeats an exact-type subset comparison -- `'11' != 11` in
+Python -- and would otherwise leave this collapse a no-op for exactly the
+rows it exists to catch.
+
+**The losing SNV's row is no longer dropped -- it's exported to a second
+file instead.** Previously the aa-stage dedup kept only the winning row and
+discarded every other candidate entirely -- the losing SNV didn't appear
+anywhere in the output, not even as an outscored record (see [Question
+1](#question-1-two-distinct-snvs-producing-the-same-protein-change), case
+(c)). `aa_dedup_or_mark` still tags every *distinct-NT-variant* candidate
+row `Variant_Role = "primary"`/`"secondary"` internally, but that tag never
+reaches the primary output file. Instead, the pipeline builds two versions
+of Supplementary Data 5 from the same tagged data (see
+[Outputs](#outputs)):
+
+- **`Supplementary_Data_5.xlsx`** -- the classic shape, filtered to
+  `Variant_Role == "primary"` and with the column dropped before export.
+  Exactly one row per variant, identical to what this pipeline always
+  produced, except that the aa-stage tie-break is now the deterministic one
+  described above instead of pandas' incidental row order.
+- **`Supplementary_Data_5.with_secondary_variants.xlsx`** -- every
+  candidate row, `Variant_Role` column included, for anyone who wants to
+  see every NT variant considered for a shared substitution rather than
+  just the chosen representative.
+
+Consumers that compute per-row figures or statistics --
+`Figure5_6.Rmd`'s Sankeys and confusion matrices, `Extended_data_figures.Rmd`,
+and `src/mave_dataset_stats.py`'s reclassification-agreement report -- all
+read `Supplementary_Data_5.xlsx` (the representative-only file) unchanged,
+exactly as before this change; none of them need to know `Variant_Role`
+exists.
+
 #### VUS / gnomAD / Unobserved
 
 Simply **take the record with the greatest absolute point value**, with no
-preference between nt- and aa-resolution assays.
+preference between nt- and aa-resolution assays. If more than one candidate
+ties on that value -- common, since ExCALIBR points only take a narrow range
+of integers -- **the tie is broken by `Dataset` name (ascending)**.
 
 This is implemented as the `"abs_max"` value of the
 `VUS_GNOMAD_UNOBSERVED_DEDUP_STRATEGY` notebook parameter (now the
 default).
+
+**Why the `Dataset`-name tiebreak was added.** Before it existed, a genuine
+tie fell through to `sort_values`' stable sort -- i.e. whichever row
+happened to arrive first in the input DataFrame -- which isn't a documented
+policy and isn't robust to unrelated upstream changes. Confirmed directly:
+removing the LDLR LA-module-1 rows (an unrelated exclusion -- see
+[`LDLR`](#ldlr-vldl-uptake-assay-prioritized-in-two-la-modules)) shifted
+every later row's position in the DataFrame enough to flip the tie-break
+outcome for **158-3,480 rows per `VUS`/`gnomAD`/`Unobserved` sheet** (up to
+~4% of a sheet), with `Fxn_points`/`Class_*` unchanged in every case --
+purely a different `Dataset` name on record for the same call, driven by
+nothing more meaningful than row position. `Dataset` name is an arbitrary
+but *stable* tiebreak: it doesn't depend on unrelated rows elsewhere in the
+pipeline, so it isn't perturbed by upstream additions/removals the way row
+order is.
 
 ### Why "greatest absolute value" rather than signed value
 
@@ -752,23 +880,48 @@ with evidence strength.
 
 Both parameters live in `Variant_Classification_analysis.ipynb`, defined
 together in the cell just before the `controls`/`ClinGen_Repo` nt/aa split
-(cell 79 as of this writing -- cell numbers shift as the notebook is
-edited, so search for `CONTROLS_CLINGEN_DEDUP_STRATEGY` if the number is
-stale). Each takes the same three values, though what each value means is
+(search for `CONTROLS_CLINGEN_DEDUP_STRATEGY` if the cell number has
+shifted). Each takes the same three values, though what each value means is
 implemented separately per category since their original (pre-parameter)
-behaviors genuinely differed:
+behaviors genuinely differed.
+
+The dedup mechanics themselves (`aa_dedup_or_mark`, `catch_mis_2`,
+`dedup_vus_gnomad_unobserved`, and the `controls_aa_sort_key`/
+`clingen_aa_sort_key` helpers that build the aa-stage tie-break's sort key)
+live in `src/lib/dedup.py`, **shared with `OddsPath_classifications.ipynb`**
+(genome-wide/OddsPath calibration, `Supplementary_Data_6.xlsx`) rather than
+copy-pasted independently into each notebook. They used to be copy-pasted,
+and `OddsPath_classifications.ipynb`'s copy silently drifted out of sync
+with every fix described in this section -- it still had the signed-value
+`catch_mis_2` bug, a pure-`ASSAY_PRIORITY_LIST` aa-stage tie-break with no
+keep-all, and no `Dataset`-name fallback for `VUS`/`gnomAD`/`Unobserved`,
+right up until it was ported over to the shared module. Both notebooks now
+define their own `CONTROLS_CLINGEN_DEDUP_STRATEGY`/
+`VUS_GNOMAD_UNOBSERVED_DEDUP_STRATEGY` (same three values, same defaults)
+and pass them into the shared functions, so a future fix to one pipeline's
+dedup mechanics is automatically available to the other's.
 
 | Value | `controls`/`ClinGen_Repo` (`catch_mis_2`) | `VUS`/`gnomAD`/`Unobserved` (`dedup_vus_gnomad_unobserved`) |
 |---|---|---|
-| `"v1"` | Original behavior: aa-level ties broken by `ASSAY_PRIORITY_LIST` rank, nt+aa merge broken by *signed* `Fxn_points`. | Original behavior: sorted by `VariantNotes` tag, which has an accidental nt-over-aa bias (`First_max_fxn_pts` sorts ahead of `max_fxn_pts` alphabetically) -- see [VUS: systematic nt-over-aa bias](assay_priority_questions.md#known-problems-by-category). |
-| `"abs_max"` | Greatest absolute `Fxn_points` wins, nt and aa candidates treated identically. | Same. |
-| `"nt_then_abs_max"` | An nt-type record always wins over an aa-type record; ties within a type broken by greatest absolute `Fxn_points`. **Current default.** | Same rule, offered for completeness/comparison but not the default for this category -- see [above](#the-two-categories-of-variant-and-why-theyre-handled-differently). |
+| `"v1"` | Original behavior: aa-level ties broken by `ASSAY_PRIORITY_LIST` rank, nt+aa merge broken by *signed* `Fxn_points`. The losing aa-stage candidate is dropped outright. | Original behavior: sorted by `VariantNotes` tag, which has an accidental nt-over-aa bias (`First_max_fxn_pts` sorts ahead of `max_fxn_pts` alphabetically) -- see [VUS: systematic nt-over-aa bias](assay_priority_questions.md#known-problems-by-category). |
+| `"abs_max"` | Greatest absolute `Fxn_points` wins, nt and aa candidates treated identically; among aa-stage candidates (already magnitude-tied by construction), ties broken by ClinVar/ClinGen record quality then recency -- see [aa-stage tie-break](#aa-stage-tie-break-clinvarclingen-evidence-quality). Every candidate row is kept, tagged `Variant_Role = "primary"`/`"secondary"`, instead of the loser being dropped. | Greatest absolute `Fxn_points` wins; remaining ties broken by `Dataset` name (ascending) -- see [above](#vus--gnomad--unobserved). |
+| `"nt_then_abs_max"` | An nt-type record always wins over an aa-type record; ties within a type broken the same way as `"abs_max"` above (quality/recency for aa-stage ties, keep-all + `Variant_Role`). **Current default.** | Same rule as `"abs_max"` but nt beats aa first; ties within a type broken by `Dataset` name. Offered for completeness/comparison but not the default for this category -- see [above](#the-two-categories-of-variant-and-why-theyre-handled-differently). |
 
 `"v1"` is retained (not removed) so the original behavior can still be
 reproduced for audit/comparison purposes; it is not the recommended
 setting for either parameter going forward.
 
 ### Comparing `v1` to the decided approach
+
+**Predates the aa-stage tie-break decision below.** This comparison's
+"current defaults" side reflects `"abs_max"`/`"nt_then_abs_max"` as they
+behaved *before* [aa-stage tie-break: ClinVar/ClinGen evidence
+quality](#aa-stage-tie-break-clinvarclingen-evidence-quality) -- pure
+magnitude-based aa-stage ties (in practice, arbitrary row order, since
+candidates reaching that tie-break were already magnitude-tied) and
+dropped losing SNV rows, not the quality/recency tie-break and keep-all +
+`Variant_Role` marking now in place. A fresh comparison would be needed to
+quantify that specific change's impact; not done here.
 
 Ran the full pipeline twice, both times against the same input data as
 production (`data/output/maves/integrated_variant_effect_dataset.tsv.gz`)
@@ -980,11 +1133,34 @@ intermediate working columns (`assay_priority`, `VariantNotes`, the
 training-variant helper columns, and others) dropped via a shared
 `COLUMNS_TO_DROP` list, then gets a shared `rename_dict` applied
 (`Total_Points_GeneSpecific_REVEL` → `Total_Points_REVEL`, etc.) and is
-reordered to a fixed `column_order`. Each table is written to its own CSV
-under `data/output/predictor_calibration/gene_specific/`, then all 15 are
-bundled into `Supplementary_Data_5.xlsx`/`.xlsx.gz` (one sheet per table).
-See `notebooks/analysis/README_Variant_Classification_analysis.md` for the
-full output file list and per-column descriptions.
+reordered to a fixed `column_order`. See
+`notebooks/analysis/README_Variant_Classification_analysis.md` for the full
+per-column descriptions.
+
+Internally, `aa_dedup_or_mark` tags every aa-stage candidate row
+`Variant_Role` (`"primary"`/`"secondary"`) -- constant `"primary"` for
+`VUS`/`gnomAD`/`Unobserved` and for nt-origin `controls`/`ClinGen_Repo`
+rows, and `"primary"`/`"secondary"` for `controls`/`ClinGen_Repo` rows that
+contended for an aa-stage SNV-representative tie-break (see [aa-stage
+tie-break: ClinVar/ClinGen evidence
+quality](#aa-stage-tie-break-clinvarclingen-evidence-quality)). That tagged
+data is exported as **two** files, each written from its own set of 15
+per-category/predictor CSVs:
+
+| File | CSV folder | Row filter | `Variant_Role` column? |
+|---|---|---|---|
+| `Supplementary_Data_5.xlsx`/`.xlsx.gz` | `data/output/predictor_calibration/gene_specific/` | `Variant_Role == "primary"` only | No -- dropped before export |
+| `Supplementary_Data_5.with_secondary_variants.xlsx`/`.xlsx.gz` | `data/output/predictor_calibration/gene_specific_with_secondary_variants/` | none (every candidate row) | Yes |
+
+`Supplementary_Data_5.xlsx` is exactly one row per variant -- identical in
+shape to what this pipeline always produced, and every existing consumer
+(`Figure5_6.Rmd`, `Extended_data_figures.Rmd`,
+`src/mave_dataset_stats.py`'s reclassification-agreement report) reads it
+completely unchanged, with no knowledge that `Variant_Role` or the
+secondary-variants file exist. `Supplementary_Data_5.with_secondary_variants.xlsx`
+is purely a supplementary view for inspecting every NT variant that
+contended for a shared amino-acid substitution, not just the chosen
+representative.
 
 ## See also
 
@@ -1052,44 +1228,19 @@ for a different exclusion rule.
    nt-level ClinVar conflicts are already handled upstream, elsewhere in
    the pipeline, that would make a redundant check here unnecessary?
 
-### Should ClinVar/ClinGen evidence quality factor into which SNV represents a shared protein consequence?
+### ~~Should ClinVar/ClinGen evidence quality factor into which SNV represents a shared protein consequence?~~ Decided
 
-When two distinct ClinVar-classified SNVs produce the same amino-acid
-change and both have aa-resolution evidence, `controls`/`ClinGen_Repo`'s
-aa-stage dedup collapses them to one representative row -- plausibly the
-right thing to do, so a single functional measurement doesn't get counted
-as two independent calibration hits (see
-[What double-counting avoidance means in practice](#what-double-counting-avoidance-means-in-practice)).
-That representative is chosen **purely by the functional assay data**
-(`assay_priority` under `"v1"`, `abs(Fxn_points)` under `"abs_max"`/
-`"nt_then_abs_max"`) -- confirmed directly, neither sort key references
-ClinVar/ClinGen evidence at all. The only clinical-quality check that runs
-first is coarse and binary: does *at least one* row in the amino-acid
-group have a "1+ star" ClinVar review status, with no mix of "1+ star" and
-"0 star" rows in the same group. Within the "1+ star" bucket, a
-single-submitter record and an expert-panel-reviewed record are
-indistinguishable to this gate.
+Yes, for `"abs_max"`/`"nt_then_abs_max"` -- see [aa-stage tie-break:
+ClinVar/ClinGen evidence
+quality](#aa-stage-tie-break-clinvarclingen-evidence-quality) under
+Decided approach for the full mechanism (quality first, then recency,
+then functional magnitude and dataset name as deterministic fallbacks)
+and for the companion decision that the losing SNV's row is no longer
+dropped (kept, tagged `Variant_Role = "secondary"`). `"v1"` is unaffected.
 
-So today, if SNV1 carries the stronger ClinVar/ClinGen evidence (say,
-expert-panel-reviewed) but SNV2's assay row has the larger functional
-score, SNV2 wins -- and SNV2's own (weaker) ClinVar star count/review
-status/significance is what ends up representing the group in the final
-`controls`/`ClinGen_Repo` output, not SNV1's.
-
-**Open questions:**
-
-1. Should the choice instead prefer the SNV with the more authoritative
-   ClinVar/ClinGen record -- e.g. as a tie-break when functional evidence
-   is close, or unconditionally, on the theory that calibration integrity
-   depends on the *clinical* truth label being as reliable as possible,
-   independent of which functional measurement happens to be strongest?
-2. Or is functional-evidence-only selection actually preferable -- e.g.
-   because a stronger functional signal is itself a proxy for a
-   cleaner/more reliable measurement, and ClinVar review status doesn't
-   necessarily track how *functionally* informative a given variant's
-   assay data is?
-3. Does this matter in practice today, or -- like the `assay_priority` and
-   `clinvar_conflict_flag_18_25` gaps above -- is it a real mechanism with
-   negligible current impact? Nobody's checked how often SNV1/SNV2-style
-   collisions with meaningfully different ClinVar review status actually
-   occur in the current `controls`/`ClinGen_Repo` data.
+Still genuinely open: **how often did this actually change the pick**, now
+that a real rerun exists to check against? Nobody's quantified how many
+`controls`/`ClinGen_Repo` aa-stage collisions had a SNV1/SNV2 pair with
+meaningfully different ClinVar review status or record date, or how that
+compares to the [`v1`-vs-decided-approach comparison](#comparing-v1-to-the-decided-approach)'s
+existing tie-artifact/genuine-difference breakdown for those categories.
