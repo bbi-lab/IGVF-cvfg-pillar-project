@@ -7,12 +7,12 @@ Usage: src/scripts/run_load_excalibr_calibrations.sh [json-dir] [workbook] [flag
 Examples:
   src/scripts/run_load_excalibr_calibrations.sh
   src/scripts/run_load_excalibr_calibrations.sh \
-    data/input/mave_calibration/excalibr/exc_pp_calib_final_fixedmapping_clinvar/json \
+    data/input/mave_calibration/excalibr/json \
     data/output/supplementary_data/Supplementary_Data_4.xlsx
 
 Notes:
   - Defaults to
-    data/input/mave_calibration/excalibr/exc_pp_calib_final_fixedmapping_clinvar/json
+    data/input/mave_calibration/excalibr/json
     and data/output/supplementary_data/Supplementary_Data_4.xlsx (both
     bind-mounted at /usr/src/app since this service only reads/writes
     data/input/ and data/output/ files, unlike flag-variants).
