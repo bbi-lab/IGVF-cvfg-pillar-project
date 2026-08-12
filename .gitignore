@@ -40,6 +40,16 @@ venv/
 .Rproj.user/
 
 ################################################################################
+# nbconvert/rmarkdown::render() execution byproducts
+################################################################################
+# nbconvert --execute's own copy of a notebook with outputs attached, and
+# rmarkdown::render()'s knitted HTML -- both named executed_<name>.<ext> by
+# convention (see docs/figures.md) and left next to the source script,
+# not worth tracking.
+executed_*.ipynb
+executed_*.html
+
+################################################################################
 # Pipeline scratch
 ################################################################################
 # Staging copy of data/raw_mave_data/, mounted into the variant-annotation

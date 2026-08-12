@@ -164,14 +164,14 @@ fig6b_plot = combined_points_condensed_plot +
 print(fig6b_plot)
 
 ggsave(
-  'fig6b.pdf',
+  '../../../data/output/figures/figure_6/figure_6b.pdf',
   fig6b_plot,
   width = 183, # Max 183
   height = 90,
   units = 'mm',
   device = cairo_pdf)
 ggsave(
-  'fig6b.svg',
+  '../../../data/output/figures/figure_6/figure_6b.svg',
   fig6b_plot,
   width = 183, # Max 183
   height = 75,

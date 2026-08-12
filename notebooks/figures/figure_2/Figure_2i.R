@@ -106,7 +106,7 @@ print(fig2i_plot + nature_theme)
 
 # Save plot
 ggsave(
-  'fig2i.pdf',
+  '../../../data/output/figures/figure_2/figure_2i.pdf',
   fig2i_plot + nature_theme,
   width = 100,
   height = 30,

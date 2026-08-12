@@ -77,8 +77,8 @@ mkdir -p data/output/figures/figure_2/Histogram_wStripplot
 
 Each `nbconvert --execute` above also leaves a side-effect
 `executed_<name>.ipynb` next to the original (nbconvert's copy with outputs
-attached, same as the Figure 4 step) -- delete these if you don't want them
-in the working tree.
+attached, same as the Figure 4 step) -- gitignored, so no need to delete
+them.
 
 ### 3. `Figure_2i.R` (separate from the notebook pipeline above)
 
@@ -88,8 +88,7 @@ its own directory (downloaded separately from
 https://data.igvf.org/tabular-files/IGVFFI3804AVJR/ -- nothing in this repo
 produces it). Builds panel i's odds-ratio plot for the IGVF functional
 assays, excluding `TSC2_IGVF` since its RapGAP dataset is broken out
-separately. Saves `fig2i.pdf` directly into `notebooks/figures/figure_2/`, not
-under `data/output/figures/`.
+separately. Saves `data/output/figures/figure_2/figure_2i.pdf`.
 
 ```bash
 docker compose run --rm -w /usr/src/app/notebooks/figures/figure_2 \
@@ -129,7 +128,7 @@ poetry run python -m ipykernel install --user --name igvf-cvfg-pillar-project \
 poetry run python -m src.build_figure4_data \
   --cached-json notebooks/figures/figure_4/old_figure4_data.json.gz
 
-# 2. Execute the notebook to produce fig4.png
+# 2. Execute the notebook to produce data/output/figures/figure_4.png
 poetry run jupyter nbconvert --to notebook --execute \
   --ExecutePreprocessor.kernel_name=igvf-cvfg-pillar-project \
   --ExecutePreprocessor.timeout=600 \
@@ -139,9 +138,9 @@ poetry run jupyter nbconvert --to notebook --execute \
 
 Step 1 writes to `notebooks/figures/figure_4/figure4_data.json.gz` by default
 (override with `--output`); step 2 reads that same path. Step 2 writes
-`notebooks/figures/figure_4/fig4.png` and a side-effect `executed_figure4.ipynb`
-(nbconvert's copy of the notebook with outputs attached) -- delete the latter
-afterward if you don't want it in the working tree.
+`data/output/figures/figure_4.png` and a side-effect `executed_figure4.ipynb`
+(nbconvert's copy of the notebook with outputs attached, left in
+`notebooks/figures/figure_4/`) -- gitignored, so no need to delete it.
 
 `--cached-json` must point at a `figure4_data.json.gz`-shaped file;
 `old_figure4_data.json.gz` (a byte-identical backup of the originally
@@ -178,13 +177,13 @@ r-figures` in that section above.
 
 ```bash
 # Figure_6b.R: place IGVFFI3804AVJR.csv.gz in this directory first (see link
-# above). Writes fig6b.pdf/fig6b.svg into the same directory.
+# above). Writes figure_6b.pdf/figure_6b.svg to data/output/figures/figure_6/.
 docker compose run --rm -w /usr/src/app/notebooks/figures/figure_5_6 \
   r-figures Figure_6b.R
 
-# Figure5_6.Rmd
+# Figure5_6.Rmd: writes executed_Figure5_6.html next to the .Rmd (gitignored)
 docker compose run --rm -w /usr/src/app/notebooks/figures/figure_5_6 \
-  r-figures -e 'rmarkdown::render("Figure5_6.Rmd")'
+  r-figures -e 'rmarkdown::render("Figure5_6.Rmd", output_file = "executed_Figure5_6.html")'
 ```
 
 `Figure5_6.Rmd`'s first chunk sets `DATA_DIR`/`OUT_DIR` to
@@ -194,10 +193,19 @@ path relative to the `.Rmd` like `Extended_data_figures.Rmd`'s
 outside the `r-figures` container (e.g. RStudio on macOS): those two lines
 will need to point at wherever `data/output` actually lives instead.
 
+`rmarkdown::render()`'s `output_file` arg above renames the knitted HTML
+byproduct from the default `Figure5_6.html` to `executed_Figure5_6.html`,
+the same `executed_`-prefix convention the notebook steps elsewhere in this
+doc use for their own nbconvert-with-outputs-attached byproducts. It still
+lands next to the `.Rmd` in `notebooks/figures/figure_5_6/`, and like those
+notebook byproducts is gitignored (`executed_*.html`/`executed_*.ipynb` in
+`.gitignore`), so no need to delete it by hand.
+
 Fig 5's plots save through `save_my_plot()` to `data/output/figures/figure_5/`;
 Fig 6a/6c/6d/6e's plots (VUS, three-ring donut, gnomAD, and unobserved
 sankeys/confusion matrices) save via direct `ggsave()` calls to
-`data/output/figures/figure_6/`.
+`data/output/figures/figure_6/`, the same directory `Figure_6b.R` (above)
+writes `figure_6b.pdf`/`figure_6b.svg` to.
 
 ## Extended Data Figures
 
@@ -224,9 +232,7 @@ docker compose run --rm -w /usr/src/app/notebooks/figures/extended_data_figure_2
   r-figures Extended_Data_Figure_2.R
 ```
 
-Unlike every other figure script in this doc, it `ggsave()`s straight to
-`Extended Data Figure 2.pdf` in its own directory
-(`notebooks/figures/extended_data_figure_2/`), not under `data/output/figures/`.
+Saves `data/output/figures/extended_data_2.pdf`.
 
 ### Extended Data Figure 5
 
@@ -268,8 +274,8 @@ also supports. Writes
 `clinvar_discordance_per_gene.png` to
 `data/output/figures/extended_data_figure_5/`, plus a side-effect
 `executed_extended_data_figure_5.ipynb` (nbconvert's copy of the notebook
-with outputs attached) in `notebooks/figures/extended_data_figure_5/` -- delete it afterward if
-you don't want it in the working tree.
+with outputs attached) in `notebooks/figures/extended_data_figure_5/` --
+gitignored, so no need to delete it.
 
 ### Extended Data Figures 4-9 (`Extended_data_figures.Rmd`)
 

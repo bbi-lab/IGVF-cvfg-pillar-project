@@ -300,7 +300,7 @@ print(fig_exd2)
 
 # Save figure
 ggsave(
-  'Extended Data Figure 2.pdf',
+  '../../../data/output/figures/extended_data_2.pdf',
   fig_exd2,
   width = 160, # Max 183
   height = 247,

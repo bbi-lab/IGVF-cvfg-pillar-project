@@ -201,8 +201,8 @@ done
 ```
 
 Each `nbconvert --execute` leaves a side-effect `executed_<name>.ipynb` next
-to the original (nbconvert's copy with outputs attached) — delete these if
-you don't want them in the working tree.
+to the original (nbconvert's copy with outputs attached) — gitignored, so no
+need to delete them.
 
 Outputs land under `data/output/supplementary_data/` (`Supplementary_Data_4.xlsx`,
 `Supplementary_Data_5.xlsx`) and `data/output/predictor_calibration/` (the
@@ -284,7 +284,7 @@ and its `Figure3a/c/d.csv.gz` inputs.
 poetry run python -m src.build_figure4_data \
   --cached-json notebooks/figures/figure_4/old_figure4_data.json.gz
 
-# 2. Execute the notebook to produce fig4.png
+# 2. Execute the notebook to produce data/output/figures/figure_4.png
 poetry run jupyter nbconvert --to notebook --execute \
   --ExecutePreprocessor.kernel_name=igvf-cvfg-pillar-project \
   --ExecutePreprocessor.timeout=600 \
@@ -299,9 +299,9 @@ poetry run jupyter nbconvert --to notebook --execute \
 docker compose run --rm -w /usr/src/app/notebooks/figures/figure_5_6 \
   r-figures Figure_6b.R
 
-# Figure5_6.Rmd
+# Figure5_6.Rmd: writes executed_Figure5_6.html next to the .Rmd (gitignored)
 docker compose run --rm -w /usr/src/app/notebooks/figures/figure_5_6 \
-  r-figures -e 'rmarkdown::render("Figure5_6.Rmd")'
+  r-figures -e 'rmarkdown::render("Figure5_6.Rmd", output_file = "executed_Figure5_6.html")'
 ```
 
 #### Extended Data Figure 2
@@ -331,10 +331,13 @@ docker compose run --rm -w /usr/src/app/notebooks/figures/extended_data_figure_4
   r-figures -e 'rmarkdown::render("Extended_data_figures.Rmd")'
 ```
 
-Every `nbconvert --execute`/`rmarkdown::render()` call above leaves a
-side-effect artifact next to the source (an `executed_<name>.ipynb` copy, or
-a rendered `.html`) — delete these if you don't want them in the working
-tree. See [`docs/figures.md`](docs/figures.md) for output paths for every
+Every `nbconvert --execute` call above leaves a side-effect `executed_<name>.ipynb`
+copy next to the source, and `Figure5_6.Rmd`'s `rmarkdown::render()` call
+does the same with `executed_Figure5_6.html` — both gitignored, so no need
+to delete them. `Extended_data_figures.Rmd` above is the one exception: it
+still renders the plain, non-gitignored `Extended_data_figures.html` next to
+itself — delete that manually if you don't want it in the working tree. See
+[`docs/figures.md`](docs/figures.md) for output paths for every
 individual panel and several figure-specific gotchas (date-stamped
 filenames, figures that only reconstruct from a cached intermediate, output
 directories that aren't created automatically).
