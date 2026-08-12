@@ -18,8 +18,8 @@ The pipeline runs in three stages, each covered in its own section below:
 2. [Data analysis / variant classification and table preparation](#2-data-analysis--variant-classification-and-table-preparation)
 3. [Figure preparation](#3-figure-preparation)
 
-See [Roadmap](#roadmap) below for the current state of the notebook-to-script
-migration and other in-progress hardening work.
+See [Roadmap](#roadmap) below for the current state of Dockerizing the
+remaining notebook-based stages.
 
 ---
 
@@ -133,11 +133,12 @@ and produces the manuscript's classification tables: OddsPath calibrations,
 ACMG/AMP evidence-point assignment, and the final per-gene, per-predictor
 classification files (Supplementary Data 5).
 
-This stage still lives in Jupyter notebooks under `notebooks/analysis/`
-rather than `src/` scripts — converting them is a deliberately deferred item
-on the [Roadmap](#roadmap) below. Each notebook has a companion
-`README_*.md` in the same directory documenting its inputs, methods, and
-outputs in detail — read those before running or modifying one.
+This stage still runs as Jupyter notebooks under `notebooks/analysis/`,
+executed locally via Poetry rather than in Docker — Dockerizing them (as
+notebooks, not converted to `src/` scripts) is the remaining item on the
+[Roadmap](#roadmap) below. Each notebook has a companion `README_*.md` in
+the same directory documenting its inputs, methods, and outputs in detail —
+read those before running or modifying one.
 
 Run in this order:
 
@@ -233,8 +234,9 @@ separately from https://data.igvf.org/tabular-files/IGVFFI3804AVJR/ (nothing
 in this repo produces it) and placed at
 `data/input/biobank/IGVFFI3804AVJR.csv.gz`.
 
-As with Stage 2, notebooks here are still notebooks, not yet converted to
-`src/` scripts (see [Roadmap](#roadmap) below).
+As with Stage 2, the Python notebooks here still run locally via Poetry
+rather than in Docker (see [Roadmap](#roadmap) below) — the R
+scripts/`.Rmd` files already do, via the `r-figures` service.
 
 ### Running it
 
@@ -383,23 +385,11 @@ Files included in this GitHub repository are:
 
 ## Roadmap
 
-In rough order:
-
-1. ~~Stand up a reproducible local environment (Poetry).~~ (done)
-2. Convert notebooks in `notebooks/analysis/` and `notebooks/figures/` to
-   `src/` scripts + tests. **Deliberately
-   skipped for now** — not blocking the work below.
-3. ~~Replace the archived `Integrated_variant_effect_dataset_pipeline.ipynb`
-   notebook with the Dockerized variant-annotation pipeline~~ (done: see
-   [Data preparation and variant annotation](#1-data-preparation-and-variant-annotation)
-   above). Still open: actually populate the `data/input/` files and do a full
-   end-to-end run to confirm the data flow works as designed (it's been
-   reviewed but not yet run against real data).
-4. ~~Reconcile a `Data/`/`data/` casing collision that arose on
-   case-insensitive filesystems.~~ (done)
-5. Dockerize the remaining pipeline stages (notebook conversions from step 2,
-   once done) the same way.
-6. Document all manual/ad hoc data-processing steps currently living only in
-   people's heads or notebook comments (e.g. the `additional notes` column in
-   Supplementary Data 3, where manual changes to the original MAVE
-   supplementary tables are recorded).
+Stage 1 (the `variant-annotation` pipeline) and Stage 3's R figures
+(`r-figures` service) already run in Docker. The remaining piece is
+Dockerizing Stage 2's three analysis notebooks
+(`OddsPath_calculations.ipynb`, `OddsPath_classifications.ipynb`,
+`Variant_Classification_analysis.ipynb`) and Stage 3's Python figure
+notebooks, which still run locally via `poetry run jupyter nbconvert` — as
+notebooks, not converted to `src/` scripts; the plan is to run them as-is
+inside a container, the same way Stage 1 and the R figures already do.
