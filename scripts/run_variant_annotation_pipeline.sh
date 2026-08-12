@@ -91,8 +91,8 @@ if [[ "$prepare_gnomad_cache" -eq 1 ]]; then
   exit 0
 fi
 
-echo "Staging data/raw_mave_data/ -> ${stage_dir#"$CVFG_PROJECT_DIR"/}/data/ ..."
-rsync -a "$CVFG_PROJECT_DIR/data/raw_mave_data/" "$stage_dir/data/"
+# echo "Staging data/raw_mave_data/ -> ${stage_dir#"$CVFG_PROJECT_DIR"/}/data/ ..."
+# rsync -a "$CVFG_PROJECT_DIR/data/raw_mave_data/" "$stage_dir/data/"
 
 # score_sets.tsv and Supplementary_Data_3.xlsx live in data/input/maves/
 # (not data/raw_mave_data/) so they're staged here explicitly rather than
