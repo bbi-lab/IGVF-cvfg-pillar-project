@@ -1,0 +1,60 @@
+[project]
+name = "igvf-cvfg-pillar-project"
+version = "0.1.0"
+description = "Data processing pipeline for reclassifying variants of uncertain significance using functional and predictive evidence (IGVF CVFG)"
+authors = [
+    { name = "Jeremy Stone", email = "74574922+jstone-uw@users.noreply.github.com" },
+]
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "altair>=5.3",
+    "biopython>=1.83",
+    "click>=8.1",
+    "fire>=0.6",
+    "matplotlib>=3.9",
+    "numpy>=1.26",
+    "openpyxl>=3.1",
+    "pandas>=2.2,<3.0",
+    "pyliftover>=0.4",
+    "requests>=2.34",
+    "scipy>=1.13",
+    "statsmodels>=0.14",
+    "tqdm>=4.66",
+    "seaborn (>=0.13.2,<0.14.0)",
+    "vl-convert-python (>=1.9.0.post1,<2.0.0)",
+]
+
+[project.optional-dependencies]
+dev = [
+    "nbstripout>=0.7",
+    "pre-commit>=3.8",
+    "ruff>=0.6",
+]
+notebooks = [
+    "ipykernel>=6.29",
+    "jupyterlab>=4.2",
+]
+tests = [
+    "pytest>=8.3",
+]
+
+[build-system]
+requires = ["poetry-core>=2.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+# Not yet distributed as an installable package -- see AGENTS.md for the
+# planned migration to a `src/` layout that will flip this on.
+package-mode = false
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.format]
+line-ending = "lf"

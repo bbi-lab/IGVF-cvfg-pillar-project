@@ -1,0 +1,3 @@
+[submodule "vendor/variant-annotation"]
+	path = vendor/variant-annotation
+	url = git@github.com:bbi-lab/variant-annotation.git

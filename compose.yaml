@@ -1,0 +1,171 @@
+x-tools-image: &tools-image
+  build: .
+  image: igvf-cvfg-pillar-project-tools:local
+
+x-r-tools-image: &r-tools-image
+  build:
+    context: .
+    dockerfile: Dockerfile.r
+  image: igvf-cvfg-pillar-project-r-tools:local
+
+services:
+  # Shares the VARIANT_DATA_DIR env var with the variant-annotation pipeline
+  # (see scripts/run_variant_annotation_pipeline.sh) so both containers read
+  # and write the same staged data directory as /work.
+  flag-variants:
+    <<: *tools-image
+    profiles:
+      - tools
+    entrypoint: ["python", "-m", "src.flag_variants"]
+    command: ["--help"]
+    volumes:
+      - .:/usr/src/app
+      - ${VARIANT_DATA_DIR:-./data}:/work
+
+  # Shares the VARIANT_DATA_DIR staging mount with flag-variants above, since
+  # it also reads/writes staged pipeline data (cvfg_variants.*.tsv) rather
+  # than committed repo files.
+  recalculate-clingen-classification:
+    <<: *tools-image
+    profiles:
+      - tools
+    entrypoint: ["python", "-m", "src.recalculate_clingen_classification"]
+    command: ["--help"]
+    volumes:
+      - .:/usr/src/app
+      - ${VARIANT_DATA_DIR:-./data}:/work
+
+  # Shares the VARIANT_DATA_DIR staging mount with flag-variants and
+  # recalculate-clingen-classification above, since it also reads/writes
+  # staged pipeline data (cvfg_variants.*.tsv) rather than committed repo
+  # files.
+  add-mavedb-active-calibration-columns:
+    <<: *tools-image
+    profiles:
+      - tools
+    entrypoint: ["python", "-m", "src.add_mavedb_active_calibration_columns"]
+    command: ["--help"]
+    volumes:
+      - .:/usr/src/app
+      - ${VARIANT_DATA_DIR:-./data}:/work
+
+  # Shares the VARIANT_DATA_DIR staging mount with the other steps above, for
+  # the same reason: it reads/writes staged pipeline data (cvfg_variants.*.tsv)
+  # rather than committed repo files. Replaces step_14's old in-script `awk`
+  # pass, which read the file line-by-line and silently corrupted the
+  # derived score_set_urn for any row whose mavedb_mapping_error spans
+  # multiple physical lines (see docs/derive_score_set_urn.md).
+  derive-score-set-urn:
+    <<: *tools-image
+    profiles:
+      - tools
+    entrypoint: ["python", "-m", "src.derive_score_set_urn"]
+    command: ["--help"]
+    volumes:
+      - .:/usr/src/app
+      - ${VARIANT_DATA_DIR:-./data}:/work
+
+  # Shares the VARIANT_DATA_DIR staging mount with the other steps above, for
+  # the same reason: it reads/writes staged pipeline data (cvfg_variants.*.tsv)
+  # rather than committed repo files.
+  postprocess-mavedb-functional-classifications:
+    <<: *tools-image
+    profiles:
+      - tools
+    entrypoint: ["python", "-m", "src.postprocess_mavedb_functional_classifications"]
+    command: ["--help"]
+    volumes:
+      - .:/usr/src/app
+      - ${VARIANT_DATA_DIR:-./data}:/work
+
+  # Reads the committed data/input/reference/extended_ensembl_consequence.csv.gz
+  # (this project's own bind mount) plus staged cvfg_variants.*.tsv (the
+  # VARIANT_DATA_DIR /work mount), so it needs both, same as flag-variants
+  # and recalculate-clingen-classification above.
+  annotate-simplified-consequence:
+    <<: *tools-image
+    profiles:
+      - tools
+    entrypoint: ["python", "-m", "src.annotate_simplified_consequence"]
+    command: ["--help"]
+    volumes:
+      - .:/usr/src/app
+      - ${VARIANT_DATA_DIR:-./data}:/work
+
+  # Reads data/input/predictors/ (committed CVFG-specific source files) and
+  # writes revel_training_variants.tsv / mutpred2_training_variants.tsv
+  # directly into data/intermediate/variant_annotation/data/ -- a preparatory
+  # step for the variant-annotation pipeline's Step 13. Both paths are fixed
+  # under this project's own tree (unlike flag-variants/
+  # recalculate-clingen-classification's staged cvfg_variants files), so like
+  # mave-dataset-stats and load-excalibr-calibrations this only needs the
+  # repo bind mount, not the VARIANT_DATA_DIR /work mount those two use.
+  build-training-variant-files:
+    <<: *tools-image
+    profiles:
+      - tools
+    entrypoint: ["python", "-m", "src.build_training_variant_files"]
+    command: []
+    volumes:
+      - .:/usr/src/app
+
+  # Reads only locally-generated data/output/maves/ and
+  # data/output/supplementary_data/ files, so it doesn't need the /work
+  # staging mount that flag-variants uses. Unlike flag-variants, every CLI
+  # arg is optional (defaults point at data/output/), so the default command
+  # is empty -- not --help -- so a bare `docker compose run mave-dataset-stats`
+  # computes stats immediately.
+  mave-dataset-stats:
+    <<: *tools-image
+    profiles:
+      - tools
+    entrypoint: ["python", "-m", "src.mave_dataset_stats"]
+    command: []
+    volumes:
+      - .:/usr/src/app
+
+  # Reads the locally-generated data/input/mave_calibration/excalibr/ JSON
+  # files and overwrites the ExCALIBR_calibrations sheet of the
+  # locally-generated data/output/supplementary_data/Supplementary_Data_4.xlsx
+  # in place, so like mave-dataset-stats it only needs the repo bind mount --
+  # no /work staging mount.
+  load-excalibr-calibrations:
+    <<: *tools-image
+    profiles:
+      - tools
+    entrypoint: ["python", "-m", "src.load_excalibr_calibrations"]
+    command: []
+    volumes:
+      - .:/usr/src/app
+
+  # Reads the locally-generated data/output/mave_calibration/
+  # OddsPath_calibrations.csv.gz and overwrites the OddsPath_calibrations
+  # sheet of the locally-generated data/output/supplementary_data/
+  # Supplementary_Data_4.xlsx in place -- the OddsPath counterpart to
+  # load-excalibr-calibrations above, same reasoning for only needing the
+  # repo bind mount.
+  load-oddspath-calibrations:
+    <<: *tools-image
+    profiles:
+      - tools
+    entrypoint: ["python", "-m", "src.load_oddspath_calibrations"]
+    command: []
+    volumes:
+      - .:/usr/src/app
+
+  # Generic runner for the manuscript's R figure scripts
+  # (notebooks/figures/**/*.R, notebooks/figures/**/*.Rmd). These scripts
+  # read/write relative filenames (e.g.
+  # `read_csv("../../../data/input/biobank/IGVFFI3804AVJR.csv.gz")`),
+  # assuming cwd is the script's own directory, so override --workdir per
+  # invocation:
+  #   docker compose run --rm -w /usr/src/app/notebooks/figures/figure_5_6 \
+  #     r-figures Figure_6b.R
+  r-figures:
+    <<: *r-tools-image
+    profiles:
+      - tools
+    entrypoint: ["Rscript"]
+    command: ["--help"]
+    volumes:
+      - .:/usr/src/app
