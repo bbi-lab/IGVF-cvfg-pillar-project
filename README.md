@@ -400,6 +400,6 @@ In rough order:
 5. Dockerize the remaining pipeline stages (notebook conversions from step 2,
    once done) the same way.
 6. Document all manual/ad hoc data-processing steps currently living only in
-   people's heads or notebook comments (e.g. the `additional notes` column
-   mentioned in
-   [`notebooks/analysis/README_Integrated_variant_effect_dataset_pipeline.md`](notebooks/analysis/README_Integrated_variant_effect_dataset_pipeline.md)).
+   people's heads or notebook comments (e.g. the `additional notes` column in
+   Supplementary Data 3, where manual changes to the original MAVE
+   supplementary tables are recorded).
