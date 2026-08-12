@@ -94,8 +94,6 @@ Committed to this repo (no action needed):
 
 Not committed — you must populate or point at these yourself:
 
-- `data/raw_mave_data/` — hand-populated MAVE study inputs; see its own
-  `README.md` for exactly what belongs there before running the pipeline.
 - A `variant-annotation` checkout with the large, generic reference caches
   already downloaded: SpliceAI VCFs, dbNSFP, `clinvar_cache/`, and the
   gnomAD Hail table cache above. These are tens of GB and are deliberately
@@ -389,7 +387,7 @@ In rough order:
 3. ~~Replace the archived `Integrated_variant_effect_dataset_pipeline.ipynb`
    notebook with the Dockerized variant-annotation pipeline~~ (done: see
    [Data preparation and variant annotation](#1-data-preparation-and-variant-annotation)
-   above). Still open: actually populate `data/raw_mave_data/` and do a full
+   above). Still open: actually populate the `data/input/` files and do a full
    end-to-end run to confirm the data flow works as designed (it's been
    reviewed but not yet run against real data).
 4. ~~Reconcile a `Data/`/`data/` casing collision that arose on
