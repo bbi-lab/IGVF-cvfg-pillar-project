@@ -83,8 +83,8 @@ them.
 ### 3. `Figure_2i.R` (separate from the notebook pipeline above)
 
 Same pattern as `Figure_6b.R` / `Extended_Data_Figure_2.R`: a plain Rscript
-run via the `r-figures` Docker service, reading `IGVFFI3804AVJR.csv.gz` from
-its own directory (downloaded separately from
+run via the `r-figures` Docker service, reading
+`data/input/biobank/IGVFFI3804AVJR.csv.gz` (downloaded separately from
 https://data.igvf.org/tabular-files/IGVFFI3804AVJR/ -- nothing in this repo
 produces it). Builds panel i's odds-ratio plot for the IGVF functional
 assays, excluding `TSC2_IGVF` since its RapGAP dataset is broken out
@@ -164,9 +164,10 @@ Directory: `notebooks/figures/figure_5_6/`. Two independent scripts, run separat
   same workbook the Extended Data Figures use; see `docs/mave_dataset_stats.md`
   for how it's built.
 - `Figure_6b.R` -- Fig 6b's per-gene odds-ratio forest plot, faceted by points
-  bin and disease group. Reads `IGVFFI3804AVJR.csv.gz`, downloaded separately
-  from https://data.igvf.org/tabular-files/IGVFFI3804AVJR/ (nothing in this
-  repo produces it) and expected in the same directory as the script.
+  bin and disease group. Reads `data/input/biobank/IGVFFI3804AVJR.csv.gz`,
+  downloaded separately from
+  https://data.igvf.org/tabular-files/IGVFFI3804AVJR/ (nothing in this repo
+  produces it).
 
 Like Extended Data Figures, both need the `r-figures` Docker service
 (`ggsankey`, `ggforce`, `patchwork`, `ggh4x`, `extrafont`/Arial, `cairo_pdf`)
@@ -176,7 +177,7 @@ r-figures` in that section above.
 ### Steps
 
 ```bash
-# Figure_6b.R: place IGVFFI3804AVJR.csv.gz in this directory first (see link
+# Figure_6b.R: reads data/input/biobank/IGVFFI3804AVJR.csv.gz (see link
 # above). Writes figure_6b.pdf/figure_6b.svg to data/output/figures/figure_6/.
 docker compose run --rm -w /usr/src/app/notebooks/figures/figure_5_6 \
   r-figures Figure_6b.R
@@ -222,12 +223,12 @@ genome-wide predictor calibration (top) and per-assay ExCALIBR classification
 (bottom), faceted by gene/disease group. Plain `Rscript`, not an `.Rmd` --
 same `tidyverse`/`patchwork`/`ggh4x`/`extrafont` dependencies and `r-figures`
 Docker service as `Figure_6b.R` (see Figure 5/6 above). Reads
-`IGVFFI3804AVJR.csv.gz` from its own directory, downloaded separately from
+`data/input/biobank/IGVFFI3804AVJR.csv.gz`, downloaded separately from
 https://data.igvf.org/tabular-files/IGVFFI3804AVJR/ (nothing in this repo
 produces it).
 
 ```bash
-# Place IGVFFI3804AVJR.csv.gz in this directory first (see link above).
+# Reads data/input/biobank/IGVFFI3804AVJR.csv.gz (see link above).
 docker compose run --rm -w /usr/src/app/notebooks/figures/extended_data_figure_2 \
   r-figures Extended_Data_Figure_2.R
 ```

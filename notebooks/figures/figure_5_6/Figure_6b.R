@@ -1,7 +1,8 @@
 # Figure 6b
 
 # This script requires IGVFFI3804AVJR.csv.gz which is available from
-# https://data.igvf.org/tabular-files/IGVFFI3804AVJR/
+# https://data.igvf.org/tabular-files/IGVFFI3804AVJR/ and expected at
+# data/input/biobank/IGVFFI3804AVJR.csv.gz.
 
 # Load libraries
 library(tidyverse)
@@ -37,7 +38,7 @@ nature_theme <- theme_linedraw() +
   )
 
 # Load main table
-or_df <- read_csv("IGVFFI3804AVJR.csv.gz")
+or_df <- read_csv("../../../data/input/biobank/IGVFFI3804AVJR.csv.gz")
 
 # Broad gene-phenotype classes
 

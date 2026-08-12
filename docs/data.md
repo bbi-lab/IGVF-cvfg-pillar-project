@@ -45,7 +45,7 @@ fetched/regenerated per checkout:
 | `mp2_annotations.csv.gz`, `mp2_gene_symbol_map.tsv` | `data/input/predictors/` | MutPred2 scores and gene-symbol map read directly by Step 16 (`--mutpred2-properties-file`/`--mutpred2-gene-symbol-map-file`). See [Where `mp2_annotations.csv.gz` comes from](#where-mp2_annotationscsvgz-comes-from) below. |
 | `data/input/mave_calibration/excalibr/json/`, `data/input/mave_calibration/excalibr/png/` | `data/input/mave_calibration/excalibr/` | Per-dataset exCALIBR point-value calibrations (JSON, read by `load_excalibr_calibrations`) and calibration plots (PNG, visual reference only). Gitignored (`data/input/mave_calibration/excalibr/*` in `.gitignore`) — large and regenerated/hand-supplied per checkout; only `.gitkeep` is committed. |
 | Large, generic reference caches: SpliceAI VCFs, dbNSFP, `clinvar_cache/`, and the gnomAD Hail table cache | Inside your `variant-annotation` checkout (not this repo) | Follow `variant-annotation`'s own setup; point `VARIANT_ANNOTATION_DIR` at a checkout that already has them. Tens of GB — deliberately not duplicated here. Build/refresh the gnomAD cache once per checkout with `scripts/run_variant_annotation_pipeline.sh --prepare-gnomad-cache` (~6-7 hours). |
-| `IGVFFI3804AVJR.csv.gz` | The individual figure directory that needs it (e.g. `notebooks/figures/figure_2/`, `notebooks/figures/extended_data_figure_2/`) | Download from https://data.igvf.org/tabular-files/IGVFFI3804AVJR/. Only needed for a subset of figures (Section 3 of the [top-level README](../README.md)), not for pipeline Stages 1-2. |
+| `IGVFFI3804AVJR.csv.gz` | `data/input/biobank/` | Download from https://data.igvf.org/tabular-files/IGVFFI3804AVJR/. Only needed for a subset of figures (Section 3 of the [top-level README](../README.md)), not for pipeline Stages 1-2. Gitignored (`data/input/biobank/*` in `.gitignore`) -- only `.gitkeep` is committed. |
 | A `variant-annotation` checkout itself | Wherever `VARIANT_ANNOTATION_DIR` points, or `vendor/variant-annotation/` (vendored submodule) | `git submodule update --init vendor/variant-annotation`, or point `VARIANT_ANNOTATION_DIR` at your own existing checkout. |
 
 ### Where `cvfg_variants.0.tsv` comes from
@@ -229,27 +229,21 @@ priority order:
    `data/input/mave_calibration/excalibr/json/DDX3X_Radford_2023.json`
    (fewer `point_ranges` entries) rather than an identical copy — worth
    confirming which is current before deleting the other.
-8. **Gitignore `IGVFFI3804AVJR.csv.gz`.** It's downloaded by hand into four
-   different directories (repo root, `notebooks/figures/extended_data_figure_2/`,
-   `notebooks/figures/figure_2/`, `notebooks/figures/figure_5_6/`) and is currently
-   untracked only because no one has run `git add` on it yet — an explicit
-   `.gitignore` pattern (`IGVFFI3804AVJR.csv.gz`) would prevent an accidental
-   commit of a large external download.
-9. **Consolidate the root-level `Supplementary_Data_*.v1.xlsx` files** (and
+8. **Consolidate the root-level `Supplementary_Data_*.v1.xlsx` files** (and
    the `data/output/supplementary_data/work/` scratch copies) into
    `data/output/supplementary_data/` or a dedicated `data/output/submission/`
    directory, rather than sitting at the repo root — keeps generated
    manuscript-submission artifacts out of the top-level listing alongside
    source files.
-10. **Refresh the per-notebook `README_*.md` files** under
-    `notebooks/analysis/` (`README_OddsPath_calculations.md`,
-    `README_OddsPath_classifications.md`, `README_Variant_Classification_analysis.md`)
-    — they still describe outputs landing in `outputs/`, `outputs/GeneSpecific_calibrations/`,
-    and inputs at `data/Supplemental_Data/` and `data/raw_mave_data/`, all of
-    which predate the current `data/input/`/`data/output/` layout this page
-    documents. `AGENTS.md`'s notebook-to-script conversion conventions already
-    call for folding these into `docs/` — doing so would resolve the drift.
-11. **Fix the stale `exCALIBR/` entry in `AGENTS.md`'s repository map.** It
+9. **Refresh the per-notebook `README_*.md` files** under
+   `notebooks/analysis/` (`README_OddsPath_calculations.md`,
+   `README_OddsPath_classifications.md`, `README_Variant_Classification_analysis.md`)
+   — they still describe outputs landing in `outputs/`, `outputs/GeneSpecific_calibrations/`,
+   and inputs at `data/Supplemental_Data/` and `data/raw_mave_data/`, all of
+   which predate the current `data/input/`/`data/output/` layout this page
+   documents. `AGENTS.md`'s notebook-to-script conversion conventions already
+   call for folding these into `docs/` — doing so would resolve the drift.
+10. **Fix the stale `exCALIBR/` entry in `AGENTS.md`'s repository map.** It
     describes a top-level `exCALIBR/` directory that no longer exists;
     calibration data now lives entirely under
     `data/input/mave_calibration/excalibr/`.

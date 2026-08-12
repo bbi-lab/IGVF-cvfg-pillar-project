@@ -99,9 +99,10 @@ Not committed — you must populate or point at these yourself:
   gnomAD Hail table cache above. These are tens of GB and are deliberately
   not duplicated into this repo.
 - `IGVFFI3804AVJR.csv.gz`, downloaded separately from
-  https://data.igvf.org/tabular-files/IGVFFI3804AVJR/ — only needed later,
-  for a subset of figures (see [Section 3](#3-figure-preparation)), not for
-  this stage.
+  https://data.igvf.org/tabular-files/IGVFFI3804AVJR/ and placed at
+  `data/input/biobank/IGVFFI3804AVJR.csv.gz` — only needed later, for a
+  subset of figures (see [Section 3](#3-figure-preparation)), not for this
+  stage.
 
 ### Running it
 
@@ -229,7 +230,8 @@ Two toolchains are in play, depending on the figure:
 
 A few figures additionally require `IGVFFI3804AVJR.csv.gz`, downloaded
 separately from https://data.igvf.org/tabular-files/IGVFFI3804AVJR/ (nothing
-in this repo produces it) and placed in the figure's own directory.
+in this repo produces it) and placed at
+`data/input/biobank/IGVFFI3804AVJR.csv.gz`.
 
 As with Stage 2, notebooks here are still notebooks, not yet converted to
 `src/` scripts (see [Roadmap](#roadmap) below).
@@ -266,7 +268,7 @@ for nb in PP_ClinVarPrecisionRecall PP_Fig2_Heatmaps PP_ResolutionOverview PP_Se
     notebooks/figures/figure_2/${nb}.ipynb
 done
 
-# 3. Figure_2i.R -- place IGVFFI3804AVJR.csv.gz in notebooks/figures/figure_2/ first
+# 3. Figure_2i.R -- reads data/input/biobank/IGVFFI3804AVJR.csv.gz (see above)
 docker compose run --rm -w /usr/src/app/notebooks/figures/figure_2 \
   r-figures Figure_2i.R
 ```
@@ -295,7 +297,7 @@ poetry run jupyter nbconvert --to notebook --execute \
 #### Figure 5/6
 
 ```bash
-# Figure_6b.R -- place IGVFFI3804AVJR.csv.gz in notebooks/figures/figure_5_6/ first
+# Figure_6b.R -- reads data/input/biobank/IGVFFI3804AVJR.csv.gz (see above)
 docker compose run --rm -w /usr/src/app/notebooks/figures/figure_5_6 \
   r-figures Figure_6b.R
 
@@ -307,7 +309,7 @@ docker compose run --rm -w /usr/src/app/notebooks/figures/figure_5_6 \
 #### Extended Data Figure 2
 
 ```bash
-# Place IGVFFI3804AVJR.csv.gz in notebooks/figures/extended_data_figure_2/ first
+# Extended_Data_Figure_2.R -- reads data/input/biobank/IGVFFI3804AVJR.csv.gz (see above)
 docker compose run --rm -w /usr/src/app/notebooks/figures/extended_data_figure_2 \
   r-figures Extended_Data_Figure_2.R
 ```

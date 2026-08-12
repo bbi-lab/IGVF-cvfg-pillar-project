@@ -155,7 +155,8 @@ services:
 
   # Generic runner for the manuscript's R figure scripts
   # (notebooks/figures/**/*.R, notebooks/figures/**/*.Rmd). These scripts
-  # read/write relative filenames (e.g. `read_csv("IGVFFI3804AVJR.csv.gz")`),
+  # read/write relative filenames (e.g.
+  # `read_csv("../../../data/input/biobank/IGVFFI3804AVJR.csv.gz")`),
   # assuming cwd is the script's own directory, so override --workdir per
   # invocation:
   #   docker compose run --rm -w /usr/src/app/notebooks/figures/figure_5_6 \

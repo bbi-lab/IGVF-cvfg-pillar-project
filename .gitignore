@@ -63,6 +63,9 @@ data/intermediate/
 data/input/mave_calibration/excalibr/*
 !data/input/mave_calibration/excalibr/.gitkeep
 
+data/input/biobank/*
+!data/input/biobank/.gitkeep
+
 data/output/*
 !data/output/supplementary_data/
 data/output/supplementary_data/*
