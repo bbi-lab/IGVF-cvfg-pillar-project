@@ -165,6 +165,27 @@ def catch_mis_2(df, group_cols, points_col="Fxn_points", strategy="v1"):
     return cleaned.drop(columns=["_abs_points", "_is_aa"], errors="ignore")
 
 
+def dedup_by_max_abs_points(df, points_col, genomic_key_cols=GENOMIC_KEY_COLS):
+    """Collapse `df` to one row per DNA variant (`genomic_key_cols`), keeping
+    the candidate with the greatest `abs(points_col)`; ties broken by
+    `Dataset` name (ascending) for full determinism. Compares
+    `genomic_key_cols` as strings rather than relying on `drop_duplicates`
+    directly, since `Chrom` mixes int and str values for the same
+    chromosome across rows in practice (see `aa_dedup_or_mark`).
+
+    Unlike `catch_mis_2`/`dedup_vus_gnomad_unobserved`, this has no nt/aa
+    resolution preference and no `"v1"` legacy mode -- it's used to build a
+    single DNA-level dataset from scratch, not to reproduce an existing
+    per-category pipeline's history.
+    """
+    df = df.copy()
+    df["_abs_points"] = df[points_col].abs()
+    sorted_df = df.sort_values(by=["_abs_points", "Dataset"], ascending=[False, True], na_position="last")
+    genomic_key = sorted_df[genomic_key_cols].astype(str)
+    deduped = sorted_df[~genomic_key.duplicated(keep="first")]
+    return deduped.drop(columns=["_abs_points"])
+
+
 def dedup_vus_gnomad_unobserved(df, group_cols, points_col="Fxn_points", strategy="v1", variant_notes_col="VariantNotes"):
     """
     Resolve a variant scored by more than one assay to a single representative

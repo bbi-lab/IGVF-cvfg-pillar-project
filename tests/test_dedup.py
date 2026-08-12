@@ -8,6 +8,7 @@ from src.lib.dedup import (
     catch_mis_2,
     clingen_aa_sort_key,
     controls_aa_sort_key,
+    dedup_by_max_abs_points,
     dedup_vus_gnomad_unobserved,
 )
 
@@ -270,6 +271,77 @@ def test_vus_dedup_v1_unaffected_by_dataset_name():
     )
     out = dedup_vus_gnomad_unobserved(df, ["Gene", "hg38_start", "ref_allele", "alt_allele"], strategy="v1")
     assert out["Dataset"].iloc[0] == "Dataset_A"  # "First_max_fxn_pts" < "max_fxn_pts" alphabetically
+
+
+# --- dedup_by_max_abs_points ------------------------------------------------------------
+
+
+def test_dedup_by_max_abs_points_picks_greater_magnitude():
+    df = pd.DataFrame(
+        {
+            "Gene": ["G1", "G1"],
+            "Chrom": ["1", "1"],
+            "hg38_start": [1000, 1000],
+            "ref_allele": ["A", "A"],
+            "alt_allele": ["T", "T"],
+            "Dataset": ["Dataset_Z", "Dataset_A"],
+            "Combined_points": [3, 8],
+        }
+    )
+    out = dedup_by_max_abs_points(df, points_col="Combined_points")
+    assert len(out) == 1
+    assert out["Dataset"].iloc[0] == "Dataset_A"
+
+
+def test_dedup_by_max_abs_points_folds_aa_origin_row_onto_nt_coordinate():
+    """An aa-resolution assay's row and an nt-resolution assay's row for the
+    same physical variant share the same genomic key columns and must
+    collapse to one row, exactly like catch_mis_2's nt+aa merge."""
+    df = pd.DataFrame(
+        {
+            "Gene": ["G1", "G1"],
+            "Chrom": ["1", "1"],
+            "hg38_start": [2000, 2000],
+            "ref_allele": ["G", "G"],
+            "alt_allele": ["C", "C"],
+            "Dataset": ["Dataset_aa", "Dataset_nt"],
+            "Combined_points": [2, 2],
+            "nucleotide_or_aa": ["aa", "nt"],
+        }
+    )
+    out = dedup_by_max_abs_points(df, points_col="Combined_points")
+    assert len(out) == 1
+    assert out["Dataset"].iloc[0] == "Dataset_aa"  # tie broken by Dataset name ascending
+
+
+def test_dedup_by_max_abs_points_order_independent_tiebreak():
+    rows = [
+        ("G1", "1", 3000, "A", "T", "Dataset_Z", 5),
+        ("G1", "1", 3000, "A", "T", "Dataset_A", 5),
+    ]
+    cols = ["Gene", "Chrom", "hg38_start", "ref_allele", "alt_allele", "Dataset", "Combined_points"]
+    df_forward = pd.DataFrame(rows, columns=cols)
+    df_reversed = pd.DataFrame(list(reversed(rows)), columns=cols)
+    out_forward = dedup_by_max_abs_points(df_forward, points_col="Combined_points")
+    out_reversed = dedup_by_max_abs_points(df_reversed, points_col="Combined_points")
+    assert out_forward["Dataset"].iloc[0] == "Dataset_A"
+    assert out_forward["Dataset"].iloc[0] == out_reversed["Dataset"].iloc[0]
+
+
+def test_dedup_by_max_abs_points_mixed_dtype_chrom_still_collapses():
+    df = pd.DataFrame(
+        {
+            "Gene": ["PAX6", "PAX6"],
+            "Chrom": ["11", 11],
+            "hg38_start": [31802817, 31802817],
+            "ref_allele": ["G", "G"],
+            "alt_allele": ["A", "A"],
+            "Dataset": ["PAX6_BLX_geneticin", "PAX6_LE9_geneticin"],
+            "Combined_points": [8, 8],
+        }
+    )
+    out = dedup_by_max_abs_points(df, points_col="Combined_points")
+    assert len(out) == 1
 
 
 def test_clinvar_review_status_rank_covers_expected_tiers():
