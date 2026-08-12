@@ -233,7 +233,7 @@ docker compose run --rm -w /usr/src/app/notebooks/figures/extended_data_figure_2
   r-figures Extended_Data_Figure_2.R
 ```
 
-Saves `data/output/figures/extended_data_2.pdf`.
+Saves `data/output/figures/extended_data_figure_2.pdf`.
 
 ### Extended Data Figure 5
 
