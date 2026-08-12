@@ -264,13 +264,28 @@ of this doc's output categories at all.
 ### `CHEK2`: an external QC flag
 
 Before the general conflict/flag cleanup, `sankey_f` is left-joined
-against `CHEK2_Gebbia_2024.xlsx` on (`hgvs_p`, `auth_reported_score`) /
-(`hgvs_pro`, `score`), and any row where that file's `Filter_CI == 1` has
-its `Flag` set to `'*'` -- which then gets removed by the same
-"remove flagged variants" step (cell 75) that drops everything else
-flagged for any other reason, regardless of gene. A second column from
-that file, `Filter_Hypercomplement`, is merged in alongside `Filter_CI`
-but never used for anything.
+against `CHEK2_Gebbia_2024.xlsx` on (`hgvs_p` with its RefSeq protein-
+accession prefix stripped, `auth_reported_score`) / (`hgvs_pro`, `score`),
+and any row where that file's `Filter_CI == 1` has its `Flag` set to `'*'`
+-- which then gets removed by the same "remove flagged variants" step
+(cell 75) that drops everything else flagged for any other reason,
+regardless of gene. A second column from that file,
+`Filter_Hypercomplement`, is merged in alongside `Filter_CI` but never
+used for anything.
+
+**Previously a silent no-op.** `hgvs_p` carries a RefSeq protein-accession
+prefix (e.g. `"NP_009125.1:p.Ser2Ala"`); `chek2['hgvs_pro']` doesn't
+(`"p.Ser2Ala"`). The merge originally matched the two columns directly,
+which never matched a single row -- confirmed against real data, 0 matches
+out of the several thousand CHEK2 rows in this dataset -- so
+`Filter_CI == 1` variants were never actually excluded from Supplementary
+Data 5 (or 6, which inherits `Variant_Classification_analysis.ipynb`'s
+checkpoint). `integrated_variant_effect_dataset.v1.tsv` has unqualified
+`hgvs_p` for these same rows, so this exclusion did work under `v1` -- it
+broke silently at some point after, when the upstream dataset build
+started qualifying `hgvs_p` with the transcript accession without a
+corresponding update to this merge. Fixed by stripping the prefix before
+matching.
 
 ### `LDLR`: `+VLDL` uptake assay prioritized in two LA modules, LA module 1 excluded entirely
 
