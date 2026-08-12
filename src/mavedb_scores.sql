@@ -192,7 +192,6 @@ and ss.id = v.scoreset_id
 order by v.hgvs_pro, v.id;
 
 -- NDUFAF6_Sung_2024 and PTEN_Mighell_2018 were uploaded to MaveDB as DNA-level score sets but should be at protein level.
--- select * from igvf_cvfg_pipeline_input v where split_part(v.variant_urn, '#', 1) in ('urn:mavedb:00000663-a-1');
 update igvf_cvfg_pipeline_input
 set raw_hgvs_nt = ''
 where split_part(variant_urn, '#', 1) in ('urn:mavedb:00000663-a-1', 'urn:mavedb:00000054-a-1');
