@@ -158,6 +158,13 @@ Run in this order:
    seen in multiple assays, and exports the per-category classification
    files that become Supplementary Data 5. See
    [`notebooks/analysis/README_Variant_Classification_analysis.md`](notebooks/analysis/README_Variant_Classification_analysis.md).
+5. **`src/build_variant_reclassification_dataset.py`** — reads that
+   notebook's own cell-69 checkpoint, re-applies its downstream exclusions
+   (`SFPQ`, the CHEK2 QC flag, conflicting/unmeasured-splice
+   `VariantNotes` tags), adds four ACMG/AMP points columns, and
+   deduplicates to one row per DNA variant. Produces
+   `data/output/reclassification/integrated_variant_effect_reclassification.tsv.gz`,
+   which collaborators use for downstream biobank analysis.
 
 Two more `src/` scripts support this stage (beyond `load_oddspath_calibrations.py`
 above) and are already converted:
@@ -200,6 +207,9 @@ for nb in OddsPath_classifications Variant_Classification_analysis; do
     --output executed_${nb}.ipynb \
     notebooks/analysis/${nb}.ipynb
 done
+
+# 5. Build the biobank-analysis reclassification export from that notebook's checkpoint
+poetry run python -m src.build_variant_reclassification_dataset
 ```
 
 Each `nbconvert --execute` leaves a side-effect `executed_<name>.ipynb` next
@@ -207,8 +217,10 @@ to the original (nbconvert's copy with outputs attached) — gitignored, so no
 need to delete them.
 
 Outputs land under `data/output/supplementary_data/` (`Supplementary_Data_4.xlsx`,
-`Supplementary_Data_5.xlsx`) and `data/output/predictor_calibration/` (the
-per-gene control files also used by Extended Data Figure 5).
+`Supplementary_Data_5.xlsx`), `data/output/predictor_calibration/` (the
+per-gene control files also used by Extended Data Figure 5), and
+`data/output/reclassification/integrated_variant_effect_reclassification.tsv.gz`
+(the biobank-analysis export from step 5 above).
 
 ---
 
