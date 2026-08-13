@@ -6,7 +6,7 @@ Usage: src/scripts/run_mave_dataset_stats.sh [condensed-file] [metadata-file] [-
 
 Examples:
   src/scripts/run_mave_dataset_stats.sh
-  src/scripts/run_mave_dataset_stats.sh --output data/output/mave_dataset_stats.csv
+  src/scripts/run_mave_dataset_stats.sh --output data/output/mave_dataset_stats.txt
 
 Notes:
   - Defaults to data/output/maves/integrated_variant_effect_dataset.condensed.tsv.gz

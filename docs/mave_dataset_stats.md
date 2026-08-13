@@ -1,10 +1,10 @@
 # MAVE Dataset Stats
 
 `src/mave_dataset_stats.py` reports summary statistics for the integrated MAVE
-variant effect dataset (`data/mave_data/integrated_variant_effect_dataset*.tsv.gz`),
+variant effect dataset (`data/output/maves/integrated_variant_effect_dataset*.tsv.gz`),
 split into three groupings of datasets:
 
-- **Community (IGVF)** -- datasets Supplementary Data 3 marks `IGVF Produced? = Yes`
+- **IGVF** -- datasets Supplementary Data 3 marks `IGVF Produced? = Yes`
 - **Community (non-IGVF)** -- everything else
 - **Combined (IGVF + community)** -- all datasets together
 
@@ -21,6 +21,15 @@ For each grouping it reports:
 
 The non-IGVF grouping additionally reports the number of genes not also
 represented in IGVF data.
+
+Immediately after that table, a **Genes represented** section lists which
+genes are covered only by IGVF datasets, only by non-IGVF ("community")
+datasets, or by both. CALM1/CALM2/CALM3 are always merged into one
+"CALM1/2/3" entry in this list regardless of `--merge-calm-genes` (see
+below), since listing the same calmodulin target three times isn't useful;
+this can make this list's per-category counts differ by up to two from the
+`genes_represented`/`genes_not_in_igvf_data` counts in the table above when
+that flag isn't passed.
 
 It also reports score coverage (REVEL, AlphaMissense, MutPred2) and clinical
 attributes (VUS, pathogenic/benign, observed in gnomAD) across the assayed
@@ -42,20 +51,51 @@ script's older any-match behavior folded them into whichever bucket matched).
 Pass `--allow-clinvar-conflicts` to restore that any-match behavior instead,
 which also drops the conflict bucket from the report.
 
+It also reports two further sections, sourced from separate input files:
+
+- **ExCALIBR calibration coverage** (Extended Data Figure 2): how many genes
+  have a row in `--excalibr-calibrations-file`'s `ExCALIBR_calibrations` sheet
+  (default `data/output/supplementary_data/Supplementary_Data_4.xlsx`), and how many
+  of those genes have at least one dataset where ExCALIBR assigned at least
+  one point of evidence in either direction. That sheet's `dataset` values are
+  matched to a gene via this script's own dataset metadata (the same
+  `Dataset Name` -> `Gene` mapping used for the summary above), after
+  stripping a trailing `_clinvar_2018` suffix and Unicode-normalizing both
+  sides -- see `excalibr_dataset_to_gene_map` in the script for why.
+- **Reclassification agreement** (Figure 4c): for every sheet in
+  `--controls-file` (default `data/output/supplementary_data/Supplementary_Data_5.xlsx`)
+  whose name starts with `controls_` -- one per predictor/calibration
+  combination, which should agree with each other since this doesn't depend
+  on which predictor is active -- how often ExCALIBR's evidence assignment
+  (`ExC_points_2025`) and the functional class assignment (`OP_points`) agree
+  with the row's ClinVar pathogenic-or-benign control label
+  (`clnsig_group_18_25`).
+
 ## Inputs
 
 - **Condensed variant effect dataset**
-  (default `data/mave_data/integrated_variant_effect_dataset.condensed.tsv.gz`):
+  (default `data/output/maves/integrated_variant_effect_dataset.condensed.tsv.gz`):
   one row per variant effect measurement/score. For protein-resolution
   datasets, one row can correspond to several DNA-level changes (pipe-delimited
   within a cell) -- the *expanded* sibling file
   (`integrated_variant_effect_dataset.tsv.gz`) explodes those into one row per
   DNA variant, but this script intentionally works from the condensed file
   since the requested counts are measurement-level, not DNA-variant-level.
-- **Dataset metadata** (default `data/mave_data/Supplementary_Data_3.xlsx`,
+- **Dataset metadata** (default `data/output/supplementary_data/Supplementary_Data_3.xlsx`,
   `Curation` sheet): one row per dataset, keyed by `Dataset Name` (joined
   against the condensed file's `Dataset` column). Used for the
-  `IGVF Produced?` and `Primary Score Set or Meta-analysis?` classifications.
+  `IGVF Produced?` and `Primary Score Set or Meta-analysis?` classifications,
+  and (via its `Gene` column) to resolve genes for the ExCALIBR calibration
+  section.
+- **ExCALIBR calibrations** (`--excalibr-calibrations-file`, default
+  `data/output/supplementary_data/Supplementary_Data_4.xlsx`, `ExCALIBR_calibrations`
+  sheet): one row per dataset. A row counts as assigning a point of evidence
+  if any of its `range_-8`..`range_8` columns is non-null.
+- **Controls** (`--controls-file`, default
+  `data/output/supplementary_data/Supplementary_Data_5.xlsx`): every sheet whose name
+  starts with `controls_` (e.g. `controls_REVEL_GeneSpecific`), one row per
+  control variant, using its `clnsig_group_18_25`, `ExC_points_2025`, and
+  `OP_points` columns.
 
 ### Note on `(hgvs_g, hgvs_p)`
 
@@ -73,13 +113,16 @@ Locally (with the Poetry environment):
 
 ```bash
 poetry run python -m src.mave_dataset_stats \
-  data/mave_data/integrated_variant_effect_dataset.condensed.tsv.gz \
-  data/mave_data/Supplementary_Data_3.xlsx \
-  [--output stats.csv]
+  data/output/maves/integrated_variant_effect_dataset.condensed.tsv.gz \
+  data/output/supplementary_data/Supplementary_Data_3.xlsx \
+  data/output/maves/integrated_variant_effect_dataset.tsv.gz \
+  [--excalibr-calibrations-file data/output/supplementary_data/Supplementary_Data_4.xlsx] \
+  [--controls-file data/output/supplementary_data/Supplementary_Data_5.xlsx] \
+  [--output stats.txt]
 ```
 
-Both positional arguments default to the paths above, so a bare invocation
-works from the repo root.
+All arguments default to the paths above, so a bare invocation works from the
+repo root.
 
 Via Docker (same image as `flag_variants`, see `compose.yaml`):
 
@@ -88,6 +131,6 @@ src/scripts/run_mave_dataset_stats.sh [condensed-file] [metadata-file] [--output
 ```
 
 Unlike `run_flag_variants.sh`, this wrapper doesn't map paths against a
-`/work` staging mount -- the script only reads the repo's checked-in
-`data/mave_data/` files, which are already available at `/usr/src/app` via the
-whole-repo bind mount.
+`/work` staging mount -- the script only reads locally-generated
+`data/output/maves/`/`data/output/supplementary_data/` files, which are
+already available at `/usr/src/app` via the whole-repo bind mount.

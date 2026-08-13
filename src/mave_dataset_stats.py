@@ -2,13 +2,18 @@
 """Summary statistics for the integrated MAVE variant effect dataset.
 
 Reads the condensed variant effect dataset (one row per variant effect
-measurement/score; see Data/mave_data/integrated_variant_effect_dataset*.tsv.gz)
+measurement/score; see data/output/maves/integrated_variant_effect_dataset*.tsv.gz)
 together with its dataset-level metadata (Supplementary_Data_3.xlsx) and
 reports, for three groupings of datasets -- IGVF-produced only, non-IGVF
 ("community") only, and combined -- the number of datasets, variant effect
 measurements, composite scores, distinct variants assayed, and genes
 represented. Each bucket's variant effect measurements are also reported as a
-percentage of the combined total (100% for the combined row).
+percentage of the combined total (100% for the combined row). Immediately
+after that table, a "Genes represented" section lists which genes are
+covered only by IGVF datasets, only by non-IGVF ("community") datasets, or
+by both -- CALM1/CALM2/CALM3 are always merged into one "CALM1/2/3" entry in
+this list regardless of `--merge-calm-genes` (see that flag below), since
+listing the same calmodulin target three times isn't useful.
 
 It additionally reports, in a set of text tables, how many variants and
 variant measurements have REVEL, AlphaMissense, and MutPred2 scores, and how
@@ -62,26 +67,61 @@ matching a target ClinVar significance, if *any* one of its pipe-delimited
 parts does. In the expanded (DNA-variant-level) file there's only ever one
 part, so this reduces to a plain presence/absence check there. "Observed in
 gnomAD" follows this repo's existing convention elsewhere (see
-Analysis/README_OddsPath_classifications.md) of treating any non-empty
+notebooks/analysis/README_OddsPath_classifications.md) of treating any non-empty
 `gnomad_MAF` as observed, regardless of the allele count.
-
-Both file arguments are optional and default to the paths above. Output is
-written as plain text (to stdout, and optionally to `--output` as well).
 
 By default, CALM1, CALM2, and CALM3 are counted as three separate genes, since
 that's how the underlying data labels them. Pass `--merge-calm-genes` to count
 them as a single gene target instead, since they encode the same calmodulin
 protein.
+
+Two further sections cover ExCALIBR calibration coverage and reclassification
+agreement, sourced from `--excalibr-calibrations-file` (default
+Supplementary_Data_4.xlsx) and `--controls-file` (default
+Supplementary_Data_5.xlsx) respectively:
+
+- **ExCALIBR calibration coverage** (Extended Data Figure 2): how many genes
+  have a row in Supplementary_Data_4's `ExCALIBR_calibrations` sheet, and how
+  many of those genes have at least one dataset where ExCALIBR assigned at
+  least one point of evidence in either direction (i.e. at least one of that
+  row's `range_-8`..`range_8` columns is non-null). That sheet's `dataset`
+  values are matched against this script's own dataset metadata (the same
+  `Dataset Name` -> `Gene` mapping used elsewhere) to determine gene
+  membership, after stripping a trailing `_clinvar_2018` suffix (this sheet's
+  convention for marking a mixed-year duplicate calibration of the same
+  dataset) and Unicode-normalizing (NFC) both sides, since accented
+  characters can round-trip through Excel in different composed/decomposed
+  forms across files. Any `dataset` value that still doesn't resolve raises
+  `ValueError`, same as an unrecognized dataset in the main metadata file.
+
+- **Reclassification agreement** (Figure 4c): for every sheet in the controls
+  file whose name starts with `controls_` (one per predictor/calibration
+  combination -- REVEL, AlphaMissense, MutPred2 -- which should agree with
+  each other since this doesn't depend on which predictor is active), how
+  often ExCALIBR's evidence assignment (`ExC_points_2025`) and the functional
+  class assignment (`OP_points`) agree with the row's ClinVar
+  pathogenic-or-benign control label (`clnsig_group_18_25`). A row's points
+  column is treated as assigning pathogenic evidence if positive, benign
+  evidence if negative, and no evidence if zero or missing -- rows with no
+  evidence assigned are excluded from the agreement percentage (reported
+  separately as "no point of evidence assigned") but still counted in the
+  section's total.
+
+Both file arguments are optional and default to the paths above. Output is
+written as plain text (to stdout, and optionally to `--output` as well).
 """
 
+import unicodedata
 from pathlib import Path
 
 import click
 import pandas as pd
 
-DEFAULT_CONDENSED_FILE = Path("data/mave_data/integrated_variant_effect_dataset.condensed.tsv.gz")
-DEFAULT_EXPANDED_FILE = Path("data/mave_data/integrated_variant_effect_dataset.tsv.gz")
-DEFAULT_METADATA_FILE = Path("data/mave_data/Supplementary_Data_3.xlsx")
+DEFAULT_CONDENSED_FILE = Path("data/output/maves/integrated_variant_effect_dataset.condensed.tsv.gz")
+DEFAULT_EXPANDED_FILE = Path("data/output/maves/integrated_variant_effect_dataset.tsv.gz")
+DEFAULT_METADATA_FILE = Path("data/output/supplementary_data/Supplementary_Data_3.xlsx")
+DEFAULT_EXCALIBR_CALIBRATIONS_FILE = Path("data/output/supplementary_data/Supplementary_Data_4.xlsx")
+DEFAULT_CONTROLS_FILE = Path("data/output/supplementary_data/Supplementary_Data_5.xlsx")
 
 METADATA_SHEET = "Curation"
 DATASET_COL = "Dataset"
@@ -121,6 +161,24 @@ PATHOGENIC_VALUES = frozenset({"Pathogenic", "Likely pathogenic", "Pathogenic/Li
 BENIGN_VALUES = frozenset({"Benign", "Likely benign", "Benign/Likely benign"})
 PATHOGENIC_OR_BENIGN_VALUES = PATHOGENIC_VALUES | BENIGN_VALUES
 CONFLICTING_CLASSIFICATION_VALUE = "Conflicting classifications of pathogenicity"
+
+EXCALIBR_CALIBRATIONS_SHEET = "ExCALIBR_calibrations"
+EXCALIBR_DATASET_COL = "dataset"
+EXCALIBR_RANGE_COLUMN_PREFIX = "range_"
+EXCALIBR_MIXED_YEAR_DATASET_SUFFIX = "_clinvar_2018"
+
+CONTROLS_SHEET_PREFIX = "controls_"
+CONTROLS_CLINVAR_GROUP_COL = "clnsig_group_18_25"
+EXCALIBR_EVIDENCE_POINTS_COL = "ExC_points_2025"
+FUNCTIONAL_CLASS_POINTS_COL = "OP_points"
+RECLASSIFICATION_POINTS_COLUMNS = {
+    "ExCALIBR evidence": EXCALIBR_EVIDENCE_POINTS_COL,
+    "Functional class": FUNCTIONAL_CLASS_POINTS_COL,
+}
+AGREE_LABEL = "Agrees with ClinVar"
+DISAGREE_LABEL = "Disagrees with ClinVar"
+NO_EVIDENCE_LABEL = "No point of evidence assigned"
+RECLASSIFICATION_LABELS_ORDER = [AGREE_LABEL, DISAGREE_LABEL, NO_EVIDENCE_LABEL]
 
 
 def split_genes(gene_value):
@@ -213,20 +271,28 @@ def load_dataset_metadata(metadata_path):
     return metadata
 
 
+def merge_calm_gene_names(genes):
+    """Collapse CALM1/CALM2/CALM3 -- which the underlying MAVE data treats as
+    three separate gene labels but which correspond to a single gene target
+    (they encode the same calmodulin protein) -- into one `CALM_MERGED_LABEL`
+    entry in `genes`.
+    """
+    if genes & CALM_GENES:
+        genes = (genes - CALM_GENES) | {CALM_MERGED_LABEL}
+    return genes
+
+
 def genes_in(df, merge_calm_genes=False):
     """Return the set of genes represented in `df`.
 
-    If `merge_calm_genes` is set, CALM1/CALM2/CALM3 -- which the underlying
-    MAVE data treats as three separate gene labels but which correspond to a
-    single gene target (they encode the same calmodulin protein) -- are
-    collapsed into one `CALM_MERGED_LABEL` entry.
+    If `merge_calm_genes` is set, CALM1/CALM2/CALM3 are collapsed into one
+    `CALM_MERGED_LABEL` entry -- see `merge_calm_gene_names`.
     """
     genes = set()
     for value in df[GENE_COL].unique():
         genes.update(split_genes(value))
-    if merge_calm_genes and genes & CALM_GENES:
-        genes -= CALM_GENES
-        genes.add(CALM_MERGED_LABEL)
+    if merge_calm_genes:
+        genes = merge_calm_gene_names(genes)
     return genes
 
 
@@ -278,11 +344,43 @@ def compute_all_stats_from_frame(condensed, metadata, merge_calm_genes=False):
             else float("nan")
         )
 
-    return {
-        "Community (IGVF)": igvf_stats,
+    stats = {
+        "IGVF": igvf_stats,
         "Community (non-IGVF)": non_igvf_stats,
         "Combined (IGVF + community)": combined_stats,
     }
+    gene_breakdown = compute_gene_breakdown(igvf_genes, non_igvf_genes)
+    return stats, gene_breakdown
+
+
+def compute_gene_breakdown(igvf_genes, non_igvf_genes):
+    """Partition genes represented in the dataset by whether they're covered
+    by IGVF-produced datasets, non-IGVF ("community") datasets, or both.
+
+    CALM1/CALM2/CALM3 are always collapsed into one `CALM_MERGED_LABEL` entry
+    here (see `merge_calm_gene_names`), regardless of `--merge-calm-genes` --
+    unlike the `genes_represented`/`genes_not_in_igvf_data` counts elsewhere
+    in the report, this gene-name list is for readability, and listing the
+    same calmodulin target three times under three different names isn't
+    useful. This can make this list's counts differ by up to two from those
+    counts when `--merge-calm-genes` isn't passed.
+
+    Returns {label: sorted gene list}.
+    """
+    igvf_genes = merge_calm_gene_names(igvf_genes)
+    non_igvf_genes = merge_calm_gene_names(non_igvf_genes)
+    return {
+        "IGVF only": sorted(igvf_genes - non_igvf_genes),
+        "Community (non-IGVF) only": sorted(non_igvf_genes - igvf_genes),
+        "Both IGVF and community (non-IGVF)": sorted(igvf_genes & non_igvf_genes),
+    }
+
+
+def format_gene_breakdown(gene_breakdown):
+    lines = ["=== Genes represented ==="]
+    for label, genes in gene_breakdown.items():
+        lines.append(f"{label} ({len(genes)}): {', '.join(genes)}")
+    return "\n".join(lines)
 
 
 def compute_all_stats(condensed_path, metadata_path, merge_calm_genes=False):
@@ -541,7 +639,169 @@ def build_variant_level_reports(condensed, expanded, condensed_path, expanded_pa
     return score_sections, clinical_sections, clinical_sections_mixed_year
 
 
-def build_report_text(table, score_sections, clinical_sections, clinical_sections_mixed_year, allow_clinvar_conflicts=False):
+def excalibr_dataset_to_gene_map(calibration_datasets, metadata):
+    """Map each ExCALIBR_calibrations `dataset` value to its `Gene`, via the
+    same Curation metadata (`Dataset Name` -> `Gene`) used elsewhere in this
+    script.
+
+    A `dataset` value ending in `_clinvar_2018` is a mixed-year duplicate
+    calibration of the same underlying dataset -- that suffix isn't part of
+    Supplementary_Data_3's `Dataset Name`, so it's stripped before lookup.
+    Both sides are also Unicode-normalized (NFC) before comparison, since
+    accented characters (e.g. in author names) can round-trip through Excel
+    in different composed/decomposed forms across files.
+
+    Raises ValueError listing any `dataset` value that still doesn't resolve
+    to a `Dataset Name` in the metadata after these adjustments.
+    """
+    normalized_index = {unicodedata.normalize("NFC", name): name for name in metadata.index}
+
+    def resolve(dataset):
+        stripped = dataset.removesuffix(EXCALIBR_MIXED_YEAR_DATASET_SUFFIX)
+        return normalized_index.get(unicodedata.normalize("NFC", stripped))
+
+    mapping = {}
+    unmapped = []
+    for dataset in calibration_datasets:
+        resolved = resolve(dataset)
+        if resolved is None:
+            unmapped.append(dataset)
+        else:
+            mapping[dataset] = metadata.loc[resolved, GENE_COL]
+    if unmapped:
+        raise ValueError(
+            f"{EXCALIBR_CALIBRATIONS_SHEET} dataset(s) not found in {METADATA_SHEET} metadata: {sorted(unmapped)}"
+        )
+    return mapping
+
+
+def compute_excalibr_calibration_stats(calibrations, metadata, merge_calm_genes=False):
+    """How many genes have an ExCALIBR calibration, and how many of those
+    genes have at least one dataset where ExCALIBR assigned at least one
+    point of evidence (pathogenic or benign) -- i.e. at least one non-null
+    `range_-8`..`range_8` value in that dataset's row.
+
+    A gene can have several calibration rows (one per dataset); this counts
+    distinct genes, not rows.
+    """
+    dataset_to_gene = excalibr_dataset_to_gene_map(calibrations[EXCALIBR_DATASET_COL], metadata)
+    range_cols = [c for c in calibrations.columns if c.startswith(EXCALIBR_RANGE_COLUMN_PREFIX)]
+    row_has_evidence = calibrations[range_cols].notna().any(axis=1)
+    has_evidence_by_dataset = row_has_evidence.groupby(calibrations[EXCALIBR_DATASET_COL]).any()
+
+    genes_with_calibration = set()
+    genes_with_evidence = set()
+    for dataset, gene_value in dataset_to_gene.items():
+        genes = set(split_genes(gene_value))
+        if merge_calm_genes and genes & CALM_GENES:
+            genes -= CALM_GENES
+            genes.add(CALM_MERGED_LABEL)
+        genes_with_calibration |= genes
+        if has_evidence_by_dataset.get(dataset, False):
+            genes_with_evidence |= genes
+
+    return {
+        "genes_with_excalibr_calibrations": len(genes_with_calibration),
+        "genes_with_evidence_assigned": len(genes_with_evidence),
+    }
+
+
+def format_calibration_summary(stats):
+    total = stats["genes_with_excalibr_calibrations"]
+    with_evidence = stats["genes_with_evidence_assigned"]
+    pct = 100 * with_evidence / total if total else float("nan")
+    return "\n".join(
+        [
+            "=== ExCALIBR calibration coverage (Extended Data Figure 2) ===",
+            f"Genes with ExCALIBR calibrations: {total}",
+            f"Genes with >=1 dataset assigning >=1 point of evidence (pathogenic or benign): {with_evidence} ({pct:.1f}%)",
+        ]
+    )
+
+
+def reclassification_flags(clinvar_group, points):
+    """Per-row agree/disagree/no-evidence flags for one points column against
+    the row's ClinVar pathogenic-or-benign control label.
+
+    A row is in scope only if `clinvar_group` is a pathogenic- or
+    benign-leaning control label (see `PATHOGENIC_VALUES`/`BENIGN_VALUES`);
+    `points` is treated as pathogenic evidence if positive, benign evidence
+    if negative, and no evidence if zero or missing. Returns (flags, in_scope),
+    both boolean Series/DataFrame aligned to `clinvar_group`'s index.
+    """
+    is_pathogenic = clinvar_group.isin(PATHOGENIC_VALUES)
+    is_benign = clinvar_group.isin(BENIGN_VALUES)
+    in_scope = is_pathogenic | is_benign
+
+    assigned_pathogenic = points > 0
+    assigned_benign = points < 0
+    no_evidence = ~assigned_pathogenic & ~assigned_benign
+
+    agree = (is_pathogenic & assigned_pathogenic) | (is_benign & assigned_benign)
+    disagree = (is_pathogenic & assigned_benign) | (is_benign & assigned_pathogenic)
+
+    flags = pd.DataFrame({AGREE_LABEL: agree, DISAGREE_LABEL: disagree, NO_EVIDENCE_LABEL: no_evidence})
+    return flags, in_scope
+
+
+def compute_reclassification_agreement(controls_df):
+    """For each points column in `RECLASSIFICATION_POINTS_COLUMNS`, the
+    agree/disagree/no-evidence breakdown (see `reclassification_flags`) plus
+    the agreement percentage among rows with evidence assigned.
+
+    Returns {label: (total, determinate, agreement_pct, table)}, where `table`
+    is the `summarize_flags` output over the in-scope rows.
+    """
+    results = {}
+    for label, points_col in RECLASSIFICATION_POINTS_COLUMNS.items():
+        flags, in_scope = reclassification_flags(controls_df[CONTROLS_CLINVAR_GROUP_COL], controls_df[points_col])
+        flags = flags[in_scope]
+        total, table = summarize_flags(flags[RECLASSIFICATION_LABELS_ORDER])
+        determinate = total - int(flags[NO_EVIDENCE_LABEL].sum())
+        agreement_pct = 100 * int(flags[AGREE_LABEL].sum()) / determinate if determinate else float("nan")
+        results[label] = (total, determinate, agreement_pct, table)
+    return results
+
+
+def format_reclassification_table(title, total, determinate, agreement_pct, table):
+    lines = [title, f"Total control variants: {total}", f"Determinate calls (evidence assigned): {determinate}"]
+    if determinate:
+        lines.append(f"Agreement with ClinVar PLP/BLB (of determinate calls): {agreement_pct:.1f}%")
+    if total:
+        body = table.copy()
+        body["pct"] = body["pct"].map(lambda x: f"{x:.1f}%")
+        lines.append(body.to_string())
+    return "\n".join(lines)
+
+
+def build_reclassification_report(controls_path):
+    """One section per (`controls_`-prefixed sheet, points column) pair in
+    the controls file. See the module docstring's "Reclassification
+    agreement" note for why every such sheet is expected to agree.
+    """
+    workbook = pd.ExcelFile(controls_path)
+    sheets = [name for name in workbook.sheet_names if name.startswith(CONTROLS_SHEET_PREFIX)]
+    sections = []
+    for sheet in sheets:
+        controls_df = workbook.parse(sheet)
+        agreement = compute_reclassification_agreement(controls_df)
+        for label, (total, determinate, agreement_pct, table) in agreement.items():
+            sections.append(
+                format_reclassification_table(f"{label} -- {sheet}", total, determinate, agreement_pct, table)
+            )
+    return sections
+
+
+def build_report_text(
+    table,
+    gene_breakdown,
+    score_sections,
+    clinical_sections,
+    clinical_sections_mixed_year,
+    calibration_summary,
+    reclassification_sections,
+    allow_clinvar_conflicts=False,
+):
     conflict_note = (
         "conflicting/ambiguous ClinVar calls folded in via any-match"
         if allow_clinvar_conflicts
@@ -550,12 +810,16 @@ def build_report_text(table, score_sections, clinical_sections, clinical_section
     parts = [
         "=== Dataset summary ===",
         table.to_string(),
+        format_gene_breakdown(gene_breakdown),
         "=== Score coverage (REVEL, AlphaMissense, MutPred2) ===",
         *score_sections,
         f"=== Clinical attributes (ClinVar 2025, gnomAD; {conflict_note}) ===",
         *clinical_sections,
         f"=== Clinical attributes (ClinVar 2025, except ClinVar 2018 for BRCA1/PTEN/MSH2/TP53; gnomAD; {conflict_note}) ===",
         *clinical_sections_mixed_year,
+        calibration_summary,
+        "=== Reclassification agreement (Figure 4c) ===",
+        *reclassification_sections,
     ]
     return "\n\n".join(parts)
 
@@ -578,6 +842,24 @@ def build_report_text(table, score_sections, clinical_sections, clinical_section
     required=False,
     default=DEFAULT_EXPANDED_FILE,
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option(
+    "--excalibr-calibrations-file",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    default=DEFAULT_EXCALIBR_CALIBRATIONS_FILE,
+    help=(
+        f"Path to the ExCALIBR calibrations workbook (default {DEFAULT_EXCALIBR_CALIBRATIONS_FILE}), "
+        f"read from its '{EXCALIBR_CALIBRATIONS_SHEET}' sheet, for the calibration-coverage section."
+    ),
+)
+@click.option(
+    "--controls-file",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    default=DEFAULT_CONTROLS_FILE,
+    help=(
+        f"Path to the controls workbook (default {DEFAULT_CONTROLS_FILE}), read from every sheet "
+        f"whose name starts with '{CONTROLS_SHEET_PREFIX}', for the reclassification-agreement section."
+    ),
 )
 @click.option(
     "--output",
@@ -610,12 +892,21 @@ def build_report_text(table, score_sections, clinical_sections, clinical_section
         "handling in Analysis/Curation_summary_V5_cleaned.ipynb."
     ),
 )
-def main(condensed_file, metadata_file, expanded_file, output, merge_calm_genes, allow_clinvar_conflicts):
+def main(
+    condensed_file,
+    metadata_file,
+    expanded_file,
+    excalibr_calibrations_file,
+    controls_file,
+    output,
+    merge_calm_genes,
+    allow_clinvar_conflicts,
+):
     condensed = pd.read_csv(condensed_file, sep="\t", dtype=str, keep_default_na=False)
     metadata = load_dataset_metadata(metadata_file)
 
     try:
-        stats = compute_all_stats_from_frame(condensed, metadata, merge_calm_genes=merge_calm_genes)
+        stats, gene_breakdown = compute_all_stats_from_frame(condensed, metadata, merge_calm_genes=merge_calm_genes)
     except ValueError as exc:
         raise click.ClickException(str(exc)) from exc
 
@@ -626,8 +917,26 @@ def main(condensed_file, metadata_file, expanded_file, output, merge_calm_genes,
         condensed, expanded, condensed_file, expanded_file, allow_clinvar_conflicts=allow_clinvar_conflicts
     )
 
+    calibrations = pd.read_excel(excalibr_calibrations_file, sheet_name=EXCALIBR_CALIBRATIONS_SHEET)
+    try:
+        calibration_stats = compute_excalibr_calibration_stats(
+            calibrations, metadata, merge_calm_genes=merge_calm_genes
+        )
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from exc
+    calibration_summary = format_calibration_summary(calibration_stats)
+
+    reclassification_sections = build_reclassification_report(controls_file)
+
     report = build_report_text(
-        table, score_sections, clinical_sections, clinical_sections_mixed_year, allow_clinvar_conflicts=allow_clinvar_conflicts
+        table,
+        gene_breakdown,
+        score_sections,
+        clinical_sections,
+        clinical_sections_mixed_year,
+        calibration_summary,
+        reclassification_sections,
+        allow_clinvar_conflicts=allow_clinvar_conflicts,
     )
     click.echo(report)
 

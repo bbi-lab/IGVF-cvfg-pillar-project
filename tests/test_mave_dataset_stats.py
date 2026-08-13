@@ -1,27 +1,40 @@
 import re
+import unicodedata
 
 import pandas as pd
 import pytest
 from click.testing import CliRunner
 
 from src.mave_dataset_stats import (
+    AGREE_LABEL,
+    CALM_MERGED_LABEL,
     CLINVAR_CONFLICT_LABEL,
+    DISAGREE_LABEL,
     GNOMAD_LABEL,
     NO_ANNOTATION_LABEL,
+    NO_EVIDENCE_LABEL,
     PATHOGENIC_OR_BENIGN_LABEL,
     SNV_ACCESSIBLE_LABEL,
     SNV_LABEL,
     VUS_LABEL,
+    build_reclassification_report,
     clinvar_classification_from_flags,
     clinvar_significance_flags,
     compute_all_stats,
+    compute_excalibr_calibration_stats,
+    compute_reclassification_agreement,
     distinct_variant_flags,
+    excalibr_dataset_to_gene_map,
+    format_calibration_summary,
     format_clinical_table,
+    format_reclassification_table,
     has_any_value,
     is_snv_accessible,
+    load_dataset_metadata,
     main,
     matches_any_value,
     mixed_year_clinvar_series,
+    reclassification_flags,
     split_genes,
     stats_to_dataframe,
     summarize_clinical_flags,
@@ -58,11 +71,36 @@ def _bucket_count(section_text, label):
     return int(match.group(1))
 
 
-def _write_metadata(path, rows):
+def _write_metadata(path, rows, genes=None):
+    """`genes`, if given, maps `Dataset Name` -> `Gene` and adds a Gene column --
+    needed only by tests that exercise the ExCALIBR-calibration code path, which
+    looks up genes via metadata rather than the condensed/expanded file.
+    """
     columns = ["Dataset Name", "IGVF Produced?", "Primary Score Set or Meta-analysis?"]
     df = pd.DataFrame(rows, columns=columns)
+    if genes is not None:
+        df["Gene"] = df["Dataset Name"].map(genes)
     with pd.ExcelWriter(path) as writer:
         df.to_excel(writer, sheet_name="Curation", index=False)
+
+
+def _write_excalibr_calibrations(path, rows):
+    """`rows` is a list of (dataset, range_-1, range_1) tuples; `range_-1`/`range_1`
+    hold a value (any non-null placeholder) when that dataset has benign/pathogenic
+    evidence, or None when it doesn't.
+    """
+    df = pd.DataFrame(rows, columns=["dataset", "range_-1", "range_1"])
+    df.to_excel(path, sheet_name="ExCALIBR_calibrations", index=False)
+
+
+def _write_controls_file(path, sheets):
+    """`sheets` is {sheet_name: rows}, where each row is
+    (clnsig_group_18_25, ExC_points_2025, OP_points).
+    """
+    columns = ["clnsig_group_18_25", "ExC_points_2025", "OP_points"]
+    with pd.ExcelWriter(path) as writer:
+        for sheet_name, rows in sheets.items():
+            pd.DataFrame(rows, columns=columns).to_excel(writer, sheet_name=sheet_name, index=False)
 
 
 @pytest.fixture
@@ -163,8 +201,37 @@ def full_dataset_files(tmp_path):
             ("DS_COMM_A", "No", "primary score set"),
             ("DS_COMM_B", "No", "meta-analysis"),
         ],
+        genes={"DS_IGVF_A": "BRCA1", "DS_IGVF_B": "GENEB, GENEC", "DS_COMM_A": "GENEC", "DS_COMM_B": "GENED"},
     )
-    return condensed_path, metadata_path, expanded_path
+
+    excalibr_path = tmp_path / "excalibr_calibrations.xlsx"
+    # DS_IGVF_A -> BRCA1 has evidence; the "_clinvar_2018"-suffixed DS_IGVF_B row
+    # (-> GENEB, GENEC) and DS_COMM_A (no row at all) don't; DS_COMM_B -> GENED does.
+    # So 4 genes are calibrated (BRCA1, GENEB, GENEC, GENED) and 2 have evidence.
+    _write_excalibr_calibrations(
+        excalibr_path,
+        [
+            ("DS_IGVF_A", None, "0.5 1"),
+            ("DS_IGVF_B_clinvar_2018", None, None),
+            ("DS_COMM_B", "-1 -0.5", None),
+        ],
+    )
+
+    controls_path = tmp_path / "controls.xlsx"
+    _write_controls_file(
+        controls_path,
+        {
+            "controls_TEST_GeneSpecific": [
+                ("Pathogenic", 3, 2),  # agree on both
+                ("Benign", -2, -1),  # agree on both
+                ("Pathogenic", -1, 0),  # ExC disagrees; OP has no evidence
+                ("Likely benign", 0, 1),  # ExC has no evidence; OP disagrees
+                ("Benign/Likely benign", -4, -2),  # agree on both
+            ]
+        },
+    )
+
+    return condensed_path, metadata_path, expanded_path, excalibr_path, controls_path
 
 
 def test_split_genes_handles_multi_gene_datasets():
@@ -174,9 +241,9 @@ def test_split_genes_handles_multi_gene_datasets():
 
 def test_compute_all_stats_buckets(dataset_files):
     condensed_path, metadata_path = dataset_files
-    stats = compute_all_stats(condensed_path, metadata_path)
+    stats, gene_breakdown = compute_all_stats(condensed_path, metadata_path)
 
-    igvf = stats["Community (IGVF)"]
+    igvf = stats["IGVF"]
     assert igvf["datasets"] == 2
     assert igvf["variant_effect_measurements"] == 3
     assert igvf["composite_scores"] == 0
@@ -198,14 +265,20 @@ def test_compute_all_stats_buckets(dataset_files):
     assert combined["distinct_variants_assayed"] == 4
     assert combined["genes_represented"] == 4
 
+    # GENEA (DS_IGVF_A) and GENEB (DS_IGVF_B) are IGVF-only; GENED (DS_COMM_B) is
+    # community-only; GENEC is shared (DS_IGVF_B and DS_COMM_A).
+    assert gene_breakdown["IGVF only"] == ["GENEA", "GENEB"]
+    assert gene_breakdown["Community (non-IGVF) only"] == ["GENED"]
+    assert gene_breakdown["Both IGVF and community (non-IGVF)"] == ["GENEC"]
+
 
 def test_stats_to_dataframe_adds_pct_of_combined_measurements(dataset_files):
     condensed_path, metadata_path = dataset_files
-    stats = compute_all_stats(condensed_path, metadata_path)
+    stats, _ = compute_all_stats(condensed_path, metadata_path)
     table = stats_to_dataframe(stats)
 
     # 3 of the combined 4 variant_effect_measurements are IGVF, 1 is non-IGVF.
-    assert table.loc["Community (IGVF)", "pct_variant_effect_measurements"] == pytest.approx(75.0)
+    assert table.loc["IGVF", "pct_variant_effect_measurements"] == pytest.approx(75.0)
     assert table.loc["Community (non-IGVF)", "pct_variant_effect_measurements"] == pytest.approx(25.0)
     assert table.loc["Combined (IGVF + community)", "pct_variant_effect_measurements"] == pytest.approx(100.0)
 
@@ -231,11 +304,14 @@ def test_merge_calm_genes_collapses_calm_paralogs(tmp_path):
         ],
     )
 
-    default_stats = compute_all_stats(condensed_path, metadata_path)
+    default_stats, default_gene_breakdown = compute_all_stats(condensed_path, metadata_path)
     assert default_stats["Community (non-IGVF)"]["genes_represented"] == 4
+    # The gene breakdown list always merges CALM1/2/3, regardless of --merge-calm-genes.
+    assert default_gene_breakdown["Community (non-IGVF) only"] == [CALM_MERGED_LABEL, "GENED"]
 
-    merged_stats = compute_all_stats(condensed_path, metadata_path, merge_calm_genes=True)
+    merged_stats, merged_gene_breakdown = compute_all_stats(condensed_path, metadata_path, merge_calm_genes=True)
     assert merged_stats["Community (non-IGVF)"]["genes_represented"] == 2
+    assert merged_gene_breakdown["Community (non-IGVF) only"] == [CALM_MERGED_LABEL, "GENED"]
 
 
 def test_compute_all_stats_raises_on_missing_metadata(dataset_files):
@@ -462,18 +538,54 @@ def test_summarize_and_format_clinical_table_breaks_out_snv_per_bucket():
 
 
 def test_cli_prints_table_and_writes_output(full_dataset_files, tmp_path):
-    condensed_path, metadata_path, expanded_path = full_dataset_files
+    condensed_path, metadata_path, expanded_path, excalibr_path, controls_path = full_dataset_files
     output_path = tmp_path / "report.txt"
 
     result = CliRunner().invoke(
         main,
-        [str(condensed_path), str(metadata_path), str(expanded_path), "--output", str(output_path)],
+        [
+            str(condensed_path),
+            str(metadata_path),
+            str(expanded_path),
+            "--excalibr-calibrations-file",
+            str(excalibr_path),
+            "--controls-file",
+            str(controls_path),
+            "--output",
+            str(output_path),
+        ],
     )
 
     assert result.exit_code == 0
-    assert "Community (IGVF)" in result.output
+    assert "IGVF" in result.output
     assert "Score coverage" in result.output
     assert "Clinical attributes" in result.output
+
+    # BRCA1 (DS_IGVF_A) and GENEB (DS_IGVF_B) are IGVF-only; GENED (DS_COMM_B) is
+    # community-only; GENEC is shared (DS_IGVF_B and DS_COMM_A).
+    genes_section = result.output.split("=== Genes represented ===")[1].split("=== Score coverage")[0]
+    assert "IGVF only (2): BRCA1, GENEB" in genes_section
+    assert "Community (non-IGVF) only (1): GENED" in genes_section
+    assert "Both IGVF and community (non-IGVF) (1): GENEC" in genes_section
+
+    # 4 genes (BRCA1, GENEB, GENEC, GENED) are calibrated; 2 (BRCA1, GENED) have evidence.
+    assert "Genes with ExCALIBR calibrations: 4" in result.output
+    assert "Genes with >=1 dataset assigning >=1 point of evidence (pathogenic or benign): 2 (50.0%)" in result.output
+
+    # controls_TEST_GeneSpecific: ExC_points_2025 agrees on 3/5, disagrees on 1, no evidence on 1
+    # -> 3/4 determinate calls agree; OP_points agrees on 3/5, disagrees on 1, no evidence on 1
+    # -> same 3/4 determinate agreement (see full_dataset_files' controls_path rows).
+    reclassification_section = result.output.split("=== Reclassification agreement (Figure 4c) ===")[1]
+    excalibr_reclass, functional_reclass = reclassification_section.split(
+        "ExCALIBR evidence -- controls_TEST_GeneSpecific"
+    )[1].split("Functional class -- controls_TEST_GeneSpecific")
+    assert "Total control variants: 5" in excalibr_reclass
+    assert _bucket_count(excalibr_reclass, AGREE_LABEL) == 3
+    assert _bucket_count(excalibr_reclass, DISAGREE_LABEL) == 1
+    assert _bucket_count(excalibr_reclass, NO_EVIDENCE_LABEL) == 1
+    assert "Agreement with ClinVar PLP/BLB (of determinate calls): 75.0%" in excalibr_reclass
+    assert _bucket_count(functional_reclass, AGREE_LABEL) == 3
+    assert "Agreement with ClinVar PLP/BLB (of determinate calls): 75.0%" in functional_reclass
     # Assayed level: all 4 distinct variants (and all 5 measurement rows) are SNV-accessible.
     assert "Total: 4 (4 SNV-accessible)" in result.output
     assert "Total: 5 (5 SNV-accessible)" in result.output
@@ -517,9 +629,22 @@ def test_cli_allow_clinvar_conflicts_flag_toggles_conflict_handling(tmp_path):
     ]
     _write_full_variant_file(condensed_path, rows)
     _write_full_variant_file(expanded_path, rows)
-    _write_metadata(metadata_path, [("DS_A", "No", "primary score set")])
+    _write_metadata(metadata_path, [("DS_A", "No", "primary score set")], genes={"DS_A": "GENEA"})
 
-    default_result = CliRunner().invoke(main, [str(condensed_path), str(metadata_path), str(expanded_path)])
+    excalibr_path = tmp_path / "excalibr_calibrations.xlsx"
+    _write_excalibr_calibrations(excalibr_path, [("DS_A", None, None)])
+    controls_path = tmp_path / "controls.xlsx"
+    _write_controls_file(controls_path, {"controls_TEST": [("Pathogenic", 1, 1)]})
+    extra_args = [
+        "--excalibr-calibrations-file",
+        str(excalibr_path),
+        "--controls-file",
+        str(controls_path),
+    ]
+
+    default_result = CliRunner().invoke(
+        main, [str(condensed_path), str(metadata_path), str(expanded_path), *extra_args]
+    )
     assert default_result.exit_code == 0
     assert "conflicting/ambiguous ClinVar calls excluded" in default_result.output
     default_distinct_section = default_result.output.split("Clinical attributes -- assayed variants, distinct")[1]
@@ -527,7 +652,7 @@ def test_cli_allow_clinvar_conflicts_flag_toggles_conflict_handling(tmp_path):
     assert _bucket_count(default_distinct_section, PATHOGENIC_OR_BENIGN_LABEL) == 0
 
     legacy_result = CliRunner().invoke(
-        main, [str(condensed_path), str(metadata_path), str(expanded_path), "--allow-clinvar-conflicts"]
+        main, [str(condensed_path), str(metadata_path), str(expanded_path), "--allow-clinvar-conflicts", *extra_args]
     )
     assert legacy_result.exit_code == 0
     assert "conflicting/ambiguous ClinVar calls folded in via any-match" in legacy_result.output
@@ -537,7 +662,7 @@ def test_cli_allow_clinvar_conflicts_flag_toggles_conflict_handling(tmp_path):
 
 
 def test_cli_reports_missing_metadata_as_click_error(full_dataset_files):
-    condensed_path, metadata_path, expanded_path = full_dataset_files
+    condensed_path, metadata_path, expanded_path, _excalibr_path, _controls_path = full_dataset_files
     _write_full_variant_file(
         condensed_path,
         [("DS_UNKNOWN", "GENEX", "c5", "p5", "", "", "", "", "", "", "A", "G")],
@@ -547,3 +672,169 @@ def test_cli_reports_missing_metadata_as_click_error(full_dataset_files):
 
     assert result.exit_code == 1
     assert "DS_UNKNOWN" in result.output
+
+
+def _write_gene_metadata(path, gene_by_dataset):
+    df = pd.DataFrame({"Dataset Name": list(gene_by_dataset), "Gene": list(gene_by_dataset.values())})
+    with pd.ExcelWriter(path) as writer:
+        df.to_excel(writer, sheet_name="Curation", index=False)
+
+
+def test_excalibr_dataset_to_gene_map_strips_clinvar_2018_suffix(tmp_path):
+    metadata_path = tmp_path / "metadata.xlsx"
+    _write_gene_metadata(metadata_path, {"BRCA1_Findlay_2018": "BRCA1"})
+    metadata = load_dataset_metadata(metadata_path)
+
+    mapping = excalibr_dataset_to_gene_map(["BRCA1_Findlay_2018_clinvar_2018"], metadata)
+
+    assert mapping == {"BRCA1_Findlay_2018_clinvar_2018": "BRCA1"}
+
+
+def test_excalibr_dataset_to_gene_map_normalizes_unicode(tmp_path):
+    metadata_path = tmp_path / "metadata.xlsx"
+    # Precomposed accented character (single codepoint), as Supplementary_Data_3 stores it.
+    precomposed = unicodedata.normalize("NFC", "RAD51C_Olvera-Le\u00f3n_2024")
+    _write_gene_metadata(metadata_path, {precomposed: "RAD51C"})
+    metadata = load_dataset_metadata(metadata_path)
+
+    # Decomposed base letter + combining acute accent, as the ExCALIBR_calibrations sheet stores it.
+    decomposed = unicodedata.normalize("NFD", precomposed)
+    assert decomposed != precomposed  # sanity check that the two forms really do differ
+    mapping = excalibr_dataset_to_gene_map([decomposed], metadata)
+
+    assert mapping == {decomposed: "RAD51C"}
+
+
+def test_excalibr_dataset_to_gene_map_raises_on_unmapped_dataset(tmp_path):
+    metadata_path = tmp_path / "metadata.xlsx"
+    _write_gene_metadata(metadata_path, {"BRCA2_IGVF": "BRCA2"})
+    metadata = load_dataset_metadata(metadata_path)
+
+    with pytest.raises(ValueError, match="BRCA2_Huang_2026"):
+        excalibr_dataset_to_gene_map(["BRCA2_IGVF", "BRCA2_Huang_2026"], metadata)
+
+
+def test_compute_excalibr_calibration_stats_counts_genes_with_evidence(tmp_path):
+    metadata_path = tmp_path / "metadata.xlsx"
+    _write_gene_metadata(
+        metadata_path,
+        {"DS_A": "GENEA", "DS_B": "GENEB, GENEC", "DS_D": "GENED"},
+    )
+    metadata = load_dataset_metadata(metadata_path)
+
+    calibrations = pd.DataFrame(
+        {
+            "dataset": ["DS_A", "DS_B_clinvar_2018", "DS_D"],
+            "range_-1": [None, None, "-1 -0.5"],
+            "range_1": ["0.5 1", None, None],
+        }
+    )
+
+    stats = compute_excalibr_calibration_stats(calibrations, metadata)
+
+    # 4 genes are calibrated (GENEA, GENEB, GENEC, GENED); GENEA and GENED have
+    # evidence, GENEB/GENEC (from the all-null DS_B row) don't.
+    assert stats["genes_with_excalibr_calibrations"] == 4
+    assert stats["genes_with_evidence_assigned"] == 2
+
+
+def test_compute_excalibr_calibration_stats_merges_calm_genes(tmp_path):
+    metadata_path = tmp_path / "metadata.xlsx"
+    _write_gene_metadata(metadata_path, {"DS_CALM": "CALM1, CALM2, CALM3"})
+    metadata = load_dataset_metadata(metadata_path)
+    calibrations = pd.DataFrame({"dataset": ["DS_CALM"], "range_-1": [None], "range_1": [None]})
+
+    default_stats = compute_excalibr_calibration_stats(calibrations, metadata)
+    assert default_stats["genes_with_excalibr_calibrations"] == 3
+
+    merged_stats = compute_excalibr_calibration_stats(calibrations, metadata, merge_calm_genes=True)
+    assert merged_stats["genes_with_excalibr_calibrations"] == 1
+
+
+def test_format_calibration_summary():
+    text = format_calibration_summary({"genes_with_excalibr_calibrations": 4, "genes_with_evidence_assigned": 2})
+    assert "Genes with ExCALIBR calibrations: 4" in text
+    assert "2 (50.0%)" in text
+
+
+def test_reclassification_flags_agree_disagree_and_no_evidence():
+    clinvar_group = pd.Series(["Pathogenic", "Benign", "Pathogenic", "Likely benign"])
+    points = pd.Series([3, -2, -1, 0])
+
+    flags, in_scope = reclassification_flags(clinvar_group, points)
+
+    assert list(in_scope) == [True, True, True, True]
+    assert list(flags[AGREE_LABEL]) == [True, True, False, False]
+    assert list(flags[DISAGREE_LABEL]) == [False, False, True, False]
+    assert list(flags[NO_EVIDENCE_LABEL]) == [False, False, False, True]
+
+
+def test_reclassification_flags_excludes_out_of_scope_clinvar_calls():
+    clinvar_group = pd.Series(["Uncertain significance", "Pathogenic"])
+    points = pd.Series([3, 3])
+
+    _flags, in_scope = reclassification_flags(clinvar_group, points)
+
+    assert list(in_scope) == [False, True]
+
+
+def test_compute_reclassification_agreement():
+    controls_df = pd.DataFrame(
+        {
+            "clnsig_group_18_25": ["Pathogenic", "Benign", "Pathogenic", "Likely benign", "Benign/Likely benign"],
+            "ExC_points_2025": [3, -2, -1, 0, -4],
+            "OP_points": [2, -1, 0, 1, -2],
+        }
+    )
+
+    results = compute_reclassification_agreement(controls_df)
+
+    excalibr_total, excalibr_determinate, excalibr_pct, excalibr_table = results["ExCALIBR evidence"]
+    assert excalibr_total == 5
+    assert excalibr_determinate == 4
+    assert excalibr_pct == pytest.approx(75.0)
+    assert excalibr_table.loc[AGREE_LABEL, "count"] == 3
+
+    functional_total, functional_determinate, functional_pct, functional_table = results["Functional class"]
+    assert functional_total == 5
+    assert functional_determinate == 4
+    assert functional_pct == pytest.approx(75.0)
+    assert functional_table.loc[AGREE_LABEL, "count"] == 3
+
+
+def test_format_reclassification_table_reports_totals_and_agreement():
+    controls_df = pd.DataFrame(
+        {
+            "clnsig_group_18_25": ["Pathogenic", "Benign"],
+            "ExC_points_2025": [3, -2],
+            "OP_points": [3, -2],
+        }
+    )
+    total, determinate, pct, table = compute_reclassification_agreement(controls_df)["ExCALIBR evidence"]
+
+    text = format_reclassification_table("ExCALIBR evidence -- test", total, determinate, pct, table)
+
+    assert "Total control variants: 2" in text
+    assert "Determinate calls (evidence assigned): 2" in text
+    assert "Agreement with ClinVar PLP/BLB (of determinate calls): 100.0%" in text
+
+
+def test_build_reclassification_report_covers_every_controls_prefixed_sheet(tmp_path):
+    controls_path = tmp_path / "controls.xlsx"
+    _write_controls_file(
+        controls_path,
+        {
+            "controls_REVEL_GeneSpecific": [("Pathogenic", 1, 1), ("Benign", -1, -1)],
+            "controls_AM_GeneSpecific": [("Pathogenic", 2, 2)],
+            "not_a_controls_sheet": [("Pathogenic", 1, 1)],
+        },
+    )
+
+    sections = build_reclassification_report(controls_path)
+
+    joined = "\n\n".join(sections)
+    assert "ExCALIBR evidence -- controls_REVEL_GeneSpecific" in joined
+    assert "Functional class -- controls_REVEL_GeneSpecific" in joined
+    assert "ExCALIBR evidence -- controls_AM_GeneSpecific" in joined
+    assert "not_a_controls_sheet" not in joined
+    assert len(sections) == 4  # 2 controls_ sheets x 2 points columns
