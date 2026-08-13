@@ -11,7 +11,7 @@ from src.build_variant_reclassification_dataset import (
 )
 
 CHECKPOINT_COLS = OUTPUT_COLUMNS[:-4] + [
-    "VariantNotes", "splice_var_amino", "ExC_points_2025", "ExC_points_2018",
+    "VariantNotes", "ExC_points_2025", "ExC_points_2018",
     "OP_points", "Fxn_points", "Points_REVEL_GeneSpecific_GenomeWide",
 ]
 

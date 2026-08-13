@@ -45,11 +45,8 @@ determinism. This also reconciles amino-acid-resolution assay rows onto
 their DNA coordinate, since they share the same genomic key columns as any
 nt-resolution row for the same physical variant.
 
-Output columns match `integrated_variant_effect_dataset.tsv`'s schema,
-except `ID` is replaced by `mavedb_variant_urn` (a different identifier
-scheme -- the checkpoint doesn't carry the raw file's `ID` values) and
-`hg19_pos`/`auth_reported_rep_score` are dropped (not present in the
-checkpoint), plus the four new points columns appended at the end.
+Output columns are `integrated_variant_effect_dataset.tsv`'s full schema,
+in its column order, with the four new points columns appended at the end.
 """
 
 from pathlib import Path
@@ -77,10 +74,12 @@ DISALLOWED_VARIANT_NOTES = frozenset({
 })
 
 OUTPUT_COLUMNS = [
-    "mavedb_variant_urn", "Dataset", "Gene", "HGNC_id", "Chrom", "Strand", "hg38_start", "hg38_end",
+    "Dataset", "Gene", "HGNC_id", "mavedb_variant_urn", "Chrom", "Strand", "hg38_start", "hg38_end",
     "ref_allele", "alt_allele", "auth_transcript_id", "transcript_pos", "transcript_ref", "transcript_alt",
-    "aa_pos", "aa_ref", "aa_alt", "hgvs_c", "hgvs_p", "consequence", "simplified_consequence",
-    "auth_reported_score", "auth_reported_func_class", "splice_measure", "gnomad_MAF",
+    "aa_pos", "aa_ref", "aa_alt", "hgvs_c", "hgvs_p", "consequence", "most_severe_mutational_consequence",
+    "auth_reported_score", "rna_score", "auth_reported_func_class", "auth_reported_func_class_category",
+    "splice_measure", "gnomad_MAF",
+    "clinvar_sig_2026", "clinvar_star_2026", "clinvar_date_last_reviewed_2026",
     "clinvar_sig_2025", "clinvar_star_2025", "clinvar_date_last_reviewed_2025",
     "clinvar_sig_2018", "clinvar_star_2018", "clinvar_date_last_reviewed_2018",
     "nucleotide_or_aa", "Ensembl Transcript ID", "RefSeq Transcript ID",
@@ -90,7 +89,6 @@ OUTPUT_COLUMNS = [
     "Interval 4 Name", "Interval 4 Range", "Interval 4 Class",
     "Interval 5 Name", "Interval 5 Range", "Interval 5 Class",
     "Interval 6 Name", "Interval 6 Range", "Interval 6 Class",
-    "Flag", "REVEL", "REVEL_train", "AM_score", "AM_class", "MutPred2", "MP2_train",
     "spliceAI_DS_AG", "spliceAI_DS_AL", "spliceAI_DS_DG", "spliceAI_DS_DL",
     "spliceAI_DP_AG", "spliceAI_DP_AL", "spliceAI_DP_DG", "spliceAI_DP_DL",
     "ClinVar Variation Id_ClinGen_repo", "Allele Registry Id_ClinGen_repo", "Disease_ClinGen_repo",
@@ -100,6 +98,8 @@ OUTPUT_COLUMNS = [
     "Guideline_ClinGen_repo", "Approval Date_ClinGen_repo", "Published Date_ClinGen_repo",
     "Retracted_ClinGen_repo", "Evidence Repo Link_ClinGen_repo", "Uuid_ClinGen_repo",
     "Updated_Classification_ClinGen_repo", "Updated_Evidence Codes_ClinGen_repo",
+    "REVEL", "REVEL_train", "AM_score", "AM_class", "MutPred2", "MP2_train",
+    "simplified_consequence", "condensed_consequence", "splice_variant", "splice_var_amino", "Flag",
     "ExCALIBR_points", "OddsPath_points", "Functional_points", "Combined_points",
 ]
 
