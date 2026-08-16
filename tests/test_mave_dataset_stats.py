@@ -14,8 +14,11 @@ from src.mave_dataset_stats import (
     NO_ANNOTATION_LABEL,
     NO_EVIDENCE_LABEL,
     PATHOGENIC_OR_BENIGN_LABEL,
+    RECLASSIFICATION_USECOLS,
+    RECLASSIFICATION_VARIANT_CLASSIFICATION_TITLE,
     SNV_ACCESSIBLE_LABEL,
     SNV_LABEL,
+    VARIANT_CLASSIFICATION_TITLE,
     VUS_LABEL,
     build_reclassification_report,
     clinvar_classification_from_flags,
@@ -23,17 +26,22 @@ from src.mave_dataset_stats import (
     compute_all_stats,
     compute_excalibr_calibration_stats,
     compute_reclassification_agreement,
+    compute_variant_classification_stats,
+    compute_variant_classification_stats_from_reclassification_file,
+    distinct_dna_variants,
     distinct_variant_flags,
     excalibr_dataset_to_gene_map,
     format_calibration_summary,
     format_clinical_table,
     format_reclassification_table,
+    format_variant_classification_summary,
     has_any_value,
     is_snv_accessible,
     load_dataset_metadata,
     main,
     matches_any_value,
     mixed_year_clinvar_series,
+    points_are_pathogenic_or_benign,
     reclassification_flags,
     split_genes,
     stats_to_dataframe,
@@ -101,6 +109,40 @@ def _write_controls_file(path, sheets):
     with pd.ExcelWriter(path) as writer:
         for sheet_name, rows in sheets.items():
             pd.DataFrame(rows, columns=columns).to_excel(writer, sheet_name=sheet_name, index=False)
+
+
+def _write_variant_classification_sheets(path, sheets, mode="a"):
+    """`sheets` is {sheet_name: rows}, where each row is
+    (Gene, Chrom, hg38_start, ref_allele, alt_allele, Class_REVEL) -- the
+    columns `compute_variant_classification_stats` reads. Appends (`mode="a"`)
+    to an existing workbook at `path` (e.g. one already written by
+    `_write_controls_file`), since the main CLI reads both sets of sheets
+    from the same `--controls-file`; pass `mode="w"` to create a fresh file.
+
+    Also adds `clnsig_group_18_25`/`ExC_points_2025`/`OP_points` columns
+    (empty/no-evidence), since the real Supplementary_Data_5 `controls_`-
+    prefixed sheets carry both this function's columns and those
+    `build_reclassification_report` reads -- one of `sheets`' names
+    (`controls_REVEL_GeneSpecific`) matches `CONTROLS_SHEET_PREFIX`, so
+    without them `build_reclassification_report` would KeyError on it.
+    """
+    columns = ["Gene", "Chrom", "hg38_start", "ref_allele", "alt_allele", "Class_REVEL"]
+    with pd.ExcelWriter(path, mode=mode, engine="openpyxl") as writer:
+        for sheet_name, rows in sheets.items():
+            df = pd.DataFrame(rows, columns=columns)
+            df["clnsig_group_18_25"] = None
+            df["ExC_points_2025"] = 0
+            df["OP_points"] = 0
+            df.to_excel(writer, sheet_name=sheet_name, index=False)
+
+
+def _write_reclassification_file(path, rows):
+    """`rows` is a list of (clinvar_sig_2025, gnomad_MAF, ref_allele,
+    alt_allele, Combined_points) tuples -- the columns
+    `compute_variant_classification_stats_from_reclassification_file` reads.
+    """
+    columns = ["clinvar_sig_2025", "gnomad_MAF", "ref_allele", "alt_allele", "Combined_points"]
+    pd.DataFrame(rows, columns=columns).to_csv(path, sep="\t", index=False)
 
 
 @pytest.fixture
@@ -230,8 +272,56 @@ def full_dataset_files(tmp_path):
             ]
         },
     )
+    # coords (1, 100, A, G) is shared between "controls" and "gnomAD" below, to
+    # exercise the combined total's cross-category dedup -- it should count
+    # once, not twice, in the combined "Distinct DNA variants classified" total.
+    _write_variant_classification_sheets(
+        controls_path,
+        {
+            "controls_REVEL_GeneSpecific": [
+                ("GENEX", 1, 100, "A", "G", "Pathogenic"),
+                ("GENEX", 1, 101, "A", "G", "Benign"),
+            ],
+            "ClinGen_Repo_REVEL_GeneSpecific": [
+                ("GENEX", 1, 102, "A", "G", "Likely Pathogenic"),
+            ],
+            "VUS_REVEL": [
+                ("GENEX", 1, 103, "A", "G", "Pathogenic"),  # resolved
+                ("GENEX", 1, 104, "A", "G", "Uncertain"),  # not resolved
+                ("GENEX", 1, 105, "A", "G", "Benign"),  # resolved
+            ],
+            "gnomAD_REVEL": [
+                ("GENEX", 1, 100, "A", "G", "Pathogenic"),  # duplicate of controls row above
+            ],
+            "Unobserved_REVEL": [
+                ("GENEX", 1, 106, "A", "G", "Pathogenic"),  # resolved
+                ("GENEX", 1, 107, "A", "G", "Uncertain"),  # not resolved
+            ],
+        },
+    )
 
-    return condensed_path, metadata_path, expanded_path, excalibr_path, controls_path
+    # 7 rows total. Pathogenic-or-benign (points >= 6 or <= -1): rows 1, 3, 5,
+    # 6, 7 (5 of 7). VUS (clinvar_sig_2025 == "Uncertain significance"): rows
+    # 1-2, of which row 1 (points 8) resolves (1 of 2). Unobserved (both
+    # clinvar_sig_2025 and gnomad_MAF null, SNV only): rows 3-4 (row 7 is
+    # excluded -- its ref/alt aren't single-base; row 5/6 have a
+    # clinvar_sig_2025/gnomad_MAF value), of which row 3 (points -8) resolves
+    # (1 of 2).
+    reclassification_path = tmp_path / "reclassification.tsv"
+    _write_reclassification_file(
+        reclassification_path,
+        [
+            ("Uncertain significance", None, "A", "G", 8),  # VUS, resolved
+            ("Uncertain significance", None, "A", "G", 2),  # VUS, not resolved
+            (None, None, "A", "G", -8),  # Unobserved SNV, resolved
+            (None, None, "A", "G", 1),  # Unobserved SNV, not resolved
+            ("Pathogenic", None, "A", "G", 11),  # controls-like, not VUS/Unobserved
+            (None, 0.01, "A", "G", -3),  # gnomAD-like, not Unobserved (gnomad_MAF set)
+            (None, None, "AC", "G", 8),  # not a SNV, excluded from Unobserved
+        ],
+    )
+
+    return condensed_path, metadata_path, expanded_path, excalibr_path, controls_path, reclassification_path
 
 
 def test_split_genes_handles_multi_gene_datasets():
@@ -538,7 +628,9 @@ def test_summarize_and_format_clinical_table_breaks_out_snv_per_bucket():
 
 
 def test_cli_prints_table_and_writes_output(full_dataset_files, tmp_path):
-    condensed_path, metadata_path, expanded_path, excalibr_path, controls_path = full_dataset_files
+    condensed_path, metadata_path, expanded_path, excalibr_path, controls_path, reclassification_path = (
+        full_dataset_files
+    )
     output_path = tmp_path / "report.txt"
 
     result = CliRunner().invoke(
@@ -551,6 +643,8 @@ def test_cli_prints_table_and_writes_output(full_dataset_files, tmp_path):
             str(excalibr_path),
             "--controls-file",
             str(controls_path),
+            "--reclassification-file",
+            str(reclassification_path),
             "--output",
             str(output_path),
         ],
@@ -586,6 +680,32 @@ def test_cli_prints_table_and_writes_output(full_dataset_files, tmp_path):
     assert "Agreement with ClinVar PLP/BLB (of determinate calls): 75.0%" in excalibr_reclass
     assert _bucket_count(functional_reclass, AGREE_LABEL) == 3
     assert "Agreement with ClinVar PLP/BLB (of determinate calls): 75.0%" in functional_reclass
+
+    # 8 distinct DNA variants across the 5 REVEL sheets combined (9 rows, minus
+    # the (GENEX, 1, 100, A, G) coordinate shared by controls_REVEL_GeneSpecific
+    # and gnomAD_REVEL); 6 of those 8 are Pathogenic/Likely Pathogenic/Benign/
+    # Likely Benign (the two "Uncertain" VUS/Unobserved rows aren't).
+    variant_classification_section = result.output.split(VARIANT_CLASSIFICATION_TITLE)[1].split(
+        RECLASSIFICATION_VARIANT_CLASSIFICATION_TITLE
+    )[0]
+    assert "Distinct DNA variants classified: 8" in variant_classification_section
+    assert "Pathogenic or benign: 6 of 8 (75.0%)" in variant_classification_section
+    assert "ClinVar VUS resolved (reclassified pathogenic or benign): 2 of 3 (66.7%)" in variant_classification_section
+    assert (
+        "Unobserved variants resolved (classified pathogenic or benign): 1 of 2 (50.0%)"
+        in variant_classification_section
+    )
+
+    # See full_dataset_files' reclassification_path rows for the expected counts.
+    reclassification_file_section = result.output.split(RECLASSIFICATION_VARIANT_CLASSIFICATION_TITLE)[1]
+    assert "Distinct DNA variants classified: 7" in reclassification_file_section
+    assert "Pathogenic or benign: 5 of 7 (71.4%)" in reclassification_file_section
+    assert "ClinVar VUS resolved (reclassified pathogenic or benign): 1 of 2 (50.0%)" in reclassification_file_section
+    assert (
+        "Unobserved variants resolved (classified pathogenic or benign): 1 of 2 (50.0%)"
+        in reclassification_file_section
+    )
+
     # Assayed level: all 4 distinct variants (and all 5 measurement rows) are SNV-accessible.
     assert "Total: 4 (4 SNV-accessible)" in result.output
     assert "Total: 5 (5 SNV-accessible)" in result.output
@@ -635,11 +755,25 @@ def test_cli_allow_clinvar_conflicts_flag_toggles_conflict_handling(tmp_path):
     _write_excalibr_calibrations(excalibr_path, [("DS_A", None, None)])
     controls_path = tmp_path / "controls.xlsx"
     _write_controls_file(controls_path, {"controls_TEST": [("Pathogenic", 1, 1)]})
+    _write_variant_classification_sheets(
+        controls_path,
+        {
+            "controls_REVEL_GeneSpecific": [("GENEA", 1, 1, "A", "G", "Pathogenic")],
+            "ClinGen_Repo_REVEL_GeneSpecific": [],
+            "VUS_REVEL": [],
+            "gnomAD_REVEL": [],
+            "Unobserved_REVEL": [],
+        },
+    )
+    reclassification_path = tmp_path / "reclassification.tsv"
+    _write_reclassification_file(reclassification_path, [("Pathogenic", None, "A", "G", 11)])
     extra_args = [
         "--excalibr-calibrations-file",
         str(excalibr_path),
         "--controls-file",
         str(controls_path),
+        "--reclassification-file",
+        str(reclassification_path),
     ]
 
     default_result = CliRunner().invoke(
@@ -662,7 +796,9 @@ def test_cli_allow_clinvar_conflicts_flag_toggles_conflict_handling(tmp_path):
 
 
 def test_cli_reports_missing_metadata_as_click_error(full_dataset_files):
-    condensed_path, metadata_path, expanded_path, _excalibr_path, _controls_path = full_dataset_files
+    condensed_path, metadata_path, expanded_path, _excalibr_path, _controls_path, _reclassification_path = (
+        full_dataset_files
+    )
     _write_full_variant_file(
         condensed_path,
         [("DS_UNKNOWN", "GENEX", "c5", "p5", "", "", "", "", "", "", "A", "G")],
@@ -830,7 +966,7 @@ def test_build_reclassification_report_covers_every_controls_prefixed_sheet(tmp_
         },
     )
 
-    sections = build_reclassification_report(controls_path)
+    sections = build_reclassification_report(pd.ExcelFile(controls_path))
 
     joined = "\n\n".join(sections)
     assert "ExCALIBR evidence -- controls_REVEL_GeneSpecific" in joined
@@ -838,3 +974,152 @@ def test_build_reclassification_report_covers_every_controls_prefixed_sheet(tmp_
     assert "ExCALIBR evidence -- controls_AM_GeneSpecific" in joined
     assert "not_a_controls_sheet" not in joined
     assert len(sections) == 4  # 2 controls_ sheets x 2 points columns
+
+
+def test_distinct_dna_variants_dedups_by_genomic_coordinates():
+    df = pd.DataFrame(
+        {
+            "Gene": ["GENEA", "GENEA", "GENEB"],
+            "Chrom": [1, 1, 2],
+            "hg38_start": [100, 100, 200],
+            "ref_allele": ["A", "A", "C"],
+            "alt_allele": ["G", "G", "T"],
+            "Class_REVEL": ["Pathogenic", "Benign", "Uncertain"],
+        }
+    )
+
+    result = distinct_dna_variants(df)
+
+    # The two GENEA rows share coordinates -- only the first (Pathogenic) survives.
+    assert len(result) == 2
+    assert result[result["Gene"] == "GENEA"]["Class_REVEL"].tolist() == ["Pathogenic"]
+
+
+def test_compute_variant_classification_stats(tmp_path):
+    controls_path = tmp_path / "controls.xlsx"
+    # coords (1, 100, A, G) is shared between "controls" and "gnomAD", to check
+    # that the combined total counts it once, not twice.
+    _write_variant_classification_sheets(
+        controls_path,
+        {
+            "controls_REVEL_GeneSpecific": [
+                ("GENEX", 1, 100, "A", "G", "Pathogenic"),
+                ("GENEX", 1, 101, "A", "G", "Benign"),
+            ],
+            "ClinGen_Repo_REVEL_GeneSpecific": [
+                ("GENEX", 1, 102, "A", "G", "Likely Pathogenic"),
+            ],
+            "VUS_REVEL": [
+                ("GENEX", 1, 103, "A", "G", "Pathogenic"),
+                ("GENEX", 1, 104, "A", "G", "Uncertain"),
+                ("GENEX", 1, 105, "A", "G", "Benign"),
+            ],
+            "gnomAD_REVEL": [
+                ("GENEX", 1, 100, "A", "G", "Pathogenic"),
+            ],
+            "Unobserved_REVEL": [
+                ("GENEX", 1, 106, "A", "G", "Pathogenic"),
+                ("GENEX", 1, 107, "A", "G", "Uncertain"),
+            ],
+        },
+        mode="w",
+    )
+
+    stats = compute_variant_classification_stats(pd.ExcelFile(controls_path))
+
+    assert stats == {
+        "total_classified": 8,
+        "total_pathogenic_or_benign": 6,
+        "vus_total": 3,
+        "vus_resolved": 2,
+        "unobserved_total": 2,
+        "unobserved_resolved": 1,
+    }
+
+
+def test_format_variant_classification_summary():
+    stats = {
+        "total_classified": 8,
+        "total_pathogenic_or_benign": 6,
+        "vus_total": 3,
+        "vus_resolved": 2,
+        "unobserved_total": 2,
+        "unobserved_resolved": 1,
+    }
+
+    text = format_variant_classification_summary(stats)
+
+    assert text.startswith(VARIANT_CLASSIFICATION_TITLE)
+    assert "Distinct DNA variants classified: 8" in text
+    assert "Pathogenic or benign: 6 of 8 (75.0%)" in text
+    assert "ClinVar VUS resolved (reclassified pathogenic or benign): 2 of 3 (66.7%)" in text
+    assert "Unobserved variants resolved (classified pathogenic or benign): 1 of 2 (50.0%)" in text
+
+
+def test_format_variant_classification_summary_uses_given_title():
+    stats = {
+        "total_classified": 1,
+        "total_pathogenic_or_benign": 1,
+        "vus_total": 0,
+        "vus_resolved": 0,
+        "unobserved_total": 0,
+        "unobserved_resolved": 0,
+    }
+
+    text = format_variant_classification_summary(stats, title=RECLASSIFICATION_VARIANT_CLASSIFICATION_TITLE)
+
+    assert text.startswith(RECLASSIFICATION_VARIANT_CLASSIFICATION_TITLE)
+
+
+def test_format_variant_classification_summary_handles_zero_totals():
+    stats = {
+        "total_classified": 0,
+        "total_pathogenic_or_benign": 0,
+        "vus_total": 0,
+        "vus_resolved": 0,
+        "unobserved_total": 0,
+        "unobserved_resolved": 0,
+    }
+
+    text = format_variant_classification_summary(stats)
+
+    assert "Distinct DNA variants classified: 0" in text
+    assert "(nan%)" in text
+
+
+def test_points_are_pathogenic_or_benign():
+    points = pd.Series([12, 6, 5, 0, -1, -6, -7, -12])
+
+    result = points_are_pathogenic_or_benign(points)
+
+    # >=6 (Pathogenic/Likely Pathogenic) or <=-1 (Likely Benign/Benign) is True;
+    # 0-5 (Uncertain) is False.
+    assert list(result) == [True, True, False, False, True, True, True, True]
+
+
+def test_compute_variant_classification_stats_from_reclassification_file(tmp_path):
+    reclassification_path = tmp_path / "reclassification.tsv"
+    _write_reclassification_file(
+        reclassification_path,
+        [
+            ("Uncertain significance", None, "A", "G", 8),  # VUS, resolved
+            ("Uncertain significance", None, "A", "G", 2),  # VUS, not resolved
+            (None, None, "A", "G", -8),  # Unobserved SNV, resolved
+            (None, None, "A", "G", 1),  # Unobserved SNV, not resolved
+            ("Pathogenic", None, "A", "G", 11),  # controls-like, not VUS/Unobserved
+            (None, 0.01, "A", "G", -3),  # gnomAD-like, not Unobserved (gnomad_MAF set)
+            (None, None, "AC", "G", 8),  # not a SNV, excluded from Unobserved
+        ],
+    )
+    df = pd.read_csv(reclassification_path, sep="\t", usecols=RECLASSIFICATION_USECOLS)
+
+    stats = compute_variant_classification_stats_from_reclassification_file(df)
+
+    assert stats == {
+        "total_classified": 7,
+        "total_pathogenic_or_benign": 5,
+        "vus_total": 2,
+        "vus_resolved": 1,
+        "unobserved_total": 2,
+        "unobserved_resolved": 1,
+    }

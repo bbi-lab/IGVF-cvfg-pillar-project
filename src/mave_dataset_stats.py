@@ -107,6 +107,34 @@ Supplementary_Data_5.xlsx) respectively:
   separately as "no point of evidence assigned") but still counted in the
   section's total.
 
+- **Variant classification** (two versions, same three questions -- how many
+  distinct DNA variants have a classification, how many of those are
+  pathogenic or benign, and how many ClinVar VUS / unobserved variants are
+  "resolved" -- reclassified/classified pathogenic or benign -- and what
+  percent of that category that is): (re)classification of DNA variants
+  using functional evidence points (ExCALIBR for most genes, OddsPath for
+  F9/TP53 -- see `docs/variant_classification.md`) plus REVEL predictor
+  evidence, gene-specific calibration falling back to genome-wide.
+
+  - **Supplementary Data 5 version**: from the controls file's
+    `controls_REVEL_GeneSpecific`, `ClinGen_Repo_REVEL_GeneSpecific`,
+    `VUS_REVEL`, `gnomAD_REVEL`, and `Unobserved_REVEL` sheets' precomputed
+    `Class_REVEL` column, deduplicated to one row per distinct DNA variant
+    (`VARIANT_CLASSIFICATION_COORD_COLS`) -- restricted to variants falling
+    into one of those five categories, and (for `controls`/`ClinGen_Repo`)
+    deduplicated by that category's own DNA-resolution-preferred rule (see
+    `docs/variant_classification.md#decided-approach`).
+  - **Reclassification-export version** (`--reclassification-file`, default
+    `data/output/reclassification/integrated_variant_effect_reclassification.tsv.gz`,
+    `src/build_variant_reclassification_dataset.py`'s output): every variant
+    surviving the notebook's exclusion rules, with no category restriction,
+    deduplicated by a single `abs(Combined_points)`-max rule applied
+    uniformly to every variant regardless of category. Pathogenic-or-benign
+    is derived from `Combined_points` (`points_are_pathogenic_or_benign`,
+    since this file has no precomputed `Class_REVEL`); VUS/Unobserved
+    membership is derived from `clinvar_sig_2025`/`gnomad_MAF` the same way
+    Supplementary Data 5's category split is.
+
 Both file arguments are optional and default to the paths above. Output is
 written as plain text (to stdout, and optionally to `--output` as well).
 """
@@ -179,6 +207,45 @@ AGREE_LABEL = "Agrees with ClinVar"
 DISAGREE_LABEL = "Disagrees with ClinVar"
 NO_EVIDENCE_LABEL = "No point of evidence assigned"
 RECLASSIFICATION_LABELS_ORDER = [AGREE_LABEL, DISAGREE_LABEL, NO_EVIDENCE_LABEL]
+
+VARIANT_CLASSIFICATION_COORD_COLS = ["Gene", "Chrom", "hg38_start", "ref_allele", "alt_allele"]
+VARIANT_CLASSIFICATION_CATEGORY_SHEETS = {
+    "controls": "controls_REVEL_GeneSpecific",
+    "ClinGen_Repo": "ClinGen_Repo_REVEL_GeneSpecific",
+    "VUS": "VUS_REVEL",
+    "gnomAD": "gnomAD_REVEL",
+    "Unobserved": "Unobserved_REVEL",
+}
+CLASS_REVEL_COL = "Class_REVEL"
+CLASS_PATHOGENIC_VALUES = frozenset({"Pathogenic", "Likely Pathogenic"})
+CLASS_BENIGN_VALUES = frozenset({"Benign", "Likely Benign"})
+CLASS_PATHOGENIC_OR_BENIGN_VALUES = CLASS_PATHOGENIC_VALUES | CLASS_BENIGN_VALUES
+
+VARIANT_CLASSIFICATION_TITLE = (
+    "=== Variant classification (Supplementary Data 5; "
+    "ExCALIBR/OddsPath + REVEL, gene-specific + genome-wide fallback) ==="
+)
+
+DEFAULT_RECLASSIFICATION_FILE = Path("data/output/reclassification/integrated_variant_effect_reclassification.tsv.gz")
+RECLASSIFICATION_COMBINED_POINTS_COL = "Combined_points"
+RECLASSIFICATION_CLINVAR_COL = "clinvar_sig_2025"
+RECLASSIFICATION_GNOMAD_COL = "gnomad_MAF"
+RECLASSIFICATION_REF_COL = "ref_allele"
+RECLASSIFICATION_ALT_COL = "alt_allele"
+RECLASSIFICATION_USECOLS = [
+    RECLASSIFICATION_CLINVAR_COL,
+    RECLASSIFICATION_GNOMAD_COL,
+    RECLASSIFICATION_REF_COL,
+    RECLASSIFICATION_ALT_COL,
+    RECLASSIFICATION_COMBINED_POINTS_COL,
+]
+LIKELY_PATHOGENIC_POINTS_THRESHOLD = 6
+LIKELY_BENIGN_POINTS_THRESHOLD = -1
+RECLASSIFICATION_VARIANT_CLASSIFICATION_TITLE = (
+    "=== Variant classification (reclassification export; "
+    "ExCALIBR/OddsPath + REVEL, gene-specific + genome-wide fallback; "
+    "single dedup, no category restriction) ==="
+)
 
 
 def split_genes(gene_value):
@@ -774,12 +841,12 @@ def format_reclassification_table(title, total, determinate, agreement_pct, tabl
     return "\n".join(lines)
 
 
-def build_reclassification_report(controls_path):
+def build_reclassification_report(workbook):
     """One section per (`controls_`-prefixed sheet, points column) pair in
-    the controls file. See the module docstring's "Reclassification
-    agreement" note for why every such sheet is expected to agree.
+    `workbook` (an open `pd.ExcelFile` over the controls file). See the module
+    docstring's "Reclassification agreement" note for why every such sheet is
+    expected to agree.
     """
-    workbook = pd.ExcelFile(controls_path)
     sheets = [name for name in workbook.sheet_names if name.startswith(CONTROLS_SHEET_PREFIX)]
     sections = []
     for sheet in sheets:
@@ -792,6 +859,135 @@ def build_reclassification_report(controls_path):
     return sections
 
 
+def distinct_dna_variants(df):
+    """Collapse `df` to one row per distinct DNA variant, identified by
+    genomic coordinates (`VARIANT_CLASSIFICATION_COORD_COLS`) -- the same key
+    `docs/variant_classification.md` uses to identify a physical DNA variant
+    (`Gene` is included alongside the genomic coordinates as a defensive
+    tie-breaker, matching that doc's own dedup key).
+    """
+    return df.drop_duplicates(subset=VARIANT_CLASSIFICATION_COORD_COLS)
+
+
+def compute_variant_classification_stats(workbook):
+    """Reclassification summary (functional evidence from ExCALIBR -- or
+    OddsPath for F9/TP53, see `docs/variant_classification.md` -- plus REVEL
+    predictor evidence, gene-specific calibration falling back to
+    genome-wide) across the five Supplementary_Data_5 variant categories.
+
+    Reads each category's sheet from `workbook`
+    (`VARIANT_CLASSIFICATION_CATEGORY_SHEETS`) and reports:
+
+    - Across every category combined (a variant appearing in more than one
+      category's sheet -- e.g. a ClinVar control also observed in gnomAD --
+      is counted once): how many distinct DNA variants have a `Class_REVEL`
+      classification, and how many of those are Pathogenic/Likely
+      Pathogenic/Benign/Likely Benign rather than Uncertain.
+    - Within `VUS` alone: how many ClinVar Uncertain-significance variants
+      are "resolved" -- reclassified Pathogenic/Likely Pathogenic/Benign/
+      Likely Benign by this pipeline -- and what percent of VUS that is.
+    - Within `Unobserved` alone: the same resolved count/percent, for
+      variants absent from both ClinVar and gnomAD.
+
+    Both category-specific counts are computed over each category's own
+    distinct DNA variants, independent of the cross-category dedup used for
+    the combined total above.
+
+    Returns a dict; see `format_variant_classification_summary`.
+    """
+    sheets = {
+        label: distinct_dna_variants(workbook.parse(sheet_name))
+        for label, sheet_name in VARIANT_CLASSIFICATION_CATEGORY_SHEETS.items()
+    }
+
+    combined = distinct_dna_variants(pd.concat(sheets.values(), ignore_index=True))
+    classified = combined[CLASS_REVEL_COL].notna()
+    pathogenic_or_benign = combined[CLASS_REVEL_COL].isin(CLASS_PATHOGENIC_OR_BENIGN_VALUES)
+
+    def resolved_count(df):
+        return int(df[CLASS_REVEL_COL].isin(CLASS_PATHOGENIC_OR_BENIGN_VALUES).sum())
+
+    return {
+        "total_classified": int(classified.sum()),
+        "total_pathogenic_or_benign": int(pathogenic_or_benign.sum()),
+        "vus_total": len(sheets["VUS"]),
+        "vus_resolved": resolved_count(sheets["VUS"]),
+        "unobserved_total": len(sheets["Unobserved"]),
+        "unobserved_resolved": resolved_count(sheets["Unobserved"]),
+    }
+
+
+def _format_count_and_pct(count, total):
+    pct = 100 * count / total if total else float("nan")
+    return f"{count} of {total} ({pct:.1f}%)"
+
+
+def format_variant_classification_summary(stats, title=VARIANT_CLASSIFICATION_TITLE):
+    return "\n".join(
+        [
+            title,
+            f"Distinct DNA variants classified: {stats['total_classified']}",
+            "Pathogenic or benign: "
+            + _format_count_and_pct(stats["total_pathogenic_or_benign"], stats["total_classified"]),
+            "",
+            "ClinVar VUS resolved (reclassified pathogenic or benign): "
+            + _format_count_and_pct(stats["vus_resolved"], stats["vus_total"]),
+            "Unobserved variants resolved (classified pathogenic or benign): "
+            + _format_count_and_pct(stats["unobserved_resolved"], stats["unobserved_total"]),
+        ]
+    )
+
+
+def points_are_pathogenic_or_benign(points):
+    """True where combined evidence points fall outside the Uncertain range
+    (0-5) -- i.e. Likely Pathogenic/Pathogenic (>=6) or Likely Benign/Benign
+    (<=-1) -- per the point-to-class cutoffs documented in
+    `docs/variant_classification.md` and `Variant_Classification_analysis.ipynb`.
+    """
+    return (points >= LIKELY_PATHOGENIC_POINTS_THRESHOLD) | (points <= LIKELY_BENIGN_POINTS_THRESHOLD)
+
+
+def compute_variant_classification_stats_from_reclassification_file(df):
+    """Like `compute_variant_classification_stats`, but sourced from the
+    reclassification export (`--reclassification-file`, default
+    `data/output/reclassification/integrated_variant_effect_reclassification.tsv.gz`)
+    instead of the Supplementary_Data_5 controls file.
+
+    That file (`src/build_variant_reclassification_dataset.py`'s output) is
+    every variant surviving `Variant_Classification_analysis.ipynb`'s
+    exclusion rules, deduplicated to one row per distinct DNA variant by a
+    single `abs(Combined_points)`-max rule applied uniformly to every variant
+    -- unlike Supplementary_Data_5, which (for `controls`/`ClinGen_Repo`)
+    instead prefers a DNA-resolution assay's record over a protein-resolution
+    one regardless of magnitude (see
+    `docs/variant_classification.md#decided-approach`), and which restricts
+    to variants falling into one of its five defined categories. This
+    function instead covers every surviving row: pathogenic-or-benign is
+    `points_are_pathogenic_or_benign(Combined_points)` (this file has no
+    precomputed `Class_REVEL` column), and VUS/Unobserved membership is
+    determined the same way Supplementary_Data_5's category split is
+    (`clinvar_sig_2025`/`gnomad_MAF`, restricted to SNVs for Unobserved).
+
+    Returns a dict; see `format_variant_classification_summary`.
+    """
+    pathogenic_or_benign = points_are_pathogenic_or_benign(df[RECLASSIFICATION_COMBINED_POINTS_COL])
+    vus = df[RECLASSIFICATION_CLINVAR_COL].isin(VUS_VALUES)
+    is_snv = (df[RECLASSIFICATION_REF_COL].str.len() == 1) & (df[RECLASSIFICATION_ALT_COL].str.len() == 1)
+    unobserved = df[RECLASSIFICATION_CLINVAR_COL].isna() & df[RECLASSIFICATION_GNOMAD_COL].isna() & is_snv
+
+    def resolved_count(mask):
+        return int((mask & pathogenic_or_benign).sum())
+
+    return {
+        "total_classified": len(df),
+        "total_pathogenic_or_benign": int(pathogenic_or_benign.sum()),
+        "vus_total": int(vus.sum()),
+        "vus_resolved": resolved_count(vus),
+        "unobserved_total": int(unobserved.sum()),
+        "unobserved_resolved": resolved_count(unobserved),
+    }
+
+
 def build_report_text(
     table,
     gene_breakdown,
@@ -800,6 +996,8 @@ def build_report_text(
     clinical_sections_mixed_year,
     calibration_summary,
     reclassification_sections,
+    variant_classification_summary,
+    reclassification_file_variant_classification_summary,
     allow_clinvar_conflicts=False,
 ):
     conflict_note = (
@@ -820,6 +1018,8 @@ def build_report_text(
         calibration_summary,
         "=== Reclassification agreement (Figure 4c) ===",
         *reclassification_sections,
+        variant_classification_summary,
+        reclassification_file_variant_classification_summary,
     ]
     return "\n\n".join(parts)
 
@@ -862,6 +1062,16 @@ def build_report_text(
     ),
 )
 @click.option(
+    "--reclassification-file",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    default=DEFAULT_RECLASSIFICATION_FILE,
+    help=(
+        f"Path to the reclassification export (default {DEFAULT_RECLASSIFICATION_FILE}), "
+        "for the second, un-category-restricted variant classification section that uses "
+        "this file's single, uniform dedup instead of Supplementary_Data_5's category-specific one."
+    ),
+)
+@click.option(
     "--output",
     type=click.Path(dir_okay=False, path_type=Path),
     default=None,
@@ -898,6 +1108,7 @@ def main(
     expanded_file,
     excalibr_calibrations_file,
     controls_file,
+    reclassification_file,
     output,
     merge_calm_genes,
     allow_clinvar_conflicts,
@@ -926,7 +1137,17 @@ def main(
         raise click.ClickException(str(exc)) from exc
     calibration_summary = format_calibration_summary(calibration_stats)
 
-    reclassification_sections = build_reclassification_report(controls_file)
+    controls_workbook = pd.ExcelFile(controls_file)
+    reclassification_sections = build_reclassification_report(controls_workbook)
+    variant_classification_summary = format_variant_classification_summary(
+        compute_variant_classification_stats(controls_workbook)
+    )
+
+    reclassification_df = pd.read_csv(reclassification_file, sep="\t", usecols=RECLASSIFICATION_USECOLS)
+    reclassification_file_variant_classification_summary = format_variant_classification_summary(
+        compute_variant_classification_stats_from_reclassification_file(reclassification_df),
+        title=RECLASSIFICATION_VARIANT_CLASSIFICATION_TITLE,
+    )
 
     report = build_report_text(
         table,
@@ -936,6 +1157,8 @@ def main(
         clinical_sections_mixed_year,
         calibration_summary,
         reclassification_sections,
+        variant_classification_summary,
+        reclassification_file_variant_classification_summary,
         allow_clinvar_conflicts=allow_clinvar_conflicts,
     )
     click.echo(report)
