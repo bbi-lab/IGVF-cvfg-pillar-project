@@ -23,6 +23,7 @@ Usage:
 """
 
 import json
+import unicodedata
 from pathlib import Path
 
 import click
@@ -68,7 +69,14 @@ def load_calibration_row(json_path):
     data = json.loads(json_path.read_text())
     point_ranges = data["point_ranges"]
 
-    row = {"dataset": json_path.stem, "prior": data["prior"]}
+    # macOS normalizes non-ASCII filenames to NFD (e.g. RAD51C_Olvera-León's
+    # "o" + combining acute accent) regardless of how the file was named when
+    # created. `dataset` has to match the NFC-typed name in score_sets.tsv /
+    # `pp['Dataset']` downstream, so normalize here at the source rather than
+    # depend on every consumer to do it -- an unnormalized `dataset` silently
+    # fails its merge and zeroes out that dataset's functional evidence with
+    # no error.
+    row = {"dataset": unicodedata.normalize("NFC", json_path.stem), "prior": data["prior"]}
     for point in RANGE_POINTS:
         row[f"range_{point}"] = format_range(point_ranges, point)
     row["relax"] = bool(data["relax"])
