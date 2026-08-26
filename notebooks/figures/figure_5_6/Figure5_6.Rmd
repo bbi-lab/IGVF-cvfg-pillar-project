@@ -410,7 +410,7 @@ controls_1star_YP <- list(
 
   "sankey_controls_REVEL_GeneSpecific.png" = sankey_controls_REVEL_YP,
   "sankey_controls_AM_GeneSpecific.png" = sankey_controls_AM_YP,
-  "sankey_controls_MP2_GeneSpecific.png" = sankey_controls_AM_YP
+  "sankey_controls_MP2_GeneSpecific.png" = sankey_controls_MP2_YP
   
   
 )
