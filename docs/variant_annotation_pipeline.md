@@ -140,6 +140,36 @@ Hail table cache](#gnomad-hail-table-cache-prerequisite-for-step-7) above;
 it's invoked with its own flag (`--prepare-gnomad-cache`) rather than running
 automatically or via `--step`.
 
+## Step 21's explicit `--dna-variant-columns`
+
+`variant-annotation`'s `flatten_dna_variants.py` (`run_flatten_dna_variants.sh`,
+called at the start of `step_21`) expands each row's pipe-delimited DNA
+candidates into one row per candidate. Which columns it splits is normally
+auto-detected (`get_dna_variant_columns` in that script): a hard-coded list
+(`mapped_hgvs_g`, `mapped_hgvs_c`, etc.) plus any column matching one of its
+own annotation prefixes (`clinvar.`, `gnomad.`, `spliceai.`, `vep.`, ...).
+
+That auto-detection only knows about `variant-annotation`'s own columns. Five
+columns this project's own steps add later are *also* pipe-delimited
+one-segment-per-DNA-candidate, same convention, but aren't recognized:
+`Updated_Classification_ClinGen_repo`/`Updated_Evidence Codes_ClinGen_repo`
+(step 18, `recalculate_clingen_classification.py`), `simplified_consequence`/
+`splice_variant` (step 17, `annotate_simplified_consequence.py`), and `Flag`
+(step 19, `flag_variants.py`). Left on auto-detect, these five are copied
+unflattened into every output row of a multi-candidate variant instead of
+being split per candidate -- e.g. a 3-candidate row's `Flag` value `"||"`
+becomes `"||"` on all 3 flattened rows instead of `""` on each -- corrupting
+them for every multi-candidate row (the large majority of rows in a real
+run).
+
+`step_21` works around this by passing `--dna-variant-columns` explicitly.
+Rather than hard-coding the full merged column list (which would drift if
+`variant-annotation` changes its own detected columns), it replicates
+`get_dna_variant_columns`'s logic locally -- reading only `cvfg_variants.20.tsv`'s
+header line (safe regardless of any multi-line quoted field elsewhere in the
+file, same reasoning as `derive_score_set_urn`/`translate_assayed_variant_level`
+below) -- and adds the five CVFG columns to whatever it finds.
+
 ## The `VARIANT_DATA_DIR` path-mapping subtlety
 
 Worth understanding before editing `scripts/variant_annotation_pipeline.sh` or

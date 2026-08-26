@@ -358,8 +358,45 @@ LAST_STEP=21
 # rename-columns calls.
 step_21() {
 
-# Flatten
-src/scripts/run_flatten_dna_variants.sh /work/data/cvfg_variants.20.tsv /work/data/cvfg_variants.20.flat.tsv
+# Flatten. --dna-variant-columns is passed explicitly rather than relying on
+# flatten_dna_variants.py's own auto-detection (get_dna_variant_columns):
+# that auto-detection only recognizes variant-annotation's own hard-coded
+# columns and prefixes (clinvar., gnomad., spliceai., vep., ...), so it
+# doesn't know about the five CVFG-project columns added by steps 17/18/19
+# above that are *also* pipe-delimited one-segment-per-DNA-candidate, same
+# convention as those recognized columns (Updated_Classification_ClinGen_repo/
+# Updated_Evidence Codes_ClinGen_repo: recalculate_clingen_classification.py;
+# simplified_consequence/splice_variant: annotate_simplified_consequence.py;
+# Flag: flag_variants.py -- see each script's docstring). Left on auto-detect,
+# these five are silently copied unflattened into every output row instead of
+# split per candidate, corrupting them for every multi-candidate row (~85% of
+# rows in a real run) -- so this replicates variant-annotation's own
+# auto-detection (reading cvfg_variants.20.tsv's header line only, which is
+# safe regardless of any multi-line quoted field elsewhere in the file) and
+# adds the five CVFG columns to it, rather than hard-coding either list,
+# so this still tracks variant-annotation's own column set if it changes.
+dna_variant_columns="$(
+  header_cols=$(head -1 "$VARIANT_DATA_DIR/data/cvfg_variants.20.tsv" | tr '\t' '\n')
+  hard_coded_cols=(mapped_hgvs_g mapped_hgvs_c reverse_translation_warnings mapped_hgvs_g_chromosome \
+    mapped_hgvs_g_start mapped_hgvs_g_stop mapped_hgvs_g_ref mapped_hgvs_g_alt mapped_hgvs_c_transcript \
+    mapped_hgvs_c_start mapped_hgvs_c_stop mapped_hgvs_c_ref mapped_hgvs_c_alt touches_intronic_region \
+    spans_intron dna_clingen_allele_id)
+  prefixes=(alphamissense. clingen_evidence_repository. clinvar. gnomad. mutpred2. spliceai. revel. vep.)
+  cvfg_added_cols=("Updated_Classification_ClinGen_repo" "Updated_Evidence Codes_ClinGen_repo" \
+    simplified_consequence splice_variant Flag)
+  selected=()
+  while IFS= read -r col; do
+    for hc in "${hard_coded_cols[@]}" "${cvfg_added_cols[@]}"; do
+      [[ "$col" == "$hc" ]] && { selected+=("$col"); continue 2; }
+    done
+    for p in "${prefixes[@]}"; do
+      [[ "$col" == "$p"* ]] && { selected+=("$col"); continue 2; }
+    done
+  done <<< "$header_cols"
+  IFS=,; echo "${selected[*]}"
+)"
+src/scripts/run_flatten_dna_variants.sh /work/data/cvfg_variants.20.tsv /work/data/cvfg_variants.20.flat.tsv \
+  --dna-variant-columns "$dna_variant_columns"
 
 COLUMN_MAP=(
   --keep-col "dataset_name:Dataset"
