@@ -78,6 +78,36 @@ services:
       - .:/usr/src/app
       - ${VARIANT_DATA_DIR:-./data}:/work
 
+  # Shares the VARIANT_DATA_DIR staging mount with the other steps above, for
+  # the same reason: it reads/writes staged pipeline data (cvfg_variants.*.tsv)
+  # rather than committed repo files. Step 20's code-translation half.
+  # Replaces step_20's old in-script `awk` pass, which read the file
+  # line-by-line and silently corrupted assayed_variant_level (and every
+  # other column) for any row whose value spans multiple physical lines --
+  # same underlying bug, and same fix, as derive-score-set-urn above.
+  translate-assayed-variant-level:
+    <<: *tools-image
+    profiles:
+      - tools
+    entrypoint: ["python", "-m", "src.translate_assayed_variant_level"]
+    command: ["--help"]
+    volumes:
+      - .:/usr/src/app
+      - ${VARIANT_DATA_DIR:-./data}:/work
+
+  # Shares the VARIANT_DATA_DIR staging mount with the other steps above, for
+  # the same reason: it reads/writes staged pipeline data (cvfg_variants.*.tsv)
+  # rather than committed repo files. Step 20's rna_score-merge half.
+  merge-rna-score-columns:
+    <<: *tools-image
+    profiles:
+      - tools
+    entrypoint: ["python", "-m", "src.merge_rna_score_columns"]
+    command: ["--help"]
+    volumes:
+      - .:/usr/src/app
+      - ${VARIANT_DATA_DIR:-./data}:/work
+
   # Reads the committed data/input/reference/extended_ensembl_consequence.csv.gz
   # (this project's own bind mount) plus staged cvfg_variants.*.tsv (the
   # VARIANT_DATA_DIR /work mount), so it needs both, same as flag-variants

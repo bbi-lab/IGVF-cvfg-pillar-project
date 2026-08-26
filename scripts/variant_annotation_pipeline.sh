@@ -324,16 +324,23 @@ step_19() {
 }
 
 # Step 20: Change codes used in the assayed_variant_level column ("protein"
-# -> "aa", "dna" -> "nt").
+# -> "aa", "dna" -> "nt"), then merge rna_score_d6 into rna_score wherever
+# rna_score is blank (Dockerized, from the CVFG pillar project -- see
+# src/scripts/run_translate_assayed_variant_level.sh and
+# src/scripts/run_merge_rna_score_columns.sh there).
 #
-# The awk pass runs directly on the host, same as step_14 -- its input/output
-# are written as "$VARIANT_DATA_DIR/data/..." so they land in and read from
-# our staged directory regardless of cwd.
+# The code-translation half used to be an in-script `awk` pass run directly
+# on the host. Like step_14's old `awk` pass (see step_14's comment above and
+# docs/derive_score_set_urn.md), it read the file line-by-line, so it
+# silently corrupted assayed_variant_level (and every other column) for any
+# row whose value spans multiple physical lines -- e.g. a multi-line
+# mavedb_mapping_error value, quoted per RFC 4180 (observed for 5 rows in a
+# real run). translate_assayed_variant_level.py reads/writes with pandas
+# instead, same fix as derive_score_set_urn.py.
 step_20() {
-awk -F'\t' -v OFS='\t' '
-  NR==1 { for (i=1; i<=NF; i++) if ($i=="assayed_variant_level") col=i; print }
-  NR>1  { if (col) { if ($col=="protein") $col="aa"; else if ($col=="dna") $col="nt" }; print }
-' "$VARIANT_DATA_DIR/data/cvfg_variants.19.tsv" > "$VARIANT_DATA_DIR/data/cvfg_variants.20.tsv"
+"$CVFG_PROJECT_DIR/src/scripts/run_translate_assayed_variant_level.sh" /work/data/cvfg_variants.19.tsv /work/data/cvfg_variants.20.codes.tsv
+"$CVFG_PROJECT_DIR/src/scripts/run_merge_rna_score_columns.sh" /work/data/cvfg_variants.20.codes.tsv /work/data/cvfg_variants.20.tsv
+rm "$VARIANT_DATA_DIR/data/cvfg_variants.20.codes.tsv"
 }
 
 LAST_STEP=21

@@ -167,13 +167,16 @@ different run, silently routing a step at our staged data). Every such path
 in `scripts/variant_annotation_pipeline.sh` is therefore now written
 explicitly: as `/work/data/...` for Dockerized steps (all step_N's honor an
 already-`/work`- or `/usr/src/app`-prefixed path verbatim, skipping the
-host-existence check entirely), or as `"$VARIANT_DATA_DIR/data/..."` for the
-handful of plain, non-Dockerized commands (step_20's in-script `awk` call,
-which runs directly on the host with the `variant-annotation` checkout as
-`cwd`, so a bare `data/...` there is neither Docker-remapped nor meaningful
-as a container path -- step_14's former `awk` call was the other one here
-until it was replaced by the Dockerized `derive_score_set_urn`, see below).
-This is also why our staged directory needs a `data/`
+host-existence check entirely), or as `"$VARIANT_DATA_DIR/data/..."` for any
+plain, non-Dockerized commands run directly on the host with the
+`variant-annotation` checkout as `cwd` (a bare `data/...` there is neither
+Docker-remapped nor meaningful as a container path). Step_14's and step_20's
+former in-script `awk` calls both used to fall into that latter category,
+until each was replaced by a Dockerized script for the same reason -- `awk`'s
+line-oriented `NR` splitting silently corrupts any row whose value spans
+multiple physical lines (see `docs/derive_score_set_urn.md` and
+`docs/translate_assayed_variant_level.md`) -- leaving no plain host commands
+in the current step sequence. This is also why our staged directory needs a `data/`
 subfolder of its own -- `data/intermediate/variant_annotation/data/...` --
 matching the `data/...` prefix every reference still uses after `/work`:
 the orchestrator script rsyncs into `data/intermediate/variant_annotation/data/`
