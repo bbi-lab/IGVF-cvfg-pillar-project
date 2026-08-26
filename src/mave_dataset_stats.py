@@ -28,6 +28,12 @@ always counted and listed as a single "CALM1/2/3" gene, both in this table's
 represented" list below, since treating the same calmodulin target as three
 separate genes isn't useful.
 
+Next, an "IGVF-produced datasets" table breaks the Dataset summary's IGVF
+`variant_effect_measurements`, `rna_scores`, and `composite_scores` counts out
+per dataset -- one row per IGVF-produced dataset, sorted by
+`variant_effect_measurements` descending -- see
+`compute_igvf_dataset_measurement_counts`.
+
 It additionally reports, in a set of text tables, how many variants and
 variant measurements have REVEL, AlphaMissense, and MutPred2 scores, and how
 many fall into each of several clinical-attribute buckets (ClinVar VUS,
@@ -771,6 +777,55 @@ def format_gene_breakdown(gene_breakdown):
     lines = ["=== Genes represented ==="]
     for label, genes in gene_breakdown.items():
         lines.append(f"{label} ({len(genes)}): {', '.join(genes)}")
+    return "\n".join(lines)
+
+
+IGVF_DATASET_MEASUREMENT_COUNTS_TITLE = "=== IGVF-produced datasets: measurements, RNA scores, and composite scores ==="
+
+
+def compute_igvf_dataset_measurement_counts(condensed, metadata):
+    """Per-IGVF-dataset breakdown of `Dataset summary`'s
+    `variant_effect_measurements`, `rna_scores`, and `composite_scores`
+    columns (see `compute_bucket_stats`) -- one row per IGVF-produced dataset
+    present in `condensed`.
+
+    A dataset's rows are either all measurement rows or all composite-score
+    rows (its `SCORE_SET_TYPE_COL`), so exactly one of
+    `variant_effect_measurements`/`composite_scores` is nonzero per row;
+    `rna_scores` is a breakdown of `variant_effect_measurements` (every row
+    with a non-empty `rna_score` also has a regular `auth_reported_score`),
+    not an addition to it.
+
+    Returns a DataFrame with `Dataset`, `variant_effect_measurements`,
+    `rna_scores`, and `composite_scores` columns, sorted by
+    `variant_effect_measurements` descending (ties broken by dataset name).
+    """
+    igvf_datasets = set(metadata.index[metadata[IGVF_PRODUCED_COL].eq("Yes")]) & set(condensed[DATASET_COL].unique())
+    measurement_datasets = set(metadata.index[metadata[SCORE_SET_TYPE_COL].eq(MEASUREMENT_VALUE)])
+
+    rows = []
+    for dataset in igvf_datasets:
+        sub = condensed[condensed[DATASET_COL] == dataset]
+        is_measurement = dataset in measurement_datasets
+        n_rows = len(sub)
+        rows.append(
+            {
+                "Dataset": dataset,
+                "variant_effect_measurements": n_rows if is_measurement else 0,
+                "rna_scores": int((sub[RNA_SCORE_COL] != "").sum()) if is_measurement else 0,
+                "composite_scores": 0 if is_measurement else n_rows,
+            }
+        )
+    table = pd.DataFrame(rows, columns=["Dataset", "variant_effect_measurements", "rna_scores", "composite_scores"])
+    return table.sort_values(
+        ["variant_effect_measurements", "Dataset"], ascending=[False, True], kind="stable"
+    ).reset_index(drop=True)
+
+
+def format_igvf_dataset_measurement_counts(table):
+    lines = [IGVF_DATASET_MEASUREMENT_COUNTS_TITLE]
+    if len(table):
+        lines.append(table.to_string(index=False))
     return "\n".join(lines)
 
 
@@ -2364,6 +2419,7 @@ def build_report_text(
     table,
     gene_breakdown,
     genomic_variant_summary,
+    igvf_dataset_measurement_counts_summary,
     composite_score_datasets_summary,
     score_sections,
     clinical_sections,
@@ -2389,6 +2445,7 @@ def build_report_text(
         table.to_string(),
         genomic_variant_summary,
         format_gene_breakdown(gene_breakdown),
+        igvf_dataset_measurement_counts_summary,
         composite_score_datasets_summary,
         "=== Score coverage (REVEL, AlphaMissense, MutPred2) ===",
         *score_sections,
@@ -2526,6 +2583,9 @@ def main(
         raise click.ClickException(str(exc)) from exc
 
     table = stats_to_dataframe(stats)
+    igvf_dataset_measurement_counts_summary = format_igvf_dataset_measurement_counts(
+        compute_igvf_dataset_measurement_counts(condensed, metadata)
+    )
     composite_score_datasets_summary = format_composite_score_datasets(
         compute_composite_score_datasets(condensed, metadata, merge_calm_genes=merge_calm_genes)
     )
@@ -2579,6 +2639,7 @@ def main(
         table,
         gene_breakdown,
         genomic_variant_summary,
+        igvf_dataset_measurement_counts_summary,
         composite_score_datasets_summary,
         score_sections,
         clinical_sections,

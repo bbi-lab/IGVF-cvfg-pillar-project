@@ -25,6 +25,7 @@ from src.mave_dataset_stats import (
     FUNCTIONAL_POINTS_COL,
     GENE_DISCORDANCE_TITLE,
     GNOMAD_LABEL,
+    IGVF_DATASET_MEASUREMENT_COUNTS_TITLE,
     MUTPRED2_TRAINING_STEP_LABEL,
     NO_ANNOTATION_LABEL,
     NO_EVIDENCE_LABEL,
@@ -54,6 +55,7 @@ from src.mave_dataset_stats import (
     compute_control_concordance,
     compute_excalibr_calibration_stats,
     compute_gene_discordance_stats,
+    compute_igvf_dataset_measurement_counts,
     compute_reclassification_agreement,
     compute_reclassification_filter_funnel,
     compute_variant_classification_chi_squared_tests,
@@ -70,6 +72,7 @@ from src.mave_dataset_stats import (
     format_control_concordance_report,
     format_gene_discordance_summary,
     format_genomic_variant_count,
+    format_igvf_dataset_measurement_counts,
     format_reclassification_filter_funnel,
     format_reclassification_table,
     format_variant_classification_chi_squared_tests,
@@ -788,6 +791,50 @@ def test_compute_all_stats_buckets(dataset_files):
     assert gene_breakdown["IGVF only"] == ["GENEA", "GENEB"]
     assert gene_breakdown["Community (non-IGVF) only"] == ["GENED"]
     assert gene_breakdown["Both IGVF and community (non-IGVF)"] == ["GENEC"]
+
+
+def test_compute_igvf_dataset_measurement_counts(tmp_path):
+    condensed_path = tmp_path / "condensed.tsv"
+    metadata_path = tmp_path / "metadata.xlsx"
+
+    _write_condensed(
+        condensed_path,
+        [
+            ("DS_IGVF_BIG", "GENEA", "c1", "p1", "nt"),
+            ("DS_IGVF_BIG", "GENEA", "c2", "p2", "nt"),
+            ("DS_IGVF_BIG", "GENEA", "c3", "p3", "nt"),
+            ("DS_IGVF_SMALL", "GENEB", "c4", "p4", "nt"),
+            ("DS_IGVF_META", "GENEC", "c5", "p5", "nt"),
+            ("DS_COMM", "GENED", "c6", "p6", "nt"),  # not IGVF-produced, excluded
+        ],
+        rna_scores=["-0.1", "", "0.2", "", "", ""],
+    )
+    _write_metadata(
+        metadata_path,
+        [
+            ("DS_IGVF_BIG", "Yes", "primary score set"),
+            ("DS_IGVF_SMALL", "Yes", "primary score set"),
+            ("DS_IGVF_META", "Yes", "meta-analysis"),
+            ("DS_COMM", "No", "primary score set"),
+        ],
+    )
+
+    condensed = pd.read_csv(condensed_path, sep="\t", dtype=str, keep_default_na=False)
+    metadata = load_dataset_metadata(metadata_path)
+
+    table = compute_igvf_dataset_measurement_counts(condensed, metadata)
+
+    # Sorted by variant_effect_measurements descending; DS_IGVF_META has 0
+    # (it's a meta-analysis, so its row counts as a composite score instead).
+    assert table["Dataset"].tolist() == ["DS_IGVF_BIG", "DS_IGVF_SMALL", "DS_IGVF_META"]
+    assert table["variant_effect_measurements"].tolist() == [3, 1, 0]
+    assert table["rna_scores"].tolist() == [2, 0, 0]
+    assert table["composite_scores"].tolist() == [0, 0, 1]
+
+    text = format_igvf_dataset_measurement_counts(table)
+    assert text.startswith(IGVF_DATASET_MEASUREMENT_COUNTS_TITLE)
+    assert "DS_IGVF_BIG" in text
+    assert "DS_COMM" not in text
 
 
 def test_compute_composite_score_datasets_uses_dataset_files_fixture(dataset_files):
