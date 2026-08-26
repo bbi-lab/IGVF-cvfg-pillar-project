@@ -97,37 +97,37 @@ controls_MP2_YP  = read_excel(file.path(DATA_DIR, "supplementary_data/Supplement
 
 
 ##------------Controls Sankey plot --------------------
-make_sankey_controls <- function(df, points_col, colors_custom, clinvar) {
-  
+make_sankey_controls <- function(df, points_col, colors_custom, clinvar, label_nodes = FALSE) {
+
   df <- df %>% mutate(clinvar = {{ clinvar }})
-  
+
   # Fix clinvar naming
   df$clinvar[df$clinvar == 'Pathogenic/Likely pathogenic'] <- "Likely pathogenic"
   df$clinvar[df$clinvar == 'Benign/Likely benign'] <- "Likely benign"
-  
+
   # Dynamically pick the points column using {{ }}
   summary_data <- df %>%
     group_by(clinvar, {{ points_col }}) %>%
     summarise(count = n(), .groups = "drop")
-  
+
   # Expand the dataframe
   expanded_df <- summary_data[rep(1:nrow(summary_data), summary_data$count), -3]
   rownames(expanded_df) <- NULL
-  
+
   # Prepare for sankey
   sankey_data <- expanded_df %>%
     ggsankey::make_long(clinvar, {{ points_col }})
-  
+
   # Factor levels
   levels_order <- c(
-    'Benign', "Likely benign", "Likely Benign", 
-    'Uncertain', "No Classification", 
+    'Benign', "Likely benign", "Likely Benign",
+    'Uncertain', "No Classification",
     "Likely pathogenic", "Likely Pathogenic", "Pathogenic"
   )
-  
+
   sankey_data$node <- factor(sankey_data$node, levels = levels_order)
   sankey_data$next_node <- factor(sankey_data$next_node, levels = levels_order)
-  
+
   # Make the plot
   gc <- ggplot(sankey_data, aes(
     x = x,
@@ -135,7 +135,7 @@ make_sankey_controls <- function(df, points_col, colors_custom, clinvar) {
     node = node,
     next_node = next_node,
     fill = node,
-    label = NA
+    label = if (label_nodes) node else NA
   )) +
     geom_sankey(flow.alpha = 0.7, node.color = "black") +
     geom_sankey_label(size = 3, color = "black") +
@@ -152,7 +152,7 @@ make_sankey_controls <- function(df, points_col, colors_custom, clinvar) {
       title = paste0("Sankey Diagram: ClinVar → ", rlang::as_name(rlang::ensym(points_col))),
       fill = "Node Category"
     )
-  
+
   return(gc)
 }
 
@@ -326,6 +326,13 @@ sankey_controls_MP2_YP = make_sankey_controls(controls_MP2_YP, Class_MP2, colors
 
 sankey_controls_AM_YP = make_sankey_controls(controls_AM_YP, Class_AM, colors_custom, clnsig_group_18_25)
 
+# Labeled (node-name) variants of the same three sankeys
+sankey_controls_REVEL_YP_lab = make_sankey_controls(controls_REVEL_YP, Class_REVEL, colors_custom, clnsig_group_18_25, label_nodes = TRUE)
+
+sankey_controls_MP2_YP_lab = make_sankey_controls(controls_MP2_YP, Class_MP2, colors_custom, clnsig_group_18_25, label_nodes = TRUE)
+
+sankey_controls_AM_YP_lab = make_sankey_controls(controls_AM_YP, Class_AM, colors_custom, clnsig_group_18_25, label_nodes = TRUE)
+
 
 ##----predictor metrics function----
 
@@ -410,15 +417,22 @@ controls_1star_YP <- list(
 
   "sankey_controls_REVEL_GeneSpecific.png" = sankey_controls_REVEL_YP,
   "sankey_controls_AM_GeneSpecific.png" = sankey_controls_AM_YP,
-  "sankey_controls_MP2_GeneSpecific.png" = sankey_controls_MP2_YP
-  
-  
+  "sankey_controls_MP2_GeneSpecific.png" = sankey_controls_MP2_YP,
+
+  "sankey_controls_REVEL_GeneSpecific_lab.png" = sankey_controls_REVEL_YP_lab,
+  "sankey_controls_AM_GeneSpecific_lab.png" = sankey_controls_AM_YP_lab,
+  "sankey_controls_MP2_GeneSpecific_lab.png" = sankey_controls_MP2_YP_lab
+
 )
 
 square_plots <- c(
   "sankey_controls_REVEL_GeneSpecific.png",
   "sankey_controls_AM_GeneSpecific.png",
   "sankey_controls_MP2_GeneSpecific.png",
+
+  "sankey_controls_REVEL_GeneSpecific_lab.png",
+  "sankey_controls_AM_GeneSpecific_lab.png",
+  "sankey_controls_MP2_GeneSpecific_lab.png",
 
   "sankey_controls_REVEL_OP.png",
   "sankey_controls_AM_OP.png",
@@ -460,39 +474,39 @@ ClinGen_MP2_YP  = read_excel(file.path(DATA_DIR, "supplementary_data/Supplementa
 
 # ------ Sankey function for clingen controls ------
 
-make_sankey_clingen <- function(df, points_col, colors_custom) {
-  
+make_sankey_clingen <- function(df, points_col, colors_custom, label_nodes = FALSE) {
+
   df <- df %>%
   filter(Updated_Classification_ClinGen_repo != "VUS")
 
-  
+
   # Fix clnsig_group naming
   df$Updated_Classification_ClinGen_repo[df$Updated_Classification_ClinGen_repo == 'Pathogenic/Likely pathogenic'] <- "Likely pathogenic"
   df$Updated_Classification_ClinGen_repo[df$Updated_Classification_ClinGen_repo == 'Benign/Likely benign'] <- "Likely benign"
-  
+
   # Dynamically pick the points column using {{ }}
   summary_data <- df %>%
     group_by(Updated_Classification_ClinGen_repo, {{ points_col }}) %>%
     summarise(count = n(), .groups = "drop")
-  
+
   # Expand the dataframe
   expanded_df <- summary_data[rep(1:nrow(summary_data), summary_data$count), -3]
   rownames(expanded_df) <- NULL
-  
+
   # Prepare for sankey
   sankey_data <- expanded_df %>%
     ggsankey::make_long(Updated_Classification_ClinGen_repo, {{ points_col }})
-  
+
   # Factor levels
   levels_order <- c(
-    'Benign', "Likely benign", "Likely Benign", 
-    'Uncertain', "No Classification", 
+    'Benign', "Likely benign", "Likely Benign",
+    'Uncertain', "No Classification",
     "Likely pathogenic", "Likely Pathogenic", "Pathogenic"
   )
-  
+
   sankey_data$node <- factor(sankey_data$node, levels = levels_order)
   sankey_data$next_node <- factor(sankey_data$next_node, levels = levels_order)
-  
+
   # Make the plot
   gc <- ggplot(sankey_data, aes(
     x = x,
@@ -500,7 +514,7 @@ make_sankey_clingen <- function(df, points_col, colors_custom) {
     node = node,
     next_node = next_node,
     fill = node,
-    label = NA
+    label = if (label_nodes) node else NA
   )) +
     geom_sankey(flow.alpha = 0.7, node.color = "black") +
     geom_sankey_label(size = 3, color = "black") +
@@ -517,7 +531,7 @@ make_sankey_clingen <- function(df, points_col, colors_custom) {
       title = paste0("Sankey Diagram: ClinGen --> ", rlang::as_name(rlang::ensym(points_col))),
       fill = "Node Category"
     )
-  
+
   return(gc)
 }
 
@@ -685,6 +699,13 @@ sankey_clingen_YP_AM = make_sankey_clingen(ClinGen_AM_YP, Class_AM, colors_custo
 
 sankey_clingen_YP_MP2 = make_sankey_clingen(ClinGen_MP2_YP, Class_MP2, colors_custom)
 
+# Labeled (node-name) variants of the same three sankeys
+sankey_clingen_YP_REVEL_lab = make_sankey_clingen(ClinGen_REVEL_YP, Class_REVEL, colors_custom, label_nodes = TRUE)
+
+sankey_clingen_YP_AM_lab = make_sankey_clingen(ClinGen_AM_YP, Class_AM, colors_custom, label_nodes = TRUE)
+
+sankey_clingen_YP_MP2_lab = make_sankey_clingen(ClinGen_MP2_YP, Class_MP2, colors_custom, label_nodes = TRUE)
+
 
 
 ##---apply confusion matrix ----
@@ -716,13 +737,21 @@ clingen_YP_pejaver <- list(
 
   "sankey_clingen_REVEL_GeneSpecific.png" = sankey_clingen_YP_REVEL,
   "sankey_clingen_AM_GeneSpecific.png" = sankey_clingen_YP_AM,
-  "sankey_clingen_MP2_GeneSpecific.png" = sankey_clingen_YP_MP2
+  "sankey_clingen_MP2_GeneSpecific.png" = sankey_clingen_YP_MP2,
+
+  "sankey_clingen_REVEL_GeneSpecific_lab.png" = sankey_clingen_YP_REVEL_lab,
+  "sankey_clingen_AM_GeneSpecific_lab.png" = sankey_clingen_YP_AM_lab,
+  "sankey_clingen_MP2_GeneSpecific_lab.png" = sankey_clingen_YP_MP2_lab
 )
 
 square_plots <- c(
   "sankey_clingen_REVEL_GeneSpecific.png",
   "sankey_clingen_AM_GeneSpecific.png",
   "sankey_clingen_MP2_GeneSpecific.png",
+
+  "sankey_clingen_REVEL_GeneSpecific_lab.png",
+  "sankey_clingen_AM_GeneSpecific_lab.png",
+  "sankey_clingen_MP2_GeneSpecific_lab.png",
 
   "sankey_clingen_OP_REVEL.png",
   "sankey_clingen_OP_AM.png",
@@ -1192,6 +1221,10 @@ ben_plot
 ggsave(file.path(OUT_DIR, 'figure_6/pie_path_REVEL_GeneSpecific_lab.png'), path_plot, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7, create.dir = TRUE)
 ggsave(file.path(OUT_DIR, 'figure_6/pie_ben_REVEL_GeneSpecific_lab.png'), ben_plot, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7, create.dir = TRUE)
 ggsave(file.path(OUT_DIR, 'figure_6/pie_unc_REVEL_GeneSpecific_lab.png'), unc_plot, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7, create.dir = TRUE)
+
+ggsave(file.path(OUT_DIR, 'figure_6/pie_path_REVEL_GeneSpecific_nolab.png'), path_plot_no_lab, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7, create.dir = TRUE)
+ggsave(file.path(OUT_DIR, 'figure_6/pie_ben_REVEL_GeneSpecific_nolab.png'), ben_plot_no_lab, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7, create.dir = TRUE)
+ggsave(file.path(OUT_DIR, 'figure_6/pie_unc_REVEL_GeneSpecific_nolab.png'), unc_plot_no_lab, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7, create.dir = TRUE)
 
 
 

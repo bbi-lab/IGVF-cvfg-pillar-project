@@ -208,6 +208,18 @@ sankeys/confusion matrices) save via direct `ggsave()` calls to
 `data/output/figures/figure_6/`, the same directory `Figure_6b.R` (above)
 writes `figure_6b.pdf`/`figure_6b.svg` to.
 
+The published Fig 5a/d and Fig 6a/c/d/e panels have counts hand-overlaid on
+top of these raw plots in the assembled `PP_Final_Figure3_5_6.ai`. The
+sankeys' node counts match the totals already printed on their companion
+confusion-matrix-style tiles (`cm_*.png`), so no extra output is needed for
+those. The `make_sankey_controls()`/`make_sankey_clingen()` functions (Fig
+5a/d) and the three-ring donut functions (Fig 6c) now each save two variants
+per plot: a `_lab` version with node/ring count labels baked in, and a
+`_nolab`/plain version without (the Fig 6a/d/e VUS/gnomAD/unobserved sankeys
+already had a labeled variant; only the Fig 5 controls/ClinGen sankeys and
+Fig 6c donuts needed a labeled or unlabeled counterpart added). Pick whichever
+matches how a given panel was assembled by hand.
+
 ## Extended Data Figures
 
 Directories: `notebooks/figures/extended_data_figure_2/`,
