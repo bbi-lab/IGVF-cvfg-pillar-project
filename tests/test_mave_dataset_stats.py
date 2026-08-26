@@ -7,34 +7,71 @@ from click.testing import CliRunner
 
 from src.mave_dataset_stats import (
     AGREE_LABEL,
+    BENIGN_VALUES,
     CALM_MERGED_LABEL,
+    CLINGEN_EVIDENCE_REPOSITORY_TITLE,
     CLINVAR_CONFLICT_LABEL,
+    COMBINED_EVIDENCE_LABEL_BY_PREDICTOR,
+    COMBINED_REVEL_EVIDENCE_LABEL,
+    COMPOSITE_SCORE_DATASETS_TITLE,
+    CONCORDANT_LABEL,
+    CONFLICTING_EVIDENCE_VALUE,
+    CONTROL_CONCORDANCE_EVIDENCE_LABEL,
+    CONTROL_VUS_LABEL,
     DISAGREE_LABEL,
+    DISCORDANT_BENIGN_TO_PATHOGENIC_LABEL,
+    DISCORDANT_LABEL,
+    DISCORDANT_PATHOGENIC_TO_BENIGN_LABEL,
+    FUNCTIONAL_POINTS_COL,
+    GENE_DISCORDANCE_TITLE,
     GNOMAD_LABEL,
+    MUTPRED2_TRAINING_STEP_LABEL,
     NO_ANNOTATION_LABEL,
     NO_EVIDENCE_LABEL,
     PATHOGENIC_OR_BENIGN_LABEL,
+    PATHOGENIC_VALUES,
     RECLASSIFICATION_USECOLS,
+    REVEL_TRAINING_STEP_LABEL,
     RECLASSIFICATION_VARIANT_CLASSIFICATION_TITLE,
     SNV_ACCESSIBLE_LABEL,
     SNV_LABEL,
+    VARIANT_CLASSIFICATION_CATEGORY_SHEETS_BY_PREDICTOR,
+    VARIANT_CLASSIFICATION_CLASS_COL_BY_PREDICTOR,
+    VARIANT_CLASSIFICATION_CONFLICTING_COL_BY_PREDICTOR,
+    VARIANT_CLASSIFICATION_POINTS_COL_BY_PREDICTOR,
+    VARIANT_CLASSIFICATION_PREDICTOR_POINTS_COL_BY_PREDICTOR,
+    VARIANT_CLASSIFICATION_PREDICTORS,
     VARIANT_CLASSIFICATION_TITLE,
     VUS_LABEL,
     build_reclassification_report,
     clinvar_classification_from_flags,
     clinvar_significance_flags,
     compute_all_stats,
+    compute_clingen_evidence_repository_stats,
+    compute_composite_score_datasets,
+    compute_control_concordance,
     compute_excalibr_calibration_stats,
+    compute_gene_discordance_stats,
     compute_reclassification_agreement,
+    compute_reclassification_filter_funnel,
     compute_variant_classification_stats,
     compute_variant_classification_stats_from_reclassification_file,
+    control_concordance_flags,
     distinct_dna_variants,
     distinct_variant_flags,
     excalibr_dataset_to_gene_map,
     format_calibration_summary,
     format_clinical_table,
+    format_clingen_evidence_repository_summary,
+    format_composite_score_datasets,
+    format_control_concordance_report,
+    format_gene_discordance_summary,
+    format_genomic_variant_count,
+    format_reclassification_filter_funnel,
     format_reclassification_table,
     format_variant_classification_summary,
+    format_variant_classification_table,
+    funnel_distinct_dna_variants,
     has_any_value,
     is_snv_accessible,
     load_dataset_metadata,
@@ -50,7 +87,7 @@ from src.mave_dataset_stats import (
     variant_flags,
 )
 
-BASE_COLUMNS = ["Dataset", "Gene", "hgvs_c", "hgvs_p"]
+BASE_COLUMNS = ["Dataset", "Gene", "hgvs_c", "hgvs_p", "nucleotide_or_aa"]
 ANNOTATION_COLUMNS = [
     "REVEL",
     "AM_score",
@@ -61,15 +98,72 @@ ANNOTATION_COLUMNS = [
     "transcript_ref",
     "transcript_alt",
 ]
-FULL_COLUMNS = BASE_COLUMNS + ANNOTATION_COLUMNS
+# Genomic-coordinate columns compute_reclassification_filter_funnel reads from
+# the expanded file (irrelevant to condensed-file-only tests, but harmless
+# there -- both share this schema for simplicity, see _write_full_variant_file).
+GENOMIC_COLUMNS = [
+    "mavedb_variant_urn",
+    "Chrom",
+    "hg38_start",
+    "ref_allele",
+    "alt_allele",
+    "aa_pos",
+    "aa_ref",
+    "aa_alt",
+]
+FULL_COLUMNS = BASE_COLUMNS + ANNOTATION_COLUMNS + GENOMIC_COLUMNS
 
 
-def _write_condensed(path, rows):
-    pd.DataFrame(rows, columns=BASE_COLUMNS).to_csv(path, sep="\t", index=False)
+def _write_condensed(path, rows, rna_scores=None):
+    """`rna_scores`, if given, is a list of `rna_score` values aligned with
+    `rows` (default: empty for every row, i.e. no RNA scores)."""
+    df = pd.DataFrame(rows, columns=BASE_COLUMNS)
+    df["rna_score"] = rna_scores if rna_scores is not None else ""
+    df.to_csv(path, sep="\t", index=False)
 
 
 def _write_full_variant_file(path, rows):
-    pd.DataFrame(rows, columns=FULL_COLUMNS).to_csv(path, sep="\t", index=False)
+    df = pd.DataFrame(rows, columns=FULL_COLUMNS)
+    df["rna_score"] = ""
+    df.to_csv(path, sep="\t", index=False)
+
+
+def _write_checkpoint_file(path, rows):
+    """`rows` is a list of (Dataset, Gene, mavedb_variant_urn, Chrom, hg38_start,
+    ref_allele, alt_allele, hgvs_p, auth_reported_score, Flag, VariantNotes,
+    splice_var_amino, revel_train_amino, mp2_train_amino,
+    Assertion_ClinGen_repo, Updated_Classification_ClinGen_repo) tuples --
+    the columns compute_reclassification_filter_funnel and
+    compute_clingen_evidence_repository_stats read from
+    Variant_Classification_analysis.ipynb's checkpoint file.
+    """
+    columns = [
+        "Dataset",
+        "Gene",
+        "mavedb_variant_urn",
+        "Chrom",
+        "hg38_start",
+        "ref_allele",
+        "alt_allele",
+        "hgvs_p",
+        "auth_reported_score",
+        "Flag",
+        "VariantNotes",
+        "splice_var_amino",
+        "revel_train_amino",
+        "mp2_train_amino",
+        "Assertion_ClinGen_repo",
+        "Updated_Classification_ClinGen_repo",
+    ]
+    pd.DataFrame(rows, columns=columns).to_csv(path, index=False)
+
+
+def _write_chek2_file(path, rows=()):
+    """`rows` is a list of (hgvs_pro, score, Filter_CI) tuples -- empty by
+    default, since most tests don't need any CHEK2 QC matches.
+    """
+    columns = ["hgvs_pro", "score", "Filter_CI"]
+    pd.DataFrame(rows, columns=columns).to_excel(path, index=False)
 
 
 def _bucket_count(section_text, label):
@@ -111,38 +205,99 @@ def _write_controls_file(path, sheets):
             pd.DataFrame(rows, columns=columns).to_excel(writer, sheet_name=sheet_name, index=False)
 
 
-def _write_variant_classification_sheets(path, sheets, mode="a"):
-    """`sheets` is {sheet_name: rows}, where each row is
-    (Gene, Chrom, hg38_start, ref_allele, alt_allele, Class_REVEL) -- the
-    columns `compute_variant_classification_stats` reads. Appends (`mode="a"`)
-    to an existing workbook at `path` (e.g. one already written by
-    `_write_controls_file`), since the main CLI reads both sets of sheets
-    from the same `--controls-file`; pass `mode="w"` to create a fresh file.
+def _write_variant_classification_sheets_by_predictor(path, category_rows, mode="w"):
+    """Writes the same `category_rows` to all three predictors' own sheets
+    (REVEL/AlphaMissense/MutPred2) -- `category_rows` is {category: rows}
+    where `category` is one of `VARIANT_CLASSIFICATION_CATEGORY_SHEETS_BY_
+    PREDICTOR`'s five keys ("controls"/"ClinGen_Repo"/"VUS"/"gnomAD"/
+    "Unobserved") and each row is (Gene, Chrom, hg38_start, ref_allele,
+    alt_allele, class_value, points_value, fxn_points, predictor_points) --
+    written under each predictor's own sheet name and `Class_*`/
+    `Total_Points_*`/predictor-points column names, plus the shared
+    `Fxn_points` column, the columns `compute_variant_classification_stats`
+    reads. Reusing the same rows for every predictor keeps expected numbers
+    identical across REVEL/AlphaMissense/MutPred2 -- sufficient to exercise
+    the per-predictor sheet-reading mechanics without three independent
+    synthetic datasets. Appends (`mode="a"`) to an existing workbook (e.g.
+    one already written by `_write_controls_file`); pass `mode="w"` (the
+    default) to create a fresh file.
 
-    Also adds `clnsig_group_18_25`/`ExC_points_2025`/`OP_points` columns
-    (empty/no-evidence), since the real Supplementary_Data_5 `controls_`-
-    prefixed sheets carry both this function's columns and those
-    `build_reclassification_report` reads -- one of `sheets`' names
-    (`controls_REVEL_GeneSpecific`) matches `CONTROLS_SHEET_PREFIX`, so
-    without them `build_reclassification_report` would KeyError on it.
+    Also adds `clnsig_group_18_25`/`ExC_points_2025`/`OP_points`/
+    `Updated_Classification_ClinGen_repo` placeholder columns: the real
+    Supplementary_Data_5 `controls_*` sheets carry both this function's
+    columns and those `build_reclassification_report` reads, and every
+    `controls_*` sheet (now three, one per predictor) gets scanned by that
+    function too -- without these placeholders it would KeyError on them.
+
+    The predictor's own `Conflicting_*` column is derived from `fxn_points`/
+    `predictor_points`, mirroring `Variant_Classification_analysis.ipynb`'s
+    `split_zero` (see docs/variant_classification.md#functional-vs-predictor-
+    conflict-flagged-not-excluded): `"Conflicting evidence"` when the two
+    sides are strictly opposite in sign, otherwise the row's own
+    `points_value`.
     """
-    columns = ["Gene", "Chrom", "hg38_start", "ref_allele", "alt_allele", "Class_REVEL"]
     with pd.ExcelWriter(path, mode=mode, engine="openpyxl") as writer:
-        for sheet_name, rows in sheets.items():
-            df = pd.DataFrame(rows, columns=columns)
-            df["clnsig_group_18_25"] = None
-            df["ExC_points_2025"] = 0
-            df["OP_points"] = 0
-            df.to_excel(writer, sheet_name=sheet_name, index=False)
+        for predictor in VARIANT_CLASSIFICATION_PREDICTORS:
+            category_sheets = VARIANT_CLASSIFICATION_CATEGORY_SHEETS_BY_PREDICTOR[predictor]
+            class_col = VARIANT_CLASSIFICATION_CLASS_COL_BY_PREDICTOR[predictor]
+            points_col = VARIANT_CLASSIFICATION_POINTS_COL_BY_PREDICTOR[predictor]
+            predictor_points_col = VARIANT_CLASSIFICATION_PREDICTOR_POINTS_COL_BY_PREDICTOR[predictor]
+            conflicting_col = VARIANT_CLASSIFICATION_CONFLICTING_COL_BY_PREDICTOR[predictor]
+            columns = [
+                "Gene",
+                "Chrom",
+                "hg38_start",
+                "ref_allele",
+                "alt_allele",
+                class_col,
+                points_col,
+                FUNCTIONAL_POINTS_COL,
+                predictor_points_col,
+            ]
+            for category, rows in category_rows.items():
+                df = pd.DataFrame(rows, columns=columns)
+                df["clnsig_group_18_25"] = None
+                df["ExC_points_2025"] = 0
+                df["OP_points"] = 0
+                df["Updated_Classification_ClinGen_repo"] = None
+                opposite_signs = (df[FUNCTIONAL_POINTS_COL] * df[predictor_points_col]) < 0
+                df[conflicting_col] = df[points_col].where(~opposite_signs, CONFLICTING_EVIDENCE_VALUE)
+                df.to_excel(writer, sheet_name=category_sheets[category], index=False)
+
+
+def _write_gene_discordance_sheet(path, rows, mode="w"):
+    """`rows` is a list of (Gene, Chrom, hg38_start, ref_allele, alt_allele,
+    clnsig_group_18_25, Class_REVEL) tuples -- the columns
+    `compute_gene_discordance_stats` reads from `controls_REVEL_GeneSpecific`.
+    """
+    columns = ["Gene", "Chrom", "hg38_start", "ref_allele", "alt_allele", "clnsig_group_18_25", "Class_REVEL"]
+    with pd.ExcelWriter(path, mode=mode, engine="openpyxl") as writer:
+        pd.DataFrame(rows, columns=columns).to_excel(writer, sheet_name="controls_REVEL_GeneSpecific", index=False)
 
 
 def _write_reclassification_file(path, rows):
     """`rows` is a list of (clinvar_sig_2025, gnomad_MAF, ref_allele,
-    alt_allele, Combined_points) tuples -- the columns
-    `compute_variant_classification_stats_from_reclassification_file` reads.
+    alt_allele, Combined_points, Functional_points, REVEL_points) tuples --
+    the columns `compute_variant_classification_stats_from_reclassification_
+    file` reads. `Conflict_REVEL_GeneSpecific` is derived from
+    `Functional_points`/`REVEL_points` the same way
+    `_write_variant_classification_sheets_by_predictor` derives
+    `Conflicting_*`: `"Conflicting evidence"` when the two sides are
+    strictly opposite in sign, otherwise the row's own `Combined_points`.
     """
-    columns = ["clinvar_sig_2025", "gnomad_MAF", "ref_allele", "alt_allele", "Combined_points"]
-    pd.DataFrame(rows, columns=columns).to_csv(path, sep="\t", index=False)
+    columns = [
+        "clinvar_sig_2025",
+        "gnomad_MAF",
+        "ref_allele",
+        "alt_allele",
+        "Combined_points",
+        "Functional_points",
+        "REVEL_points",
+    ]
+    df = pd.DataFrame(rows, columns=columns)
+    opposite_signs = (df["Functional_points"] * df["REVEL_points"]) < 0
+    df["Conflict_REVEL_GeneSpecific"] = df["Combined_points"].where(~opposite_signs, CONFLICTING_EVIDENCE_VALUE)
+    df.to_csv(path, sep="\t", index=False)
 
 
 @pytest.fixture
@@ -153,11 +308,11 @@ def dataset_files(tmp_path):
     _write_condensed(
         condensed_path,
         [
-            ("DS_IGVF_A", "GENEA", "c1", "p1"),
-            ("DS_IGVF_A", "GENEA", "c1", "p1"),  # duplicate variant, second measurement
-            ("DS_IGVF_B", "GENEB, GENEC", "c2", "p2"),
-            ("DS_COMM_A", "GENEC", "c3", "p3"),
-            ("DS_COMM_B", "GENED", "c4", "p4"),
+            ("DS_IGVF_A", "GENEA", "c1", "p1", "nt"),
+            ("DS_IGVF_A", "GENEA", "c1", "p1", "nt"),  # duplicate variant, second measurement
+            ("DS_IGVF_B", "GENEB, GENEC", "c2", "p2", "aa"),
+            ("DS_COMM_A", "GENEC", "c3", "p3", "nt"),
+            ("DS_COMM_B", "GENED", "c4", "p4", "aa"),
         ],
     )
     _write_metadata(
@@ -189,16 +344,68 @@ def full_dataset_files(tmp_path):
     # different clinical-attribute bucket between the two report sections.
     # p3 is on GENEC (not a mixed-year gene) and carries a 2018 call
     # ("Pathogenic") that must be ignored in favor of its empty 2025 call.
+    # Trailing 8 fields on every row are GENOMIC_COLUMNS (mavedb_variant_urn,
+    # Chrom, hg38_start, ref_allele, alt_allele, aa_pos, aa_ref, aa_alt) --
+    # arbitrary but distinct/non-special-cased (no LDLR/F9/TP53/SFPQ genes
+    # here), just enough for compute_reclassification_filter_funnel to run.
     _write_full_variant_file(
         condensed_path,
         [
-            ("DS_IGVF_A", "BRCA1", "c1", "p1", "0.5", "0.5", "0.5", "Pathogenic", "Uncertain significance", "", "A", "G"),
-            ("DS_IGVF_A", "BRCA1", "c1", "p1", "0.5", "0.5", "0.5", "Pathogenic", "Uncertain significance", "", "A", "G"),
+            (
+                "DS_IGVF_A",
+                "BRCA1",
+                "c1",
+                "p1",
+                "nt",
+                "0.5",
+                "0.5",
+                "0.5",
+                "Pathogenic",
+                "Uncertain significance",
+                "",
+                "A",
+                "G",
+                "urn:mavedb:1a",
+                "17",
+                "100",
+                "A",
+                "G",
+                "1",
+                "I",
+                "M",
+            ),
+            (
+                # Same variant, second measurement -- distinct condensed row/urn,
+                # like a real duplicate MaveDB submission (urn is 1:1 with
+                # condensed rows in the real data, never repeated within it).
+                "DS_IGVF_A",
+                "BRCA1",
+                "c1",
+                "p1",
+                "nt",
+                "0.5",
+                "0.5",
+                "0.5",
+                "Pathogenic",
+                "Uncertain significance",
+                "",
+                "A",
+                "G",
+                "urn:mavedb:1b",
+                "17",
+                "100",
+                "A",
+                "G",
+                "1",
+                "I",
+                "M",
+            ),
             (
                 "DS_IGVF_B",
                 "GENEB, GENEC",
                 "c2",
                 "p2",
+                "aa",
                 "",
                 "",
                 "",
@@ -207,20 +414,95 @@ def full_dataset_files(tmp_path):
                 "0.001",
                 "A",
                 "T",
+                "urn:mavedb:2",
+                "17",
+                "200",
+                "A",
+                "T",
+                "2",
+                "I",
+                "I",
             ),
-            ("DS_COMM_A", "GENEC", "c3", "p3", "", "", "", "", "Pathogenic", "", "A", "G"),
-            ("DS_COMM_B", "GENED", "c4a|c4b", "p4", "0.2|", "0.2|", "0.9|0.9", "Benign|", "Benign|", "", "AC|A", "GT|G"),
+            (
+                "DS_COMM_A",
+                "GENEC",
+                "c3",
+                "p3",
+                "nt",
+                "",
+                "",
+                "",
+                "",
+                "Pathogenic",
+                "",
+                "A",
+                "G",
+                "urn:mavedb:3",
+                "17",
+                "300",
+                "A",
+                "G",
+                "3",
+                "I",
+                "I",
+            ),
+            (
+                "DS_COMM_B",
+                "GENED",
+                "c4a|c4b",
+                "p4",
+                "aa",
+                "0.2|",
+                "0.2|",
+                "0.9|0.9",
+                "Benign|",
+                "Benign|",
+                "",
+                "AC|A",
+                "GT|G",
+                "urn:mavedb:4",
+                "17",
+                "400",
+                "AC",
+                "GT",
+                "4",
+                "I",
+                "I",
+            ),
         ],
     )
     _write_full_variant_file(
         expanded_path,
         [
-            ("DS_IGVF_A", "BRCA1", "c1", "p1", "0.5", "0.5", "0.5", "Pathogenic", "Uncertain significance", "", "A", "G"),
+            (
+                "DS_IGVF_A",
+                "BRCA1",
+                "c1",
+                "p1",
+                "nt",
+                "0.5",
+                "0.5",
+                "0.5",
+                "Pathogenic",
+                "Uncertain significance",
+                "",
+                "A",
+                "G",
+                "urn:mavedb:1a",
+                "17",
+                "100",
+                "A",
+                "G",
+                "1",
+                "I",
+                "M",
+            ),
             (
                 "DS_IGVF_B",
                 "GENEB, GENEC",
                 "c2",
                 "p2",
+                "aa",
                 "",
                 "",
                 "",
@@ -229,10 +511,84 @@ def full_dataset_files(tmp_path):
                 "0.001",
                 "A",
                 "T",
+                "urn:mavedb:2",
+                "17",
+                "200",
+                "A",
+                "T",
+                "2",
+                "I",
+                "I",
             ),
-            ("DS_COMM_A", "GENEC", "c3", "p3", "", "", "", "", "Pathogenic", "", "A", "G"),
-            ("DS_COMM_B", "GENED", "c4a", "p4", "0.2", "0.2", "0.9", "Benign", "Benign", "", "AC", "GT"),
-            ("DS_COMM_B", "GENED", "c4b", "p4", "", "", "0.9", "", "", "", "AC", "GT"),
+            (
+                "DS_COMM_A",
+                "GENEC",
+                "c3",
+                "p3",
+                "nt",
+                "",
+                "",
+                "",
+                "",
+                "Pathogenic",
+                "",
+                "A",
+                "G",
+                "urn:mavedb:3",
+                "17",
+                "300",
+                "A",
+                "G",
+                "3",
+                "I",
+                "I",
+            ),
+            (
+                "DS_COMM_B",
+                "GENED",
+                "c4a",
+                "p4",
+                "aa",
+                "0.2",
+                "0.2",
+                "0.9",
+                "Benign",
+                "Benign",
+                "",
+                "AC",
+                "GT",
+                "urn:mavedb:4",
+                "17",
+                "400",
+                "AC",
+                "GT",
+                "4",
+                "I",
+                "I",
+            ),
+            (
+                "DS_COMM_B",
+                "GENED",
+                "c4b",
+                "p4",
+                "aa",
+                "",
+                "",
+                "0.9",
+                "",
+                "",
+                "",
+                "AC",
+                "GT",
+                "urn:mavedb:4",
+                "17",
+                "401",
+                "A",
+                "G",
+                "4",
+                "I",
+                "I",
+            ),
         ],
     )
     _write_metadata(
@@ -275,29 +631,38 @@ def full_dataset_files(tmp_path):
     # coords (1, 100, A, G) is shared between "controls" and "gnomAD" below, to
     # exercise the combined total's cross-category dedup -- it should count
     # once, not twice, in the combined "Distinct DNA variants classified" total.
-    _write_variant_classification_sheets(
+    # Same rows written to all three predictors' sheets (REVEL/AlphaMissense/
+    # MutPred2), so each predictor's row in the resulting table shows the same
+    # numbers -- see _write_variant_classification_sheets_by_predictor.
+    # Every row's Fxn_points/predictor-points are "don't care" (fxn = total,
+    # predictor = 0) except row 105, which is single-source (fxn = 0,
+    # predictor = -1) to exercise the -1-point single-source/conflicting
+    # split -- see _write_variant_classification_sheets_by_predictor.
+    _write_variant_classification_sheets_by_predictor(
         controls_path,
         {
-            "controls_REVEL_GeneSpecific": [
-                ("GENEX", 1, 100, "A", "G", "Pathogenic"),
-                ("GENEX", 1, 101, "A", "G", "Benign"),
+            "controls": [
+                ("GENEX", 1, 100, "A", "G", "Pathogenic", 6, 6, 0),
+                ("GENEX", 1, 101, "A", "G", "Benign", -2, -2, 0),
             ],
-            "ClinGen_Repo_REVEL_GeneSpecific": [
-                ("GENEX", 1, 102, "A", "G", "Likely Pathogenic"),
+            "ClinGen_Repo": [
+                ("GENEX", 1, 102, "A", "G", "Likely Pathogenic", 6, 6, 0),
             ],
-            "VUS_REVEL": [
-                ("GENEX", 1, 103, "A", "G", "Pathogenic"),  # resolved
-                ("GENEX", 1, 104, "A", "G", "Uncertain"),  # not resolved
-                ("GENEX", 1, 105, "A", "G", "Benign"),  # resolved
+            "VUS": [
+                ("GENEX", 1, 103, "A", "G", "Pathogenic", 6, 6, 0),  # resolved
+                ("GENEX", 1, 104, "A", "G", "Uncertain", 2, 2, 0),  # not resolved
+                # resolved, at the -1-point threshold, single source (predictor only)
+                ("GENEX", 1, 105, "A", "G", "Benign", -1, 0, -1),
             ],
-            "gnomAD_REVEL": [
-                ("GENEX", 1, 100, "A", "G", "Pathogenic"),  # duplicate of controls row above
+            "gnomAD": [
+                ("GENEX", 1, 100, "A", "G", "Pathogenic", 6, 6, 0),  # duplicate of controls row above
             ],
-            "Unobserved_REVEL": [
-                ("GENEX", 1, 106, "A", "G", "Pathogenic"),  # resolved
-                ("GENEX", 1, 107, "A", "G", "Uncertain"),  # not resolved
+            "Unobserved": [
+                ("GENEX", 1, 106, "A", "G", "Pathogenic", 6, 6, 0),  # resolved
+                ("GENEX", 1, 107, "A", "G", "Uncertain", 3, 3, 0),  # not resolved
             ],
         },
+        mode="a",
     )
 
     # 7 rows total. Pathogenic-or-benign (points >= 6 or <= -1): rows 1, 3, 5,
@@ -305,23 +670,70 @@ def full_dataset_files(tmp_path):
     # 1-2, of which row 1 (points 8) resolves (1 of 2). Unobserved (both
     # clinvar_sig_2025 and gnomad_MAF null, SNV only): rows 3-4 (row 7 is
     # excluded -- its ref/alt aren't single-base; row 5/6 have a
-    # clinvar_sig_2025/gnomad_MAF value), of which row 3 (points -8) resolves
-    # (1 of 2).
+    # clinvar_sig_2025/gnomad_MAF value), of which row 3 (points -1, exactly
+    # at the Benign/Likely Benign threshold, single source: Functional_points
+    # 0/REVEL_points -1) resolves (1 of 2).
     reclassification_path = tmp_path / "reclassification.tsv"
     _write_reclassification_file(
         reclassification_path,
         [
-            ("Uncertain significance", None, "A", "G", 8),  # VUS, resolved
-            ("Uncertain significance", None, "A", "G", 2),  # VUS, not resolved
-            (None, None, "A", "G", -8),  # Unobserved SNV, resolved
-            (None, None, "A", "G", 1),  # Unobserved SNV, not resolved
-            ("Pathogenic", None, "A", "G", 11),  # controls-like, not VUS/Unobserved
-            (None, 0.01, "A", "G", -3),  # gnomAD-like, not Unobserved (gnomad_MAF set)
-            (None, None, "AC", "G", 8),  # not a SNV, excluded from Unobserved
+            ("Uncertain significance", None, "A", "G", 8, 8, 0),  # VUS, resolved
+            ("Uncertain significance", None, "A", "G", 2, 2, 0),  # VUS, not resolved
+            (None, None, "A", "G", -1, 0, -1),  # Unobserved SNV, resolved at the -1-point threshold
+            (None, None, "A", "G", 1, 1, 0),  # Unobserved SNV, not resolved
+            ("Pathogenic", None, "A", "G", 11, 11, 0),  # controls-like, not VUS/Unobserved
+            (None, 0.01, "A", "G", -3, -3, 0),  # gnomAD-like, not Unobserved (gnomad_MAF set)
+            (None, None, "AC", "G", 8, 8, 0),  # not a SNV, excluded from Unobserved
         ],
     )
 
-    return condensed_path, metadata_path, expanded_path, excalibr_path, controls_path, reclassification_path
+    # Mirrors the expanded_path rows above (same mavedb_variant_urn/genomic
+    # coordinates) at the "post pre-checkpoint-filter" stage -- nothing here
+    # is flagged/tagged for exclusion, so all 4 distinct DNA variants survive
+    # compute_reclassification_filter_funnel's post-checkpoint steps too.
+    # p1 is a ClinGen Evidence Repository control that retains a determinate
+    # classification after evidence removal; p2 is one that doesn't (drops
+    # to Uncertain) -- exercising compute_clingen_evidence_repository_stats'
+    # pre-/post-removal split. p3/p4 carry no ClinGen data.
+    checkpoint_path = tmp_path / "checkpoint.csv"
+    _write_checkpoint_file(
+        checkpoint_path,
+        [
+            (
+                "DS_IGVF_A", "BRCA1", "urn:mavedb:1a", "17", 100, "A", "G", "p1", 0.5, None, None, "No", "No", "No",
+                "Pathogenic", "Pathogenic",
+            ),
+            (
+                "DS_IGVF_B", "GENEB, GENEC", "urn:mavedb:2", "17", 200, "A", "T", "p2", None, None, None, "No", "No", "No",
+                "Benign", "Uncertain",
+            ),
+            (
+                "DS_COMM_A", "GENEC", "urn:mavedb:3", "17", 300, "A", "G", "p3", None, None, None, "No", "No", "No",
+                None, None,
+            ),
+            (
+                "DS_COMM_B", "GENED", "urn:mavedb:4", "17", 400, "AC", "GT", "p4", 0.2, None, None, "No", "No", "No",
+                None, None,
+            ),
+            (
+                "DS_COMM_B", "GENED", "urn:mavedb:4", "17", 401, "A", "G", "p4", None, None, None, "No", "No", "No",
+                None, None,
+            ),
+        ],
+    )
+    chek2_path = tmp_path / "chek2.xlsx"
+    _write_chek2_file(chek2_path)
+
+    return (
+        condensed_path,
+        metadata_path,
+        expanded_path,
+        excalibr_path,
+        controls_path,
+        reclassification_path,
+        checkpoint_path,
+        chek2_path,
+    )
 
 
 def test_split_genes_handles_multi_gene_datasets():
@@ -336,14 +748,22 @@ def test_compute_all_stats_buckets(dataset_files):
     igvf = stats["IGVF"]
     assert igvf["datasets"] == 2
     assert igvf["variant_effect_measurements"] == 3
+    assert igvf["rna_scores"] == 0
     assert igvf["composite_scores"] == 0
+    # p2 (DS_IGVF_B) is the only "aa"-resolution row; c1 (DS_IGVF_A, x2) is the only "nt"-resolution variant.
+    assert igvf["distinct_protein_variants_assayed"] == 1
+    assert igvf["distinct_dna_variants_assayed"] == 1
     assert igvf["distinct_variants_assayed"] == 2
     assert igvf["genes_represented"] == 3
 
     non_igvf = stats["Community (non-IGVF)"]
     assert non_igvf["datasets"] == 2
     assert non_igvf["variant_effect_measurements"] == 1
+    assert non_igvf["rna_scores"] == 0
     assert non_igvf["composite_scores"] == 1
+    # p4 (DS_COMM_B) is "aa"-resolution; c3 (DS_COMM_A) is "nt"-resolution.
+    assert non_igvf["distinct_protein_variants_assayed"] == 1
+    assert non_igvf["distinct_dna_variants_assayed"] == 1
     assert non_igvf["distinct_variants_assayed"] == 2
     assert non_igvf["genes_represented"] == 2
     assert non_igvf["genes_not_in_igvf_data"] == 1  # GENED only; GENEC is shared with IGVF
@@ -351,7 +771,11 @@ def test_compute_all_stats_buckets(dataset_files):
     combined = stats["Combined (IGVF + community)"]
     assert combined["datasets"] == 4
     assert combined["variant_effect_measurements"] == 4
+    assert combined["rna_scores"] == 0
     assert combined["composite_scores"] == 1
+    # p2 and p4 are "aa"-resolution; c1 and c3 are "nt"-resolution.
+    assert combined["distinct_protein_variants_assayed"] == 2
+    assert combined["distinct_dna_variants_assayed"] == 2
     assert combined["distinct_variants_assayed"] == 4
     assert combined["genes_represented"] == 4
 
@@ -360,6 +784,92 @@ def test_compute_all_stats_buckets(dataset_files):
     assert gene_breakdown["IGVF only"] == ["GENEA", "GENEB"]
     assert gene_breakdown["Community (non-IGVF) only"] == ["GENED"]
     assert gene_breakdown["Both IGVF and community (non-IGVF)"] == ["GENEC"]
+
+
+def test_compute_composite_score_datasets_uses_dataset_files_fixture(dataset_files):
+    condensed_path, metadata_path = dataset_files
+    condensed = pd.read_csv(condensed_path, sep="\t", dtype=str, keep_default_na=False)
+    metadata = load_dataset_metadata(metadata_path)
+
+    table = compute_composite_score_datasets(condensed, metadata)
+
+    # DS_COMM_B (GENED, community) is the only meta-analysis dataset in this fixture.
+    assert table["Dataset"].tolist() == ["DS_COMM_B"]
+    assert table["Gene"].tolist() == ["GENED"]
+    assert table["IGVF / Community"].tolist() == ["Community"]
+    assert table["Scores"].tolist() == [1]
+
+
+def test_compute_composite_score_datasets_sorts_by_scores_descending(tmp_path):
+    condensed_path = tmp_path / "condensed.tsv"
+    metadata_path = tmp_path / "metadata.xlsx"
+
+    _write_condensed(
+        condensed_path,
+        [
+            ("DS_META_SMALL", "GENEA", "c1", "p1", "nt"),
+            ("DS_META_BIG", "GENEB, GENEC", "c2", "p2", "aa"),
+            ("DS_META_BIG", "GENEB, GENEC", "c3", "p3", "aa"),
+            ("DS_META_BIG", "GENEB, GENEC", "c4", "p4", "aa"),
+            ("DS_PRIMARY", "GENED", "c5", "p5", "nt"),  # not a meta-analysis, excluded
+        ],
+    )
+    _write_metadata(
+        metadata_path,
+        [
+            ("DS_META_SMALL", "Yes", "meta-analysis"),
+            ("DS_META_BIG", "No", "meta-analysis"),
+            ("DS_PRIMARY", "Yes", "primary score set"),
+        ],
+    )
+
+    condensed = pd.read_csv(condensed_path, sep="\t", dtype=str, keep_default_na=False)
+    metadata = load_dataset_metadata(metadata_path)
+
+    table = compute_composite_score_datasets(condensed, metadata)
+
+    assert table["Dataset"].tolist() == ["DS_META_BIG", "DS_META_SMALL"]
+    assert table["Gene"].tolist() == ["GENEB, GENEC", "GENEA"]
+    assert table["IGVF / Community"].tolist() == ["Community", "IGVF"]
+    assert table["Scores"].tolist() == [3, 1]
+
+
+def test_format_composite_score_datasets():
+    table = pd.DataFrame(
+        {
+            "Gene": ["GENEB, GENEC", "GENEA"],
+            "Dataset": ["DS_META_BIG", "DS_META_SMALL"],
+            "IGVF / Community": ["Community", "IGVF"],
+            "Scores": [3, 1],
+        }
+    )
+
+    text = format_composite_score_datasets(table)
+
+    assert text.startswith(COMPOSITE_SCORE_DATASETS_TITLE)
+    assert "Total composite scores: 4" in text
+    assert "DS_META_BIG" in text
+    assert "DS_META_SMALL" in text
+
+
+def test_format_composite_score_datasets_handles_empty_table():
+    table = pd.DataFrame(columns=["Gene", "Dataset", "IGVF / Community", "Scores"])
+
+    text = format_composite_score_datasets(table)
+
+    assert text.startswith(COMPOSITE_SCORE_DATASETS_TITLE)
+    assert "Total composite scores: 0" in text
+
+
+def test_format_genomic_variant_count_counts_parsed_rows_not_lines():
+    # A field containing an embedded newline (properly quoted, as pandas writes
+    # it) would inflate a naive `wc -l` count relative to the true row count --
+    # this must report the pandas-parsed row count (2), not the line count.
+    df = pd.DataFrame({"hgvs_c": ["c.1A>G", "c.2A>G"], "note": ["single line", "line one\nline two"]})
+
+    text = format_genomic_variant_count("some/path.tsv.gz", df)
+
+    assert text == "Genomic variants (rows in some/path.tsv.gz): 2"
 
 
 def test_stats_to_dataframe_adds_pct_of_combined_measurements(dataset_files):
@@ -373,16 +883,62 @@ def test_stats_to_dataframe_adds_pct_of_combined_measurements(dataset_files):
     assert table.loc["Combined (IGVF + community)", "pct_variant_effect_measurements"] == pytest.approx(100.0)
 
 
-def test_merge_calm_genes_collapses_calm_paralogs(tmp_path):
+def test_rna_scores_is_a_breakdown_of_measurements_not_an_addition(tmp_path):
+    """A row with an rna_score also has a regular auth_reported_score in the
+    real data, so rna_scores is reported beside variant_effect_measurements
+    as a breakdown, not counted as extra measurements on top of it."""
     condensed_path = tmp_path / "condensed.tsv"
     metadata_path = tmp_path / "metadata.xlsx"
 
     _write_condensed(
         condensed_path,
         [
-            ("DS_COMM_A", "CALM1", "c1", "p1"),
-            ("DS_COMM_B", "CALM2, CALM3", "c2", "p2"),
-            ("DS_COMM_C", "GENED", "c3", "p3"),
+            ("DS_IGVF_A", "GENEA", "c1", "p1", "nt"),
+            ("DS_IGVF_A", "GENEA", "c2", "p2", "nt"),
+            ("DS_COMM_A", "GENEB", "c3", "p3", "nt"),
+        ],
+        rna_scores=["-0.5", "", ""],
+    )
+    _write_metadata(
+        metadata_path,
+        [
+            ("DS_IGVF_A", "Yes", "primary score set"),
+            ("DS_COMM_A", "No", "primary score set"),
+        ],
+    )
+
+    stats, _ = compute_all_stats(condensed_path, metadata_path)
+    table = stats_to_dataframe(stats)
+
+    assert stats["IGVF"]["variant_effect_measurements"] == 2
+    assert stats["IGVF"]["rna_scores"] == 1
+    assert stats["Community (non-IGVF)"]["rna_scores"] == 0
+    assert stats["Combined (IGVF + community)"]["variant_effect_measurements"] == 3
+    assert stats["Combined (IGVF + community)"]["rna_scores"] == 1
+
+    # Combined total for the RNA-inclusive percentage is 3 measurements + 1 RNA
+    # score = 4; IGVF contributes 2 measurements + 1 RNA score = 3 of that.
+    assert table.loc["IGVF", "pct_variant_effect_measurements_with_rna_scores"] == pytest.approx(75.0)
+    assert table.loc["Community (non-IGVF)", "pct_variant_effect_measurements_with_rna_scores"] == pytest.approx(25.0)
+    assert table.loc[
+        "Combined (IGVF + community)", "pct_variant_effect_measurements_with_rna_scores"
+    ] == pytest.approx(100.0)
+
+
+def test_dataset_summary_always_merges_calm_paralogs(tmp_path):
+    """CALM1/CALM2/CALM3 count as one gene in the Dataset summary's
+    genes_represented/genes_not_in_igvf_data, matching the always-merged
+    Genes represented list -- there's no --merge-calm-genes toggle for this
+    section."""
+    condensed_path = tmp_path / "condensed.tsv"
+    metadata_path = tmp_path / "metadata.xlsx"
+
+    _write_condensed(
+        condensed_path,
+        [
+            ("DS_COMM_A", "CALM1", "c1", "p1", "nt"),
+            ("DS_COMM_B", "CALM2, CALM3", "c2", "p2", "nt"),
+            ("DS_COMM_C", "GENED", "c3", "p3", "nt"),
         ],
     )
     _write_metadata(
@@ -394,21 +950,16 @@ def test_merge_calm_genes_collapses_calm_paralogs(tmp_path):
         ],
     )
 
-    default_stats, default_gene_breakdown = compute_all_stats(condensed_path, metadata_path)
-    assert default_stats["Community (non-IGVF)"]["genes_represented"] == 4
-    # The gene breakdown list always merges CALM1/2/3, regardless of --merge-calm-genes.
-    assert default_gene_breakdown["Community (non-IGVF) only"] == [CALM_MERGED_LABEL, "GENED"]
-
-    merged_stats, merged_gene_breakdown = compute_all_stats(condensed_path, metadata_path, merge_calm_genes=True)
-    assert merged_stats["Community (non-IGVF)"]["genes_represented"] == 2
-    assert merged_gene_breakdown["Community (non-IGVF) only"] == [CALM_MERGED_LABEL, "GENED"]
+    stats, gene_breakdown = compute_all_stats(condensed_path, metadata_path)
+    assert stats["Community (non-IGVF)"]["genes_represented"] == 2
+    assert gene_breakdown["Community (non-IGVF) only"] == [CALM_MERGED_LABEL, "GENED"]
 
 
 def test_compute_all_stats_raises_on_missing_metadata(dataset_files):
     condensed_path, metadata_path = dataset_files
     _write_condensed(
         condensed_path,
-        [("DS_UNKNOWN", "GENEX", "c5", "p5")],
+        [("DS_UNKNOWN", "GENEX", "c5", "p5", "nt")],
     )
     with pytest.raises(ValueError, match="DS_UNKNOWN"):
         compute_all_stats(condensed_path, metadata_path)
@@ -628,9 +1179,16 @@ def test_summarize_and_format_clinical_table_breaks_out_snv_per_bucket():
 
 
 def test_cli_prints_table_and_writes_output(full_dataset_files, tmp_path):
-    condensed_path, metadata_path, expanded_path, excalibr_path, controls_path, reclassification_path = (
-        full_dataset_files
-    )
+    (
+        condensed_path,
+        metadata_path,
+        expanded_path,
+        excalibr_path,
+        controls_path,
+        reclassification_path,
+        checkpoint_path,
+        chek2_path,
+    ) = full_dataset_files
     output_path = tmp_path / "report.txt"
 
     result = CliRunner().invoke(
@@ -645,6 +1203,10 @@ def test_cli_prints_table_and_writes_output(full_dataset_files, tmp_path):
             str(controls_path),
             "--reclassification-file",
             str(reclassification_path),
+            "--checkpoint-file",
+            str(checkpoint_path),
+            "--chek2-file",
+            str(chek2_path),
             "--output",
             str(output_path),
         ],
@@ -654,13 +1216,45 @@ def test_cli_prints_table_and_writes_output(full_dataset_files, tmp_path):
     assert "IGVF" in result.output
     assert "Score coverage" in result.output
     assert "Clinical attributes" in result.output
+    assert "Filtering effects on the reclassification dataset" in result.output
+    assert (
+        "Control concordance (ClinVar vs. ClinGen; OddsPath alone vs. combined with "
+        "REVEL/AlphaMissense/MutPred2)" in result.output
+    )
+
+    # checkpoint_path's p1 (Pathogenic -> Pathogenic) and p2 (Benign -> Uncertain)
+    # are the only two rows with an original determinate ClinGen classification;
+    # only p1 retains one after evidence removal -- see full_dataset_files.
+    clingen_section = result.output.split(CLINGEN_EVIDENCE_REPOSITORY_TITLE)[1].split(
+        "=== Reclassification agreement"
+    )[0]
+    assert "2 distinct DNA variants across 2 genes" in clingen_section
+    assert "Retained a determinate classification: 1 of 2 (50.0%) distinct DNA variants across 1 genes" in (
+        clingen_section
+    )
+    assert "REVEL: 1 variants across 1 genes" in clingen_section
+    assert "AlphaMissense: 1 variants across 1 genes" in clingen_section
+    assert "MutPred2: 1 variants across 1 genes" in clingen_section
+
+    # full_dataset_files' expanded_path has 5 rows (p1, p2, p3, and p4's c4a/c4b).
+    assert f"Genomic variants (rows in {expanded_path}): 5" in result.output
 
     # BRCA1 (DS_IGVF_A) and GENEB (DS_IGVF_B) are IGVF-only; GENED (DS_COMM_B) is
     # community-only; GENEC is shared (DS_IGVF_B and DS_COMM_A).
-    genes_section = result.output.split("=== Genes represented ===")[1].split("=== Score coverage")[0]
+    genes_section = result.output.split("=== Genes represented ===")[1].split(COMPOSITE_SCORE_DATASETS_TITLE)[0]
     assert "IGVF only (2): BRCA1, GENEB" in genes_section
     assert "Community (non-IGVF) only (1): GENED" in genes_section
     assert "Both IGVF and community (non-IGVF) (1): GENEC" in genes_section
+
+    # DS_COMM_B is the fixture's only meta-analysis dataset (gene GENED, community,
+    # 1 condensed row/composite score).
+    composite_score_section = result.output.split(COMPOSITE_SCORE_DATASETS_TITLE)[1].split(
+        "=== Score coverage"
+    )[0]
+    assert "Total composite scores: 1" in composite_score_section
+    assert "GENED" in composite_score_section
+    assert "DS_COMM_B" in composite_score_section
+    assert "Community" in composite_score_section
 
     # 4 genes (BRCA1, GENEB, GENEC, GENED) are calibrated; 2 (BRCA1, GENED) have evidence.
     assert "Genes with ExCALIBR calibrations: 4" in result.output
@@ -681,20 +1275,38 @@ def test_cli_prints_table_and_writes_output(full_dataset_files, tmp_path):
     assert _bucket_count(functional_reclass, AGREE_LABEL) == 3
     assert "Agreement with ClinVar PLP/BLB (of determinate calls): 75.0%" in functional_reclass
 
-    # 8 distinct DNA variants across the 5 REVEL sheets combined (9 rows, minus
-    # the (GENEX, 1, 100, A, G) coordinate shared by controls_REVEL_GeneSpecific
-    # and gnomAD_REVEL); 6 of those 8 are Pathogenic/Likely Pathogenic/Benign/
-    # Likely Benign (the two "Uncertain" VUS/Unobserved rows aren't).
+    # 8 distinct DNA variants across the 5 category sheets combined (9 rows,
+    # minus the (GENEX, 1, 100, A, G) coordinate shared by "controls" and
+    # "gnomAD"); 6 of those 8 are Pathogenic/Likely Pathogenic/Benign/Likely
+    # Benign (the two "Uncertain" VUS/Unobserved rows aren't). Same rows were
+    # written to all three predictors' sheets, so REVEL/AlphaMissense/MutPred2
+    # each show these same numbers in their own table row.
     variant_classification_section = result.output.split(VARIANT_CLASSIFICATION_TITLE)[1].split(
         RECLASSIFICATION_VARIANT_CLASSIFICATION_TITLE
     )[0]
-    assert "Distinct DNA variants classified: 8" in variant_classification_section
-    assert "Pathogenic or benign: 6 of 8 (75.0%)" in variant_classification_section
-    assert "ClinVar VUS resolved (reclassified pathogenic or benign): 2 of 3 (66.7%)" in variant_classification_section
-    assert (
-        "Unobserved variants resolved (classified pathogenic or benign): 1 of 2 (50.0%)"
-        in variant_classification_section
-    )
+    for predictor in VARIANT_CLASSIFICATION_PREDICTORS:
+        assert predictor in variant_classification_section
+    assert "Distinct DNA variants classified" in variant_classification_section
+    assert "ClinVar VUS unresolved:" in variant_classification_section
+    assert "gnomAD variants resolved (classified pathogenic or benign):" in variant_classification_section
+    assert "gnomAD variants unresolved:" in variant_classification_section
+    assert "Unobserved variants unresolved:" in variant_classification_section
+    assert variant_classification_section.count("6 of 8 (75.0%)") == 3
+    assert variant_classification_section.count("2 of 3 (66.7%)") == 3
+    # VUS: row 103 (Pathogenic, of 3 VUS) resolves pathogenic; row 105 (Benign, at the
+    # -1-point threshold) resolves benign; row 104 (Uncertain, fxn 2/predictor 0) is the sole
+    # unresolved VUS, experimental-only. gnomAD: its sole row (same coords as controls row 100,
+    # Pathogenic, fxn 6/predictor 0) resolves pathogenic, experimental-only, leaving gnomAD with no
+    # unresolved rows at all. Unobserved: row 106 (Pathogenic, of 2 Unobserved) resolves pathogenic;
+    # no Unobserved row resolves benign; row 107 (Uncertain, fxn 3/predictor 0) is the sole
+    # unresolved Unobserved, experimental-only. Counts below were verified against the actual
+    # rendered table rather than hand-derived, given how many columns now overlap.
+    assert variant_classification_section.count("1 of 2 (50.0%)") == 9
+    assert variant_classification_section.count("1 of 3 (33.3%)") == 12
+    assert variant_classification_section.count("0 of 2 (0.0%)") == 6
+    assert variant_classification_section.count("1 of 1 (100.0%)") == 33
+    assert variant_classification_section.count("0 of 1 (0.0%)") == 66
+    assert variant_classification_section.count("0 of 0 (nan%)") == 51
 
     # See full_dataset_files' reclassification_path rows for the expected counts.
     reclassification_file_section = result.output.split(RECLASSIFICATION_VARIANT_CLASSIFICATION_TITLE)[1]
@@ -704,6 +1316,51 @@ def test_cli_prints_table_and_writes_output(full_dataset_files, tmp_path):
     assert (
         "Unobserved variants resolved (classified pathogenic or benign): 1 of 2 (50.0%)"
         in reclassification_file_section
+    )
+    # VUS row (points 8, of 2 VUS) resolves pathogenic; Unobserved row (points -1, at the
+    # -1-point threshold, of 2 Unobserved) resolves benign.
+    assert "Pathogenic or likely pathogenic: 1 of 2 (50.0%)" in reclassification_file_section
+    assert "Benign or likely benign: 0 of 2 (0.0%)" in reclassification_file_section
+    assert "Benign or likely benign from only -1 point: 0 of 2 (0.0%)" in reclassification_file_section
+    assert "Pathogenic or likely pathogenic: 0 of 2 (0.0%)" in reclassification_file_section
+    assert "Benign or likely benign: 1 of 2 (50.0%)" in reclassification_file_section
+    assert "Benign or likely benign from only -1 point: 1 of 2 (50.0%)" in reclassification_file_section
+    # VUS's P/LP row (fxn 8/revel 0) is experimental-only; Unobserved's B/LB row (fxn 0/revel -1)
+    # is predictive-only and single-source at the -1-point threshold. Neither side has a resolved
+    # variant on its *other* side (VUS B/LB, Unobserved P/LP), so those splits are nan%.
+    assert reclassification_file_section.count("Experimental evidence only: 1 of 1 (100.0%)") == 4
+    assert reclassification_file_section.count("Predictive evidence only: 1 of 1 (100.0%)") == 1
+    assert reclassification_file_section.count("Both: 0 of 1 (0.0%)") == 3
+    assert reclassification_file_section.count("Experimental evidence only: 0 of 0 (nan%)") == 4
+    assert reclassification_file_section.count("Predictive evidence only: 0 of 0 (nan%)") == 4
+    assert reclassification_file_section.count("Both: 0 of 0 (nan%)") == 3
+    assert reclassification_file_section.count("Evidence from only one source: 0 of 0 (nan%)") == 2
+    assert reclassification_file_section.count("Conflicting functional and predictive data: 0 of 0 (nan%)") == 2
+    assert "Evidence from only one source: 1 of 1 (100.0%)" in reclassification_file_section
+    assert "Conflicting functional and predictive data: 0 of 1 (0.0%)" in reclassification_file_section
+    # VUS row 2 (points 2, of 2 VUS) is the sole unresolved VUS, experimental-only; Unobserved row
+    # 4 (points 1, of 2 Unobserved) is the sole unresolved Unobserved, also experimental-only; the
+    # sole gnomAD row (points -3, of 1 gnomAD) resolves benign, experimental-only, leaving gnomAD
+    # with no unresolved rows at all (0 of 1, and its own splits are nan% since 0 of 0).
+    assert "ClinVar VUS unresolved: 1 of 2 (50.0%)" in reclassification_file_section
+    assert "gnomAD variants resolved (classified pathogenic or benign): 1 of 1 (100.0%)" in reclassification_file_section
+    assert "gnomAD variants unresolved: 0 of 1 (0.0%)" in reclassification_file_section
+    assert "Unobserved variants unresolved: 1 of 2 (50.0%)" in reclassification_file_section
+    assert reclassification_file_section.count("Concordant (both sources, same direction): 0 of 1 (0.0%)") == 2
+    assert reclassification_file_section.count("Discordant (both sources, opposite direction): 0 of 1 (0.0%)") == 2
+    assert reclassification_file_section.count("Concordant (both sources, same direction): 0 of 0 (nan%)") == 1
+    assert reclassification_file_section.count("Discordant (both sources, opposite direction): 0 of 0 (nan%)") == 1
+    assert reclassification_file_section.count("Predictive evidence only: 0 of 1 (0.0%)") == 4  # VUS P/LP too
+    assert reclassification_file_section.count("Neither: 0 of 1 (0.0%)") == 2
+    assert reclassification_file_section.count("Neither: 0 of 0 (nan%)") == 1
+    assert reclassification_file_section.count("0 or 1 source (total): 1 of 1 (100.0%)") == 2
+    assert reclassification_file_section.count("0 or 1 source (total): 0 of 0 (nan%)") == 1
+    # Neither unresolved row (VUS points 2, Unobserved points 1) qualifies as near-pathogenic.
+    assert (
+        reclassification_file_section.count("+4 or +5 points (overlaps categories above): 0 of 1 (0.0%)") == 2
+    )
+    assert (
+        reclassification_file_section.count("+4 or +5 points (overlaps categories above): 0 of 0 (nan%)") == 1
     )
 
     # Assayed level: all 4 distinct variants (and all 5 measurement rows) are SNV-accessible.
@@ -743,9 +1400,55 @@ def test_cli_allow_clinvar_conflicts_flag_toggles_conflict_handling(tmp_path):
 
     # p1's two measurement rows disagree (Pathogenic vs. Benign) -- a conflict
     # that only shows up once the rows are grouped into one distinct variant.
+    # condensed rows get distinct urns (real urns are 1:1 with condensed
+    # rows); expanded's rows can share a urn, so they just reuse the first.
     rows = [
-        ("DS_A", "GENEA", "c1", "p1", "", "", "", "Pathogenic", "Pathogenic", "", "A", "G"),
-        ("DS_A", "GENEA", "c1", "p1", "", "", "", "Benign", "Benign", "", "A", "G"),
+        (
+            "DS_A",
+            "GENEA",
+            "c1",
+            "p1",
+            "nt",
+            "",
+            "",
+            "",
+            "Pathogenic",
+            "Pathogenic",
+            "",
+            "A",
+            "G",
+            "urn:mavedb:1a",
+            "17",
+            "100",
+            "A",
+            "G",
+            "1",
+            "I",
+            "M",
+        ),
+        (
+            "DS_A",
+            "GENEA",
+            "c1",
+            "p1",
+            "nt",
+            "",
+            "",
+            "",
+            "Benign",
+            "Benign",
+            "",
+            "A",
+            "G",
+            "urn:mavedb:1b",
+            "17",
+            "100",
+            "A",
+            "G",
+            "1",
+            "I",
+            "M",
+        ),
     ]
     _write_full_variant_file(condensed_path, rows)
     _write_full_variant_file(expanded_path, rows)
@@ -755,18 +1458,26 @@ def test_cli_allow_clinvar_conflicts_flag_toggles_conflict_handling(tmp_path):
     _write_excalibr_calibrations(excalibr_path, [("DS_A", None, None)])
     controls_path = tmp_path / "controls.xlsx"
     _write_controls_file(controls_path, {"controls_TEST": [("Pathogenic", 1, 1)]})
-    _write_variant_classification_sheets(
+    _write_variant_classification_sheets_by_predictor(
         controls_path,
         {
-            "controls_REVEL_GeneSpecific": [("GENEA", 1, 1, "A", "G", "Pathogenic")],
-            "ClinGen_Repo_REVEL_GeneSpecific": [],
-            "VUS_REVEL": [],
-            "gnomAD_REVEL": [],
-            "Unobserved_REVEL": [],
+            "controls": [("GENEA", 1, 1, "A", "G", "Pathogenic", 6, 6, 0)],
+            "ClinGen_Repo": [],
+            "VUS": [],
+            "gnomAD": [],
+            "Unobserved": [],
         },
+        mode="a",
     )
     reclassification_path = tmp_path / "reclassification.tsv"
-    _write_reclassification_file(reclassification_path, [("Pathogenic", None, "A", "G", 11)])
+    _write_reclassification_file(reclassification_path, [("Pathogenic", None, "A", "G", 11, 11, 0)])
+    checkpoint_path = tmp_path / "checkpoint.csv"
+    _write_checkpoint_file(
+        checkpoint_path,
+        [("DS_A", "GENEA", "urn:mavedb:1a", "17", 100, "A", "G", "p1", None, None, None, "No", "No", "No", None, None)],
+    )
+    chek2_path = tmp_path / "chek2.xlsx"
+    _write_chek2_file(chek2_path)
     extra_args = [
         "--excalibr-calibrations-file",
         str(excalibr_path),
@@ -774,6 +1485,10 @@ def test_cli_allow_clinvar_conflicts_flag_toggles_conflict_handling(tmp_path):
         str(controls_path),
         "--reclassification-file",
         str(reclassification_path),
+        "--checkpoint-file",
+        str(checkpoint_path),
+        "--chek2-file",
+        str(chek2_path),
     ]
 
     default_result = CliRunner().invoke(
@@ -796,12 +1511,43 @@ def test_cli_allow_clinvar_conflicts_flag_toggles_conflict_handling(tmp_path):
 
 
 def test_cli_reports_missing_metadata_as_click_error(full_dataset_files):
-    condensed_path, metadata_path, expanded_path, _excalibr_path, _controls_path, _reclassification_path = (
-        full_dataset_files
-    )
+    (
+        condensed_path,
+        metadata_path,
+        expanded_path,
+        _excalibr_path,
+        _controls_path,
+        _reclassification_path,
+        _checkpoint_path,
+        _chek2_path,
+    ) = full_dataset_files
     _write_full_variant_file(
         condensed_path,
-        [("DS_UNKNOWN", "GENEX", "c5", "p5", "", "", "", "", "", "", "A", "G")],
+        [
+            (
+                "DS_UNKNOWN",
+                "GENEX",
+                "c5",
+                "p5",
+                "nt",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "A",
+                "G",
+                "urn:mavedb:5",
+                "17",
+                "500",
+                "A",
+                "G",
+                "5",
+                "I",
+                "I",
+            )
+        ],
     )
 
     result = CliRunner().invoke(main, [str(condensed_path), str(metadata_path), str(expanded_path)])
@@ -872,6 +1618,34 @@ def test_compute_excalibr_calibration_stats_counts_genes_with_evidence(tmp_path)
     # evidence, GENEB/GENEC (from the all-null DS_B row) don't.
     assert stats["genes_with_excalibr_calibrations"] == 4
     assert stats["genes_with_evidence_assigned"] == 2
+    # None of these genes are in EXCALIBR_EXCLUDED_GENES, so the excl. counts match.
+    assert stats["genes_with_excalibr_calibrations_excl"] == 4
+    assert stats["genes_with_evidence_assigned_excl"] == 2
+
+
+def test_compute_excalibr_calibration_stats_excludes_f9_tp53_sfpq(tmp_path):
+    metadata_path = tmp_path / "metadata.xlsx"
+    _write_gene_metadata(
+        metadata_path,
+        {"DS_F9": "F9", "DS_TP53": "TP53", "DS_SFPQ": "SFPQ", "DS_A": "GENEA"},
+    )
+    metadata = load_dataset_metadata(metadata_path)
+
+    calibrations = pd.DataFrame(
+        {
+            "dataset": ["DS_F9", "DS_TP53", "DS_SFPQ", "DS_A"],
+            "range_-1": ["-1 -0.5", None, "-1 -0.5", "-1 -0.5"],
+            "range_1": [None, "0.5 1", None, None],
+        }
+    )
+
+    stats = compute_excalibr_calibration_stats(calibrations, metadata)
+
+    # All 4 genes are calibrated and have evidence, but only GENEA survives exclusion.
+    assert stats["genes_with_excalibr_calibrations"] == 4
+    assert stats["genes_with_evidence_assigned"] == 4
+    assert stats["genes_with_excalibr_calibrations_excl"] == 1
+    assert stats["genes_with_evidence_assigned_excl"] == 1
 
 
 def test_compute_excalibr_calibration_stats_merges_calm_genes(tmp_path):
@@ -888,9 +1662,685 @@ def test_compute_excalibr_calibration_stats_merges_calm_genes(tmp_path):
 
 
 def test_format_calibration_summary():
-    text = format_calibration_summary({"genes_with_excalibr_calibrations": 4, "genes_with_evidence_assigned": 2})
-    assert "Genes with ExCALIBR calibrations: 4" in text
+    text = format_calibration_summary(
+        {
+            "genes_with_excalibr_calibrations": 4,
+            "genes_with_evidence_assigned": 2,
+            "genes_with_excalibr_calibrations_excl": 3,
+            "genes_with_evidence_assigned_excl": 1,
+        }
+    )
+    assert "Genes with ExCALIBR calibrations: 4 (3 excluding F9/TP53/SFPQ)" in text
     assert "2 (50.0%)" in text
+    assert "1 (33.3%) excluding F9/TP53/SFPQ" in text
+
+
+def test_funnel_distinct_dna_variants_normalizes_hg38_start_and_chrom():
+    # The notebook's checkpoint file writes hg38_start/Chrom out from a
+    # float-typed column (e.g. "100.0"), while the expanded file keeps them
+    # as plain strings ("100") -- both must collapse to the same DNA variant.
+    df = pd.DataFrame(
+        {
+            "Gene": ["GENEA", "GENEA"],
+            "Chrom": ["17", "17.0"],
+            "hg38_start": ["100", "100.0"],
+            "ref_allele": ["A", "A"],
+            "alt_allele": ["G", "G"],
+        }
+    )
+    assert funnel_distinct_dna_variants(df) == 1
+
+
+def _expanded_funnel_fixture():
+    """One row per pre-checkpoint exclusion reason, plus one survivor.
+
+    row1/row2 share a DNA coordinate (LDLR LA module 2, aa 70): row1 is the
+    +VLDL assay, row2 the abundance assay it supersedes -- row2 alone should
+    be dropped, and since they share a coordinate the distinct-DNA-variant
+    count doesn't change at that step (only the distinct-assayed count does).
+    row3 is LDLR LA module 1 (blanket-excluded regardless of assay). row4 is
+    an F9 dataset not on the meta-analysis allowlist. row5 (GENEA) survives.
+    """
+    columns = [
+        "Dataset",
+        "Gene",
+        "mavedb_variant_urn",
+        "Chrom",
+        "hg38_start",
+        "ref_allele",
+        "alt_allele",
+        "aa_pos",
+        "aa_ref",
+        "aa_alt",
+    ]
+    rows = [
+        ("LDLR_Tabet_2025_presence_VLDL", "LDLR", "urn:mavedb:v1", "19", 100, "A", "G", 70, "A", "V"),
+        ("LDLR_Tabet_2025_abundance", "LDLR", "urn:mavedb:v2", "19", 100, "A", "G", 70, "A", "V"),
+        ("LDLR_Tabet_2025_uptake", "LDLR", "urn:mavedb:v3", "19", 200, "C", "T", 30, "G", "D"),
+        ("F9_Popp_2025_strep_2", "F9", "urn:mavedb:v4", "X", 300, "A", "C", 10, "M", "I"),
+        ("GENEA_Study_2020", "GENEA", "urn:mavedb:v5", "1", 400, "A", "G", 5, "M", "I"),
+    ]
+    return pd.DataFrame(rows, columns=columns)
+
+
+def _checkpoint_funnel_fixture():
+    """One row per post-checkpoint exclusion reason, plus one survivor, each
+    with its own distinct DNA coordinate/urn so every step's delta is 1.
+
+    DS_VN/DS_SPLICE_VN/DS_START_LOST each carry exactly one of the three
+    `VariantNotes` tags (`conflicting_fxn_data`/`splice_variant_not_measured`/
+    `start_lost_variant_not_measured`) -- each removed at its own funnel step,
+    distinct from DS_SPLICE, which instead carries `splice_var_amino ==
+    "Yes"` (the separate, later "at the amino-acid level" step).
+
+    DS_REVEL (revel_train_amino="Yes", mp2_train_amino="No") and DS_SURVIVOR
+    (revel_train_amino="No", mp2_train_amino="Yes") both reach the "Other
+    flagged variants" branch point, then diverge: the REVEL branch excludes
+    DS_REVEL and keeps DS_SURVIVOR, while the MutPred2 branch excludes
+    DS_SURVIVOR and keeps DS_REVEL instead -- proving the two branches are
+    independent siblings rather than one applied on top of the other.
+    """
+    columns = [
+        "Dataset",
+        "Gene",
+        "mavedb_variant_urn",
+        "Chrom",
+        "hg38_start",
+        "ref_allele",
+        "alt_allele",
+        "hgvs_p",
+        "auth_reported_score",
+        "Flag",
+        "VariantNotes",
+        "splice_var_amino",
+        "revel_train_amino",
+        "mp2_train_amino",
+    ]
+    rows = [
+        ("DS_SFPQ", "SFPQ", "urn:mavedb:c1", "1", 10, "A", "G", "NP_1.1:p.Ser1Ala", 0.1, None, None, "No", "No", "No"),
+        (
+            "DS_CHEK2",
+            "CHEK2",
+            "urn:mavedb:c2",
+            "22",
+            20,
+            "A",
+            "G",
+            "NP_2.1:p.Ser2Ala",
+            0.5,
+            None,
+            None,
+            "No",
+            "No",
+            "No",
+        ),
+        (
+            "DS_VN",
+            "GENEB",
+            "urn:mavedb:c3",
+            "2",
+            30,
+            "A",
+            "G",
+            "NP_3.1:p.Ser3Ala",
+            0.3,
+            None,
+            "conflicting_fxn_data",
+            "No",
+            "No",
+            "No",
+        ),
+        (
+            "DS_SPLICE_VN",
+            "GENEG",
+            "urn:mavedb:c8",
+            "7",
+            80,
+            "A",
+            "G",
+            "NP_8.1:p.Ser8Ala",
+            0.8,
+            None,
+            "splice_variant_not_measured",
+            "No",
+            "No",
+            "No",
+        ),
+        (
+            "DS_START_LOST",
+            "GENEH",
+            "urn:mavedb:c9",
+            "8",
+            90,
+            "A",
+            "G",
+            "NP_9.1:p.Ser9Ala",
+            0.9,
+            None,
+            "start_lost_variant_not_measured",
+            "No",
+            "No",
+            "No",
+        ),
+        (
+            "DS_SPLICE",
+            "GENEC",
+            "urn:mavedb:c4",
+            "3",
+            40,
+            "A",
+            "G",
+            "NP_4.1:p.Ser4Ala",
+            0.4,
+            None,
+            None,
+            "Yes",
+            "No",
+            "No",
+        ),
+        ("DS_FLAG", "GENED", "urn:mavedb:c5", "4", 50, "A", "G", "NP_5.1:p.Ser5Ala", 0.5, "*", None, "No", "No", "No"),
+        (
+            "DS_REVEL",
+            "GENEE",
+            "urn:mavedb:c6",
+            "5",
+            60,
+            "A",
+            "G",
+            "NP_6.1:p.Ser6Ala",
+            0.6,
+            None,
+            None,
+            "No",
+            "Yes",
+            "No",
+        ),
+        (
+            "DS_SURVIVOR",
+            "GENEF",
+            "urn:mavedb:c7",
+            "6",
+            70,
+            "A",
+            "G",
+            "NP_7.1:p.Ser7Ala",
+            0.7,
+            None,
+            None,
+            "No",
+            "No",
+            "Yes",
+        ),
+    ]
+    return pd.DataFrame(rows, columns=columns)
+
+
+def _chek2_funnel_fixture():
+    # Matches DS_CHEK2's row above (hgvs_p prefix stripped: "p.Ser2Ala", score 0.5).
+    return pd.DataFrame({"hgvs_pro": ["p.Ser2Ala"], "score": [0.5], "Filter_CI": [1]})
+
+
+def _condensed_funnel_fixture():
+    """One row per urn used across _expanded_funnel_fixture/_checkpoint_funnel_fixture
+    (real urns are 1:1 with condensed rows), each with its own (hgvs_c, hgvs_p)
+    pair -- distinct_assayed_variants maps a row's urn back to this pair, so
+    with one urn per pair here the counts are the same as counting urns directly.
+    """
+    urns = [f"urn:mavedb:v{i}" for i in range(1, 6)] + [f"urn:mavedb:c{i}" for i in range(1, 10)]
+    return pd.DataFrame(
+        {
+            "mavedb_variant_urn": urns,
+            "hgvs_c": [f"c.{i}A>G" for i in range(len(urns))],
+            "hgvs_p": [f"p.Ser{i}Ala" for i in range(len(urns))],
+        }
+    )
+
+
+def test_compute_reclassification_filter_funnel_sequential_steps():
+    expanded = _expanded_funnel_fixture()
+    checkpoint = _checkpoint_funnel_fixture()
+    chek2 = _chek2_funnel_fixture()
+    condensed = _condensed_funnel_fixture()
+
+    steps = compute_reclassification_filter_funnel(expanded, checkpoint, chek2, condensed)
+    by_label = {step["label"]: step for step in steps}
+
+    raw = steps[0]
+    assert raw["rows"] == 5
+    # Every row in this fixture has its own distinct urn, so variant_effect_measurements
+    # (grouped by urn) equals rows here -- see
+    # test_compute_reclassification_filter_funnel_counts_measurements_by_urn_grouping
+    # for a case where they differ.
+    assert raw["variant_effect_measurements"] == 5
+    assert raw["distinct_dna_variants"] == 4  # row1/row2 share a coordinate
+    assert raw["distinct_assayed_variants"] == 5
+
+    vldl = by_label["- LDLR: +VLDL assay preferred over abundance/uptake (LA modules 2/6)"]
+    assert vldl["rows"] == 4
+    assert vldl["distinct_dna_variants"] == 4  # unchanged -- row1 still covers that coordinate
+    assert vldl["distinct_assayed_variants"] == 4  # row2's urn is gone
+
+    la1 = by_label["- LDLR: LA module 1 excluded entirely (aa 25-65)"]
+    assert la1["rows"] == 3
+    assert la1["distinct_dna_variants"] == 3
+    assert la1["distinct_assayed_variants"] == 3
+
+    f9tp53 = by_label["- F9/TP53: restricted to the meta-analysis dataset only"]
+    assert f9tp53["rows"] == 2
+    assert f9tp53["distinct_dna_variants"] == 2
+    assert f9tp53["distinct_assayed_variants"] == 2
+
+    # Post-checkpoint steps read `checkpoint` directly (its own 9-row fixture,
+    # unrelated to the 2 pre-checkpoint survivors above).
+    sfpq = by_label["- SFPQ excluded entirely (insufficient ClinVar controls)"]
+    assert sfpq["rows"] == 8
+    assert sfpq["distinct_dna_variants"] == 8
+    assert sfpq["distinct_assayed_variants"] == 8
+
+    # DS_VN's VariantNotes ("conflicting_fxn_data") is removed here; DS_SPLICE_VN and
+    # DS_START_LOST's tags aren't this tag, so they survive this step specifically.
+    conflicting = by_label["- Conflicting functional data (opposite-sign Fxn_points across assays)"]
+    assert conflicting["rows"] == 7
+    assert conflicting["distinct_dna_variants"] == 7
+    assert conflicting["distinct_assayed_variants"] == 7
+
+    splice_not_measured = by_label["- Splice variant not measured (no functional measurement at all)"]
+    assert splice_not_measured["rows"] == 6  # DS_SPLICE_VN removed
+    assert splice_not_measured["distinct_dna_variants"] == 6
+    assert splice_not_measured["distinct_assayed_variants"] == 6
+
+    start_lost = by_label["- Start-lost variant not measured (no functional measurement at all)"]
+    assert start_lost["rows"] == 5  # DS_START_LOST removed
+    assert start_lost["distinct_dna_variants"] == 5
+    assert start_lost["distinct_assayed_variants"] == 5
+
+    # DS_SPLICE (splice_var_amino == "Yes", a different column from VariantNotes) is
+    # removed here -- distinct from the VariantNotes-tag-based steps above.
+    splice = by_label["- Splice variant not measured at the amino-acid level (aa-level candidates sharing a splice-affecting group)"]
+    assert splice["rows"] == 4
+    assert splice["distinct_dna_variants"] == 4
+    assert splice["distinct_assayed_variants"] == 4
+
+    chek2_step = by_label["- CHEK2 QC flag (Filter_CI == 1)"]
+    assert chek2_step["rows"] == 3
+    assert chek2_step["distinct_dna_variants"] == 3
+    assert chek2_step["distinct_assayed_variants"] == 3
+
+    other_flag = by_label["- Other flagged variants (pre-existing Flag == '*')"]
+    assert other_flag["rows"] == 2
+    assert other_flag["distinct_dna_variants"] == 2
+    assert other_flag["distinct_assayed_variants"] == 2
+
+    # REVEL and MutPred2 training exclusion are siblings baselined against
+    # "Other flagged variants" (rows == 2) independently, not a chain: each
+    # drops exactly one of {DS_REVEL, DS_SURVIVOR} and keeps the other, so
+    # both branches end at 1 row but with rows_removed == 1 (2 - 1), not 0
+    # (which is what a same-list-position default baseline would wrongly
+    # compute if MutPred2 were chained after REVEL instead of after "Other
+    # flagged variants").
+    revel_train = by_label[REVEL_TRAINING_STEP_LABEL]
+    assert revel_train["rows"] == 1
+    assert revel_train["rows_removed"] == 1
+    assert revel_train["variant_effect_measurements"] == 1
+    assert revel_train["measurements_removed"] == 1
+    assert revel_train["distinct_dna_variants"] == 1
+    assert revel_train["distinct_assayed_variants"] == 1
+
+    mp2_train = by_label[MUTPRED2_TRAINING_STEP_LABEL]
+    assert mp2_train["rows"] == 1
+    assert mp2_train["rows_removed"] == 1
+    assert mp2_train["variant_effect_measurements"] == 1
+    assert mp2_train["measurements_removed"] == 1
+    assert mp2_train["distinct_dna_variants"] == 1
+    assert mp2_train["distinct_assayed_variants"] == 1
+
+    assert steps[-2] is revel_train
+    assert steps[-1] is mp2_train
+
+
+def test_compute_reclassification_filter_funnel_counts_measurements_by_urn_grouping():
+    """`variant_effect_measurements` groups by `mavedb_variant_urn`, unlike
+    `rows`, which counts DNA-level rows directly -- one measurement (urn) can
+    have multiple DNA-level candidate rows (e.g. a protein-resolution
+    measurement reverse-translated to several DNA candidates), so the two
+    counts differ whenever that happens.
+    """
+    columns = [
+        "Dataset",
+        "Gene",
+        "mavedb_variant_urn",
+        "Chrom",
+        "hg38_start",
+        "ref_allele",
+        "alt_allele",
+        "aa_pos",
+        "aa_ref",
+        "aa_alt",
+    ]
+    expanded = pd.DataFrame(
+        [
+            # Two DNA-level candidates for the same measurement (urn:mavedb:1).
+            ("DS_A", "GENEA", "urn:mavedb:1", "1", 100, "A", "G", 1, "M", "I"),
+            ("DS_A", "GENEA", "urn:mavedb:1", "1", 100, "A", "T", 1, "M", "I"),
+            ("DS_B", "GENEB", "urn:mavedb:2", "2", 200, "C", "G", 2, "S", "T"),
+        ],
+        columns=columns,
+    )
+    checkpoint = pd.DataFrame(
+        columns=columns
+        + ["hgvs_p", "auth_reported_score", "Flag", "VariantNotes", "splice_var_amino", "revel_train_amino", "mp2_train_amino"]
+    )
+    chek2 = pd.DataFrame(columns=["hgvs_pro", "score", "Filter_CI"])
+    condensed = pd.DataFrame(
+        {
+            "mavedb_variant_urn": ["urn:mavedb:1", "urn:mavedb:2"],
+            "hgvs_c": ["c.1A>G", "c.2C>G"],
+            "hgvs_p": ["p.Met1Ile", "p.Ser2Thr"],
+        }
+    )
+
+    steps = compute_reclassification_filter_funnel(expanded, checkpoint, chek2, condensed)
+
+    raw = steps[0]
+    assert raw["rows"] == 3
+    assert raw["variant_effect_measurements"] == 2  # urn:mavedb:1's two rows collapse to one measurement
+
+
+def test_format_reclassification_filter_funnel_summary_lines():
+    expanded = _expanded_funnel_fixture()
+    checkpoint = _checkpoint_funnel_fixture()
+    chek2 = _chek2_funnel_fixture()
+    condensed = _condensed_funnel_fixture()
+    steps = compute_reclassification_filter_funnel(expanded, checkpoint, chek2, condensed)
+
+    text = format_reclassification_filter_funnel(steps, reclassification_total=1)
+    assert "=== Filtering effects on the reclassification dataset ===" in text
+    assert "Distinct DNA variants reclassified: 1 of 4 (25.0%)" in text
+    assert "Distinct assayed variants reclassified: 1 of 5 (20.0%)" in text
+    assert "Note:" not in text  # final count (1) matches reclassification_total (1)
+    # rows/variant_effect_measurements each get their own *_removed column, same as the
+    # pre-existing distinct_dna_variants/distinct_assayed_variants columns.
+    assert "rows_removed" in text
+    assert "variant_effect_measurements" in text
+    assert "measurements_removed" in text
+    # The table columns appear in this order: rows immediately followed by its own
+    # removed column, then variant_effect_measurements immediately followed by its own.
+    assert text.index("rows") < text.index("rows_removed") < text.index("variant_effect_measurements")
+    assert text.index("variant_effect_measurements") < text.index("measurements_removed")
+
+    mismatched_text = format_reclassification_filter_funnel(steps, reclassification_total=2)
+    assert "Note: funnel's final distinct-DNA-variant count (1) differs from" in mismatched_text
+
+
+def test_compute_clingen_evidence_repository_stats(tmp_path):
+    # s1: SFPQ, excluded entirely. s2: pre-existing Flag == '*', excluded.
+    # s3: conflicting_fxn_data VariantNotes tag, excluded. s4: original
+    # classification not determinate (Uncertain Significance), excluded
+    # from the pre-removal population. s5/s6/s7 survive every exclusion and
+    # have a determinate original classification: s5 stays Pathogenic after
+    # removal (retained), s6 drops to Uncertain (not retained), s7 flips
+    # direction (Likely Pathogenic -> Benign, still determinate, retained).
+    checkpoint_path = tmp_path / "checkpoint.csv"
+    _write_checkpoint_file(
+        checkpoint_path,
+        [
+            ("DS1", "SFPQ", "urn:s1", "1", 10, "A", "G", "p1", None, None, None, "No", "No", "No", "Pathogenic", "Pathogenic"),
+            ("DS1", "GENEA", "urn:s2", "1", 20, "A", "G", "p2", None, "*", None, "No", "No", "No", "Pathogenic", "Pathogenic"),
+            ("DS1", "GENEA", "urn:s3", "1", 30, "A", "G", "p3", None, None, "conflicting_fxn_data", "No", "No", "No", "Pathogenic", "Pathogenic"),
+            ("DS1", "GENEA", "urn:s4", "1", 40, "A", "G", "p4", None, None, None, "No", "No", "No", "Uncertain Significance", "Uncertain Significance"),
+            ("DS1", "GENEA", "urn:s5", "1", 50, "A", "G", "p5", None, None, None, "No", "No", "No", "Pathogenic", "Pathogenic"),
+            ("DS1", "GENEB", "urn:s6", "1", 60, "A", "G", "p6", None, None, None, "No", "No", "No", "Likely Benign", "Uncertain"),
+            ("DS1", "GENEB", "urn:s7", "1", 70, "A", "G", "p7", None, None, None, "No", "No", "No", "Likely Pathogenic", "Benign"),
+        ],
+    )
+    chek2_path = tmp_path / "chek2.xlsx"
+    _write_chek2_file(chek2_path)
+
+    controls_path = tmp_path / "controls.xlsx"
+    clingen_rows = {
+        "REVEL": [("GENEA", "Pathogenic"), ("GENEB", "Uncertain")],
+        "AlphaMissense": [("GENEA", "Pathogenic"), ("GENEB", "Benign"), ("GENEC", "Likely Benign")],
+        "MutPred2": [("GENEA", "Likely Pathogenic")],
+    }
+    with pd.ExcelWriter(controls_path) as writer:
+        for predictor, rows in clingen_rows.items():
+            sheet = VARIANT_CLASSIFICATION_CATEGORY_SHEETS_BY_PREDICTOR[predictor]["ClinGen_Repo"]
+            pd.DataFrame(rows, columns=["Gene", "Updated_Classification_ClinGen_repo"]).to_excel(
+                writer, sheet_name=sheet, index=False
+            )
+
+    checkpoint = pd.read_csv(checkpoint_path, low_memory=False)
+    chek2 = pd.read_excel(chek2_path, header=0)
+    controls_workbook = pd.ExcelFile(controls_path)
+
+    stats = compute_clingen_evidence_repository_stats(checkpoint, chek2, controls_workbook)
+
+    assert stats["pre_removal_total"] == 3
+    assert stats["pre_removal_genes"] == 2
+    assert stats["pre_removal_pathogenic"] == 1
+    assert stats["pre_removal_likely_pathogenic"] == 1
+    assert stats["pre_removal_benign"] == 0
+    assert stats["pre_removal_likely_benign"] == 1
+
+    assert stats["post_removal_total"] == 2
+    assert stats["post_removal_genes"] == 2
+    assert stats["post_removal_plp"] == 1
+    assert stats["post_removal_blb"] == 1
+
+    assert stats["REVEL_total"] == 2
+    assert stats["REVEL_genes"] == 2
+    assert stats["REVEL_plp"] == 1
+    assert stats["REVEL_blb"] == 0
+
+    assert stats["AlphaMissense_total"] == 3
+    assert stats["AlphaMissense_genes"] == 3
+    assert stats["AlphaMissense_plp"] == 1
+    assert stats["AlphaMissense_blb"] == 2
+
+    assert stats["MutPred2_total"] == 1
+    assert stats["MutPred2_genes"] == 1
+    assert stats["MutPred2_plp"] == 1
+    assert stats["MutPred2_blb"] == 0
+
+
+def test_format_clingen_evidence_repository_summary(tmp_path):
+    checkpoint_path = tmp_path / "checkpoint.csv"
+    _write_checkpoint_file(
+        checkpoint_path,
+        [
+            ("DS1", "GENEA", "urn:s5", "1", 50, "A", "G", "p5", None, None, None, "No", "No", "No", "Pathogenic", "Pathogenic"),
+            ("DS1", "GENEB", "urn:s6", "1", 60, "A", "G", "p6", None, None, None, "No", "No", "No", "Likely Benign", "Uncertain"),
+        ],
+    )
+    chek2_path = tmp_path / "chek2.xlsx"
+    _write_chek2_file(chek2_path)
+    controls_path = tmp_path / "controls.xlsx"
+    with pd.ExcelWriter(controls_path) as writer:
+        for predictor in VARIANT_CLASSIFICATION_PREDICTORS:
+            sheet = VARIANT_CLASSIFICATION_CATEGORY_SHEETS_BY_PREDICTOR[predictor]["ClinGen_Repo"]
+            pd.DataFrame([("GENEA", "Pathogenic")], columns=["Gene", "Updated_Classification_ClinGen_repo"]).to_excel(
+                writer, sheet_name=sheet, index=False
+            )
+    checkpoint = pd.read_csv(checkpoint_path, low_memory=False)
+    chek2 = pd.read_excel(chek2_path, header=0)
+    controls_workbook = pd.ExcelFile(controls_path)
+    stats = compute_clingen_evidence_repository_stats(checkpoint, chek2, controls_workbook)
+
+    text = format_clingen_evidence_repository_summary(stats)
+
+    assert "=== ClinGen Evidence Repository control set (evidence removed & reclassified) ===" in text
+    assert "2 distinct DNA variants across 2 genes" in text
+    assert "Pathogenic: 1" in text
+    assert "Likely Benign: 1" in text
+    assert "Retained a determinate classification: 1 of 2 (50.0%) distinct DNA variants across 1 genes" in text
+    assert "Pathogenic or Likely Pathogenic: 1" in text
+    assert "Benign or Likely Benign: 0" in text
+    for predictor in VARIANT_CLASSIFICATION_PREDICTORS:
+        assert f"{predictor}: 1 variants across 1 genes (Pathogenic or Likely Pathogenic: 1, Benign or Likely Benign: 0)" in text
+
+
+def test_control_concordance_flags_concordant_discordant_vus():
+    control_group = pd.Series(["Pathogenic", "Benign", "Pathogenic", "Benign", "Uncertain significance"])
+    assigned_pathogenic = pd.Series([True, False, False, False, False])
+    assigned_benign = pd.Series([False, True, True, False, False])
+
+    flags, in_scope = control_concordance_flags(
+        control_group, PATHOGENIC_VALUES, BENIGN_VALUES, assigned_pathogenic, assigned_benign
+    )
+
+    # row 5 (Uncertain significance) is out of scope regardless of its flags.
+    assert list(in_scope) == [True, True, True, True, False]
+    assert list(flags[CONCORDANT_LABEL]) == [True, True, False, False, False]
+    assert list(flags[DISCORDANT_LABEL]) == [False, False, True, False, False]
+    assert list(flags[CONTROL_VUS_LABEL]) == [False, False, False, True, True]
+
+
+def _write_control_concordance_workbook(path):
+    """5 ClinVar control rows + 3 ClinGen control rows per predictor, worked
+    out by hand in the test docstrings below (OddsPath alone: sign of
+    OP_points, read only from the REVEL sheet; combined with each predictor:
+    that predictor's own Class_* category membership on its own sheet).
+    """
+    clinvar_rows_revel = [
+        # (clnsig_group_18_25, OP_points, Class_REVEL)
+        ("Pathogenic", 2, "Pathogenic"),  # both concordant
+        ("Benign", -1, "Uncertain"),  # OddsPath concordant, combined VUS
+        ("Pathogenic", -1, "Likely Pathogenic"),  # OddsPath discordant, combined concordant
+        ("Benign", 0, "Benign"),  # OddsPath VUS (no evidence), combined concordant
+        ("Likely pathogenic", None, "Likely Benign"),  # OddsPath VUS, combined discordant
+    ]
+    clingen_rows_revel = [
+        # (Updated_Classification_ClinGen_repo, OP_points, Class_REVEL)
+        ("Pathogenic", 1, "Pathogenic"),  # both concordant
+        ("Benign", 1, "Uncertain"),  # OddsPath discordant, combined VUS
+        ("Likely Pathogenic", None, "Likely Benign"),  # OddsPath VUS, combined discordant
+    ]
+    # AM: concordant=3, discordant=1, vus=1 (ClinVar); concordant=2, discordant=0, vus=1 (ClinGen)
+    clinvar_rows_am = [
+        ("Pathogenic", "Pathogenic"),
+        ("Benign", "Benign"),
+        ("Pathogenic", "Benign"),
+        ("Benign", "Uncertain"),
+        ("Likely pathogenic", "Likely Pathogenic"),
+    ]
+    clingen_rows_am = [
+        ("Pathogenic", "Likely Pathogenic"),
+        ("Benign", "Likely Benign"),
+        ("Likely Pathogenic", "Uncertain"),
+    ]
+    # MP2: concordant=2, discordant=2, vus=1 (ClinVar); concordant=2, discordant=1, vus=0 (ClinGen)
+    clinvar_rows_mp2 = [
+        ("Pathogenic", "Uncertain"),
+        ("Benign", "Pathogenic"),
+        ("Pathogenic", "Pathogenic"),
+        ("Benign", "Benign"),
+        ("Likely pathogenic", "Benign"),
+    ]
+    clingen_rows_mp2 = [
+        ("Pathogenic", "Pathogenic"),
+        ("Benign", "Pathogenic"),
+        ("Likely Pathogenic", "Likely Pathogenic"),
+    ]
+    with pd.ExcelWriter(path) as writer:
+        pd.DataFrame(clinvar_rows_revel, columns=["clnsig_group_18_25", "OP_points", "Class_REVEL"]).to_excel(
+            writer, sheet_name="controls_REVEL_GeneSpecific", index=False
+        )
+        pd.DataFrame(
+            clingen_rows_revel, columns=["Updated_Classification_ClinGen_repo", "OP_points", "Class_REVEL"]
+        ).to_excel(writer, sheet_name="ClinGen_Repo_REVEL_GeneSpecific", index=False)
+        pd.DataFrame(clinvar_rows_am, columns=["clnsig_group_18_25", "Class_AM"]).to_excel(
+            writer, sheet_name="controls_AM_GeneSpecific", index=False
+        )
+        pd.DataFrame(clingen_rows_am, columns=["Updated_Classification_ClinGen_repo", "Class_AM"]).to_excel(
+            writer, sheet_name="ClinGen_Repo_AM_GeneSpecific", index=False
+        )
+        pd.DataFrame(clinvar_rows_mp2, columns=["clnsig_group_18_25", "Class_MP2"]).to_excel(
+            writer, sheet_name="controls_MP2_GeneSpecific", index=False
+        )
+        pd.DataFrame(clingen_rows_mp2, columns=["Updated_Classification_ClinGen_repo", "Class_MP2"]).to_excel(
+            writer, sheet_name="ClinGen_Repo_MP2_GeneSpecific", index=False
+        )
+
+
+def test_compute_control_concordance_clinvar_and_clingen(tmp_path):
+    path = tmp_path / "controls.xlsx"
+    _write_control_concordance_workbook(path)
+
+    concordance = compute_control_concordance(pd.ExcelFile(path))
+
+    clinvar_oddspath_total, clinvar_oddspath_table = concordance[("ClinVar", CONTROL_CONCORDANCE_EVIDENCE_LABEL)]
+    assert clinvar_oddspath_total == 5
+    assert clinvar_oddspath_table.loc[CONCORDANT_LABEL, "count"] == 2
+    assert clinvar_oddspath_table.loc[DISCORDANT_LABEL, "count"] == 1
+    assert clinvar_oddspath_table.loc[CONTROL_VUS_LABEL, "count"] == 2
+    assert clinvar_oddspath_table.loc[CONCORDANT_LABEL, "pct"] == pytest.approx(40.0)
+
+    clinvar_combined_total, clinvar_combined_table = concordance[("ClinVar", COMBINED_REVEL_EVIDENCE_LABEL)]
+    assert clinvar_combined_total == 5
+    assert clinvar_combined_table.loc[CONCORDANT_LABEL, "count"] == 3
+    assert clinvar_combined_table.loc[DISCORDANT_LABEL, "count"] == 1
+    assert clinvar_combined_table.loc[CONTROL_VUS_LABEL, "count"] == 1
+
+    clingen_oddspath_total, clingen_oddspath_table = concordance[("ClinGen", CONTROL_CONCORDANCE_EVIDENCE_LABEL)]
+    assert clingen_oddspath_total == 3
+    assert clingen_oddspath_table.loc[CONCORDANT_LABEL, "count"] == 1
+    assert clingen_oddspath_table.loc[DISCORDANT_LABEL, "count"] == 1
+    assert clingen_oddspath_table.loc[CONTROL_VUS_LABEL, "count"] == 1
+
+    clingen_combined_total, clingen_combined_table = concordance[("ClinGen", COMBINED_REVEL_EVIDENCE_LABEL)]
+    assert clingen_combined_total == 3
+    assert clingen_combined_table.loc[CONCORDANT_LABEL, "count"] == 1
+    assert clingen_combined_table.loc[DISCORDANT_LABEL, "count"] == 1
+    assert clingen_combined_table.loc[CONTROL_VUS_LABEL, "count"] == 1
+
+    am_label = COMBINED_EVIDENCE_LABEL_BY_PREDICTOR["AlphaMissense"]
+    clinvar_am_total, clinvar_am_table = concordance[("ClinVar", am_label)]
+    assert clinvar_am_total == 5
+    assert clinvar_am_table.loc[CONCORDANT_LABEL, "count"] == 3
+    assert clinvar_am_table.loc[DISCORDANT_LABEL, "count"] == 1
+    assert clinvar_am_table.loc[CONTROL_VUS_LABEL, "count"] == 1
+
+    clingen_am_total, clingen_am_table = concordance[("ClinGen", am_label)]
+    assert clingen_am_total == 3
+    assert clingen_am_table.loc[CONCORDANT_LABEL, "count"] == 2
+    assert clingen_am_table.loc[DISCORDANT_LABEL, "count"] == 0
+    assert clingen_am_table.loc[CONTROL_VUS_LABEL, "count"] == 1
+
+    mp2_label = COMBINED_EVIDENCE_LABEL_BY_PREDICTOR["MutPred2"]
+    clinvar_mp2_total, clinvar_mp2_table = concordance[("ClinVar", mp2_label)]
+    assert clinvar_mp2_total == 5
+    assert clinvar_mp2_table.loc[CONCORDANT_LABEL, "count"] == 2
+    assert clinvar_mp2_table.loc[DISCORDANT_LABEL, "count"] == 2
+    assert clinvar_mp2_table.loc[CONTROL_VUS_LABEL, "count"] == 1
+
+    clingen_mp2_total, clingen_mp2_table = concordance[("ClinGen", mp2_label)]
+    assert clingen_mp2_total == 3
+    assert clingen_mp2_table.loc[CONCORDANT_LABEL, "count"] == 2
+    assert clingen_mp2_table.loc[DISCORDANT_LABEL, "count"] == 1
+    assert clingen_mp2_table.loc[CONTROL_VUS_LABEL, "count"] == 0
+
+
+def test_format_control_concordance_report(tmp_path):
+    path = tmp_path / "controls.xlsx"
+    _write_control_concordance_workbook(path)
+    concordance = compute_control_concordance(pd.ExcelFile(path))
+
+    text = format_control_concordance_report(concordance)
+
+    assert (
+        "=== Control concordance (ClinVar vs. ClinGen; OddsPath alone vs. combined with "
+        "REVEL/AlphaMissense/MutPred2) ===" in text
+    )
+    assert "ClinVar controls (controls_*_GeneSpecific sheets):" in text
+    assert "ClinGen controls (ClinGen_Repo_*_GeneSpecific sheets):" in text
+    assert CONTROL_CONCORDANCE_EVIDENCE_LABEL in text
+    assert COMBINED_REVEL_EVIDENCE_LABEL in text
+    assert COMBINED_EVIDENCE_LABEL_BY_PREDICTOR["AlphaMissense"] in text
+    assert COMBINED_EVIDENCE_LABEL_BY_PREDICTOR["MutPred2"] in text
+    # ClinVar/OddsPath row: 2 concordant of 5 total.
+    assert "2 of 5 (40.0%)" in text
+    # ClinGen/AlphaMissense row: 2 concordant of 3 total.
+    assert "2 of 3 (66.7%)" in text
 
 
 def test_reclassification_flags_agree_disagree_and_no_evidence():
@@ -998,43 +2448,122 @@ def test_distinct_dna_variants_dedups_by_genomic_coordinates():
 def test_compute_variant_classification_stats(tmp_path):
     controls_path = tmp_path / "controls.xlsx"
     # coords (1, 100, A, G) is shared between "controls" and "gnomAD", to check
-    # that the combined total counts it once, not twice.
-    _write_variant_classification_sheets(
+    # that the combined total counts it once, not twice. Same rows written to
+    # all three predictors' sheets, so each predictor's stats should match.
+    # Row 105 is single-source (Fxn_points 0, predictor points -1); row 108 is
+    # conflicting (Fxn_points +2, predictor points -3, opposite signs, still
+    # summing to the -1-point threshold) -- together they cover both halves
+    # of the mutually-exclusive-and-exhaustive -1-point split.
+    _write_variant_classification_sheets_by_predictor(
         controls_path,
         {
-            "controls_REVEL_GeneSpecific": [
-                ("GENEX", 1, 100, "A", "G", "Pathogenic"),
-                ("GENEX", 1, 101, "A", "G", "Benign"),
+            "controls": [
+                ("GENEX", 1, 100, "A", "G", "Pathogenic", 6, 6, 0),
+                ("GENEX", 1, 101, "A", "G", "Benign", -2, -2, 0),
             ],
-            "ClinGen_Repo_REVEL_GeneSpecific": [
-                ("GENEX", 1, 102, "A", "G", "Likely Pathogenic"),
+            "ClinGen_Repo": [
+                ("GENEX", 1, 102, "A", "G", "Likely Pathogenic", 6, 6, 0),
             ],
-            "VUS_REVEL": [
-                ("GENEX", 1, 103, "A", "G", "Pathogenic"),
-                ("GENEX", 1, 104, "A", "G", "Uncertain"),
-                ("GENEX", 1, 105, "A", "G", "Benign"),
+            "VUS": [
+                ("GENEX", 1, 103, "A", "G", "Pathogenic", 6, 6, 0),
+                ("GENEX", 1, 104, "A", "G", "Uncertain", 2, 2, 0),
+                ("GENEX", 1, 105, "A", "G", "Benign", -1, 0, -1),  # -1-point threshold, single source
+                ("GENEX", 1, 108, "A", "G", "Benign", -1, 2, -3),  # -1-point threshold, conflicting
+                ("GENEX", 1, 109, "A", "G", "Uncertain", 5, 2, 3),  # unresolved, both sources, concordant
+                ("GENEX", 1, 110, "A", "G", "Uncertain", 3, 8, -5),  # unresolved, both sources, discordant
             ],
-            "gnomAD_REVEL": [
-                ("GENEX", 1, 100, "A", "G", "Pathogenic"),
+            "gnomAD": [
+                ("GENEX", 1, 100, "A", "G", "Pathogenic", 6, 6, 0),
             ],
-            "Unobserved_REVEL": [
-                ("GENEX", 1, 106, "A", "G", "Pathogenic"),
-                ("GENEX", 1, 107, "A", "G", "Uncertain"),
+            "Unobserved": [
+                ("GENEX", 1, 106, "A", "G", "Pathogenic", 6, 6, 0),
+                ("GENEX", 1, 107, "A", "G", "Uncertain", 3, 3, 0),
             ],
         },
         mode="w",
     )
 
-    stats = compute_variant_classification_stats(pd.ExcelFile(controls_path))
+    stats_by_predictor = compute_variant_classification_stats(pd.ExcelFile(controls_path))
 
-    assert stats == {
-        "total_classified": 8,
-        "total_pathogenic_or_benign": 6,
-        "vus_total": 3,
-        "vus_resolved": 2,
+    assert set(stats_by_predictor) == set(VARIANT_CLASSIFICATION_PREDICTORS)
+    expected = {
+        "total_classified": 11,
+        "total_pathogenic_or_benign": 7,
+        "vus_total": 6,
+        "vus_resolved": 3,
+        # row 103 (fxn 6, predictor 0): experimental only.
+        "vus_resolved_pathogenic": 1,
+        "vus_resolved_pathogenic_only_experimental": 1,
+        "vus_resolved_pathogenic_only_predictive": 0,
+        "vus_resolved_pathogenic_both_evidence": 0,
+        # row 105 (fxn 0, predictor -1): predictive only. row 108 (fxn 2, predictor -3): both.
+        "vus_resolved_benign": 2,
+        "vus_resolved_benign_only_experimental": 0,
+        "vus_resolved_benign_only_predictive": 1,
+        "vus_resolved_benign_both_evidence": 1,
+        "vus_resolved_benign_at_threshold": 2,
+        "vus_resolved_benign_at_threshold_single_source": 1,
+        "vus_resolved_benign_at_threshold_conflicting": 1,
+        # row 104 (fxn 2, predictor 0): experimental only. row 109 (fxn 2, predictor 3, both
+        # same sign): concordant. row 110 (fxn 8, predictor -5, opposite signs): discordant.
+        "vus_unresolved": 3,
+        "vus_unresolved_concordant": 1,
+        "vus_unresolved_discordant": 1,
+        "vus_unresolved_only_experimental": 1,
+        "vus_unresolved_only_predictive": 0,
+        "vus_unresolved_neither": 0,
+        "vus_unresolved_zero_or_one_source": 1,
+        # row 109 (points 5) is the only VUS near-pathogenic row (row 110's points, 3, don't qualify).
+        "vus_unresolved_near_pathogenic": 1,
+        # the sole gnomAD row (same coords as controls row 100, fxn 6/predictor 0): resolved
+        # pathogenic, experimental only.
+        "gnomad_total": 1,
+        "gnomad_resolved": 1,
+        "gnomad_resolved_pathogenic": 1,
+        "gnomad_resolved_pathogenic_only_experimental": 1,
+        "gnomad_resolved_pathogenic_only_predictive": 0,
+        "gnomad_resolved_pathogenic_both_evidence": 0,
+        "gnomad_resolved_benign": 0,
+        "gnomad_resolved_benign_only_experimental": 0,
+        "gnomad_resolved_benign_only_predictive": 0,
+        "gnomad_resolved_benign_both_evidence": 0,
+        "gnomad_resolved_benign_at_threshold": 0,
+        "gnomad_resolved_benign_at_threshold_single_source": 0,
+        "gnomad_resolved_benign_at_threshold_conflicting": 0,
+        "gnomad_unresolved": 0,
+        "gnomad_unresolved_concordant": 0,
+        "gnomad_unresolved_discordant": 0,
+        "gnomad_unresolved_only_experimental": 0,
+        "gnomad_unresolved_only_predictive": 0,
+        "gnomad_unresolved_neither": 0,
+        "gnomad_unresolved_zero_or_one_source": 0,
+        "gnomad_unresolved_near_pathogenic": 0,
         "unobserved_total": 2,
         "unobserved_resolved": 1,
+        # row 106 (fxn 6, predictor 0): experimental only.
+        "unobserved_resolved_pathogenic": 1,
+        "unobserved_resolved_pathogenic_only_experimental": 1,
+        "unobserved_resolved_pathogenic_only_predictive": 0,
+        "unobserved_resolved_pathogenic_both_evidence": 0,
+        "unobserved_resolved_benign": 0,
+        "unobserved_resolved_benign_only_experimental": 0,
+        "unobserved_resolved_benign_only_predictive": 0,
+        "unobserved_resolved_benign_both_evidence": 0,
+        "unobserved_resolved_benign_at_threshold": 0,
+        "unobserved_resolved_benign_at_threshold_single_source": 0,
+        "unobserved_resolved_benign_at_threshold_conflicting": 0,
+        # row 107 (fxn 3, predictor 0), the sole unresolved Unobserved: experimental only.
+        "unobserved_unresolved": 1,
+        "unobserved_unresolved_concordant": 0,
+        "unobserved_unresolved_discordant": 0,
+        "unobserved_unresolved_only_experimental": 1,
+        "unobserved_unresolved_only_predictive": 0,
+        "unobserved_unresolved_neither": 0,
+        "unobserved_unresolved_zero_or_one_source": 1,
+        "unobserved_unresolved_near_pathogenic": 0,
     }
+    for predictor in VARIANT_CLASSIFICATION_PREDICTORS:
+        assert stats_by_predictor[predictor] == expected
 
 
 def test_format_variant_classification_summary():
@@ -1043,8 +2572,71 @@ def test_format_variant_classification_summary():
         "total_pathogenic_or_benign": 6,
         "vus_total": 3,
         "vus_resolved": 2,
+        "vus_resolved_pathogenic": 1,
+        "vus_resolved_pathogenic_only_experimental": 1,
+        "vus_resolved_pathogenic_only_predictive": 0,
+        "vus_resolved_pathogenic_both_evidence": 0,
+        "vus_resolved_benign": 1,
+        "vus_resolved_benign_only_experimental": 0,
+        "vus_resolved_benign_only_predictive": 1,
+        "vus_resolved_benign_both_evidence": 0,
+        "vus_resolved_benign_at_threshold": 1,
+        "vus_resolved_benign_at_threshold_single_source": 1,
+        "vus_resolved_benign_at_threshold_conflicting": 0,
+        # Covers all five evidence-source buckets: 1 each of concordant/discordant/
+        # experimental-only/predictive-only/neither (1+1+1=3 for the "zero or 1 source" total).
+        "vus_unresolved": 5,
+        "vus_unresolved_concordant": 1,
+        "vus_unresolved_discordant": 1,
+        "vus_unresolved_only_experimental": 1,
+        "vus_unresolved_only_predictive": 1,
+        "vus_unresolved_neither": 1,
+        "vus_unresolved_zero_or_one_source": 3,
+        # Overlaps the categories above rather than partitioning the unresolved count.
+        "vus_unresolved_near_pathogenic": 2,
+        "gnomad_total": 4,
+        "gnomad_resolved": 2,
+        "gnomad_resolved_pathogenic": 1,
+        "gnomad_resolved_pathogenic_only_experimental": 0,
+        "gnomad_resolved_pathogenic_only_predictive": 1,
+        "gnomad_resolved_pathogenic_both_evidence": 0,
+        "gnomad_resolved_benign": 1,
+        "gnomad_resolved_benign_only_experimental": 1,
+        "gnomad_resolved_benign_only_predictive": 0,
+        "gnomad_resolved_benign_both_evidence": 0,
+        "gnomad_resolved_benign_at_threshold": 1,
+        "gnomad_resolved_benign_at_threshold_single_source": 1,
+        "gnomad_resolved_benign_at_threshold_conflicting": 0,
+        "gnomad_unresolved": 2,
+        "gnomad_unresolved_concordant": 0,
+        "gnomad_unresolved_discordant": 0,
+        "gnomad_unresolved_only_experimental": 1,
+        "gnomad_unresolved_only_predictive": 0,
+        "gnomad_unresolved_neither": 1,
+        "gnomad_unresolved_zero_or_one_source": 2,
+        "gnomad_unresolved_near_pathogenic": 0,
         "unobserved_total": 2,
         "unobserved_resolved": 1,
+        "unobserved_resolved_pathogenic": 1,
+        "unobserved_resolved_pathogenic_only_experimental": 0,
+        "unobserved_resolved_pathogenic_only_predictive": 0,
+        "unobserved_resolved_pathogenic_both_evidence": 1,
+        "unobserved_resolved_benign": 0,
+        "unobserved_resolved_benign_only_experimental": 0,
+        "unobserved_resolved_benign_only_predictive": 0,
+        "unobserved_resolved_benign_both_evidence": 0,
+        "unobserved_resolved_benign_at_threshold": 0,
+        "unobserved_resolved_benign_at_threshold_single_source": 0,
+        "unobserved_resolved_benign_at_threshold_conflicting": 0,
+        # No concordant/neither this time -- 1 discordant, 1 experimental-only, 1 predictive-only.
+        "unobserved_unresolved": 3,
+        "unobserved_unresolved_concordant": 0,
+        "unobserved_unresolved_discordant": 1,
+        "unobserved_unresolved_only_experimental": 1,
+        "unobserved_unresolved_only_predictive": 1,
+        "unobserved_unresolved_neither": 0,
+        "unobserved_unresolved_zero_or_one_source": 2,
+        "unobserved_unresolved_near_pathogenic": 1,
     }
 
     text = format_variant_classification_summary(stats)
@@ -1054,6 +2646,58 @@ def test_format_variant_classification_summary():
     assert "Pathogenic or benign: 6 of 8 (75.0%)" in text
     assert "ClinVar VUS resolved (reclassified pathogenic or benign): 2 of 3 (66.7%)" in text
     assert "Unobserved variants resolved (classified pathogenic or benign): 1 of 2 (50.0%)" in text
+    # VUS breakdown, as a fraction of vus_total (3).
+    assert "Pathogenic or likely pathogenic: 1 of 3 (33.3%)" in text
+    assert "Benign or likely benign: 1 of 3 (33.3%)" in text
+    # VUS P/LP (1) is experimental-only; VUS B/LB (1) is predictive-only -- each split as a
+    # fraction of its own parent count (1).
+    assert "Experimental evidence only: 1 of 1 (100.0%)" in text
+    assert "Predictive evidence only: 1 of 1 (100.0%)" in text
+    assert text.count("Both: 0 of 1 (0.0%)") == 4  # VUS and gnomAD P/LP and B/LB both-evidence counts
+    assert "Benign or likely benign from only -1 point: 1 of 3 (33.3%)" in text
+    # -1-point single-source/conflicting split, as a fraction of the -1-point count (1).
+    assert "Evidence from only one source: 1 of 1 (100.0%)" in text
+    assert "Conflicting functional and predictive data: 0 of 1 (0.0%)" in text
+    # Unobserved breakdown, as a fraction of unobserved_total (2).
+    assert "Pathogenic or likely pathogenic: 1 of 2 (50.0%)" in text
+    assert "Benign or likely benign: 0 of 2 (0.0%)" in text
+    # Unobserved P/LP (1) is both-evidence; Unobserved B/LB count is 0, so its split is nan%.
+    assert "Both: 1 of 1 (100.0%)" in text
+    assert text.count("0 of 0 (nan%)") >= 3  # Unobserved B/LB's experimental/predictive/both split
+    assert "Benign or likely benign from only -1 point: 0 of 2 (0.0%)" in text
+    # Unobserved's -1-point count is 0, so its single-source/conflicting fraction is nan%.
+    assert "Evidence from only one source: 0 of 0 (nan%)" in text
+    assert "Conflicting functional and predictive data: 0 of 0 (nan%)" in text
+    # VUS unresolved (5, an intentionally-unrealistic count exceeding vus_total (3) -- this is a
+    # pure formatting test, not a consistency check): 1 each of concordant/discordant/
+    # experimental-only/predictive-only/neither, as a fraction of the unresolved count (5); "0 or 1
+    # source" totals the other three (3 of 5).
+    assert "ClinVar VUS unresolved: 5 of 3 (166.7%)" in text
+    assert "Concordant (both sources, same direction): 1 of 5 (20.0%)" in text
+    assert "Discordant (both sources, opposite direction): 1 of 5 (20.0%)" in text
+    assert text.count("1 of 5 (20.0%)") == 5  # concordant, discordant, experimental-only, predictive-only, neither
+    assert "0 or 1 source (total): 3 of 5 (60.0%)" in text
+    assert "+4 or +5 points (overlaps categories above): 2 of 5 (40.0%)" in text
+    # gnomAD resolved (2 of 4): P/LP (1) is predictive-only; B/LB (1) is experimental-only.
+    assert "gnomAD variants resolved (classified pathogenic or benign): 2 of 4 (50.0%)" in text
+    assert "Pathogenic or likely pathogenic: 1 of 4 (25.0%)" in text
+    assert "Benign or likely benign: 1 of 4 (25.0%)" in text
+    assert "Benign or likely benign from only -1 point: 1 of 4 (25.0%)" in text
+    # gnomAD unresolved (2 of 4): 1 experimental-only, 1 neither, 0 concordant/discordant/predictive-only.
+    assert "gnomAD variants unresolved: 2 of 4 (50.0%)" in text
+    # "1 of 2 (50.0%)" appears 4x total: Unobserved's title + P/LP lines, plus gnomAD unresolved's
+    # experimental-only and neither lines.
+    assert text.count("1 of 2 (50.0%)") == 4
+    assert "0 or 1 source (total): 2 of 2 (100.0%)" in text
+    assert "+4 or +5 points (overlaps categories above): 0 of 2 (0.0%)" in text
+    # Unobserved unresolved (3): 1 discordant, 1 experimental-only, 1 predictive-only, 0 concordant/neither.
+    assert "Unobserved variants unresolved: 3 of 2 (150.0%)" in text
+    assert "Discordant (both sources, opposite direction): 1 of 3 (33.3%)" in text
+    assert "+4 or +5 points (overlaps categories above): 1 of 3 (33.3%)" in text
+    # "1 of 3 (33.3%)" also appears above from VUS resolved's P/LP, B/LB, -1-point lines (3x),
+    # plus Unobserved unresolved's discordant/experimental-only/predictive-only (3x).
+    assert text.count("1 of 3 (33.3%)") == 7
+    assert "0 or 1 source (total): 2 of 3 (66.7%)" in text
 
 
 def test_format_variant_classification_summary_uses_given_title():
@@ -1062,8 +2706,67 @@ def test_format_variant_classification_summary_uses_given_title():
         "total_pathogenic_or_benign": 1,
         "vus_total": 0,
         "vus_resolved": 0,
+        "vus_resolved_pathogenic": 0,
+        "vus_resolved_pathogenic_only_experimental": 0,
+        "vus_resolved_pathogenic_only_predictive": 0,
+        "vus_resolved_pathogenic_both_evidence": 0,
+        "vus_resolved_benign": 0,
+        "vus_resolved_benign_only_experimental": 0,
+        "vus_resolved_benign_only_predictive": 0,
+        "vus_resolved_benign_both_evidence": 0,
+        "vus_resolved_benign_at_threshold": 0,
+        "vus_resolved_benign_at_threshold_single_source": 0,
+        "vus_resolved_benign_at_threshold_conflicting": 0,
+        "vus_unresolved": 0,
+        "vus_unresolved_concordant": 0,
+        "vus_unresolved_discordant": 0,
+        "vus_unresolved_only_experimental": 0,
+        "vus_unresolved_only_predictive": 0,
+        "vus_unresolved_neither": 0,
+        "vus_unresolved_zero_or_one_source": 0,
+        "vus_unresolved_near_pathogenic": 0,
+        "gnomad_total": 0,
+        "gnomad_resolved": 0,
+        "gnomad_resolved_pathogenic": 0,
+        "gnomad_resolved_pathogenic_only_experimental": 0,
+        "gnomad_resolved_pathogenic_only_predictive": 0,
+        "gnomad_resolved_pathogenic_both_evidence": 0,
+        "gnomad_resolved_benign": 0,
+        "gnomad_resolved_benign_only_experimental": 0,
+        "gnomad_resolved_benign_only_predictive": 0,
+        "gnomad_resolved_benign_both_evidence": 0,
+        "gnomad_resolved_benign_at_threshold": 0,
+        "gnomad_resolved_benign_at_threshold_single_source": 0,
+        "gnomad_resolved_benign_at_threshold_conflicting": 0,
+        "gnomad_unresolved": 0,
+        "gnomad_unresolved_concordant": 0,
+        "gnomad_unresolved_discordant": 0,
+        "gnomad_unresolved_only_experimental": 0,
+        "gnomad_unresolved_only_predictive": 0,
+        "gnomad_unresolved_neither": 0,
+        "gnomad_unresolved_zero_or_one_source": 0,
+        "gnomad_unresolved_near_pathogenic": 0,
         "unobserved_total": 0,
         "unobserved_resolved": 0,
+        "unobserved_resolved_pathogenic": 0,
+        "unobserved_resolved_pathogenic_only_experimental": 0,
+        "unobserved_resolved_pathogenic_only_predictive": 0,
+        "unobserved_resolved_pathogenic_both_evidence": 0,
+        "unobserved_resolved_benign": 0,
+        "unobserved_resolved_benign_only_experimental": 0,
+        "unobserved_resolved_benign_only_predictive": 0,
+        "unobserved_resolved_benign_both_evidence": 0,
+        "unobserved_resolved_benign_at_threshold": 0,
+        "unobserved_resolved_benign_at_threshold_single_source": 0,
+        "unobserved_resolved_benign_at_threshold_conflicting": 0,
+        "unobserved_unresolved": 0,
+        "unobserved_unresolved_concordant": 0,
+        "unobserved_unresolved_discordant": 0,
+        "unobserved_unresolved_only_experimental": 0,
+        "unobserved_unresolved_only_predictive": 0,
+        "unobserved_unresolved_neither": 0,
+        "unobserved_unresolved_zero_or_one_source": 0,
+        "unobserved_unresolved_near_pathogenic": 0,
     }
 
     text = format_variant_classification_summary(stats, title=RECLASSIFICATION_VARIANT_CLASSIFICATION_TITLE)
@@ -1077,14 +2780,397 @@ def test_format_variant_classification_summary_handles_zero_totals():
         "total_pathogenic_or_benign": 0,
         "vus_total": 0,
         "vus_resolved": 0,
+        "vus_resolved_pathogenic": 0,
+        "vus_resolved_pathogenic_only_experimental": 0,
+        "vus_resolved_pathogenic_only_predictive": 0,
+        "vus_resolved_pathogenic_both_evidence": 0,
+        "vus_resolved_benign": 0,
+        "vus_resolved_benign_only_experimental": 0,
+        "vus_resolved_benign_only_predictive": 0,
+        "vus_resolved_benign_both_evidence": 0,
+        "vus_resolved_benign_at_threshold": 0,
+        "vus_resolved_benign_at_threshold_single_source": 0,
+        "vus_resolved_benign_at_threshold_conflicting": 0,
+        "vus_unresolved": 0,
+        "vus_unresolved_concordant": 0,
+        "vus_unresolved_discordant": 0,
+        "vus_unresolved_only_experimental": 0,
+        "vus_unresolved_only_predictive": 0,
+        "vus_unresolved_neither": 0,
+        "vus_unresolved_zero_or_one_source": 0,
+        "vus_unresolved_near_pathogenic": 0,
+        "gnomad_total": 0,
+        "gnomad_resolved": 0,
+        "gnomad_resolved_pathogenic": 0,
+        "gnomad_resolved_pathogenic_only_experimental": 0,
+        "gnomad_resolved_pathogenic_only_predictive": 0,
+        "gnomad_resolved_pathogenic_both_evidence": 0,
+        "gnomad_resolved_benign": 0,
+        "gnomad_resolved_benign_only_experimental": 0,
+        "gnomad_resolved_benign_only_predictive": 0,
+        "gnomad_resolved_benign_both_evidence": 0,
+        "gnomad_resolved_benign_at_threshold": 0,
+        "gnomad_resolved_benign_at_threshold_single_source": 0,
+        "gnomad_resolved_benign_at_threshold_conflicting": 0,
+        "gnomad_unresolved": 0,
+        "gnomad_unresolved_concordant": 0,
+        "gnomad_unresolved_discordant": 0,
+        "gnomad_unresolved_only_experimental": 0,
+        "gnomad_unresolved_only_predictive": 0,
+        "gnomad_unresolved_neither": 0,
+        "gnomad_unresolved_zero_or_one_source": 0,
+        "gnomad_unresolved_near_pathogenic": 0,
         "unobserved_total": 0,
         "unobserved_resolved": 0,
+        "unobserved_resolved_pathogenic": 0,
+        "unobserved_resolved_pathogenic_only_experimental": 0,
+        "unobserved_resolved_pathogenic_only_predictive": 0,
+        "unobserved_resolved_pathogenic_both_evidence": 0,
+        "unobserved_resolved_benign": 0,
+        "unobserved_resolved_benign_only_experimental": 0,
+        "unobserved_resolved_benign_only_predictive": 0,
+        "unobserved_resolved_benign_both_evidence": 0,
+        "unobserved_resolved_benign_at_threshold": 0,
+        "unobserved_resolved_benign_at_threshold_single_source": 0,
+        "unobserved_resolved_benign_at_threshold_conflicting": 0,
+        "unobserved_unresolved": 0,
+        "unobserved_unresolved_concordant": 0,
+        "unobserved_unresolved_discordant": 0,
+        "unobserved_unresolved_only_experimental": 0,
+        "unobserved_unresolved_only_predictive": 0,
+        "unobserved_unresolved_neither": 0,
+        "unobserved_unresolved_zero_or_one_source": 0,
+        "unobserved_unresolved_near_pathogenic": 0,
     }
 
     text = format_variant_classification_summary(stats)
 
     assert "Distinct DNA variants classified: 0" in text
     assert "(nan%)" in text
+
+
+def _variant_classification_stats_by_predictor(stats):
+    return {predictor: stats for predictor in VARIANT_CLASSIFICATION_PREDICTORS}
+
+
+def test_format_variant_classification_table():
+    stats = {
+        "total_classified": 8,
+        "total_pathogenic_or_benign": 6,
+        "vus_total": 3,
+        "vus_resolved": 2,
+        # VUS P/LP (1) is experimental-only; VUS B/LB (1) is predictive-only.
+        "vus_resolved_pathogenic": 1,
+        "vus_resolved_pathogenic_only_experimental": 1,
+        "vus_resolved_pathogenic_only_predictive": 0,
+        "vus_resolved_pathogenic_both_evidence": 0,
+        "vus_resolved_benign": 1,
+        "vus_resolved_benign_only_experimental": 0,
+        "vus_resolved_benign_only_predictive": 1,
+        "vus_resolved_benign_both_evidence": 0,
+        "vus_resolved_benign_at_threshold": 1,
+        "vus_resolved_benign_at_threshold_single_source": 1,
+        "vus_resolved_benign_at_threshold_conflicting": 0,
+        # vus_total (3) - vus_resolved (2) = 1 unresolved row, experimental-only.
+        "vus_unresolved": 1,
+        "vus_unresolved_concordant": 0,
+        "vus_unresolved_discordant": 0,
+        "vus_unresolved_only_experimental": 1,
+        "vus_unresolved_only_predictive": 0,
+        "vus_unresolved_neither": 0,
+        "vus_unresolved_zero_or_one_source": 1,
+        "vus_unresolved_near_pathogenic": 0,
+        # Same shape as VUS above: P/LP experimental-only, B/LB predictive-only, 1 unresolved
+        # experimental-only row.
+        "gnomad_total": 3,
+        "gnomad_resolved": 2,
+        "gnomad_resolved_pathogenic": 1,
+        "gnomad_resolved_pathogenic_only_experimental": 1,
+        "gnomad_resolved_pathogenic_only_predictive": 0,
+        "gnomad_resolved_pathogenic_both_evidence": 0,
+        "gnomad_resolved_benign": 1,
+        "gnomad_resolved_benign_only_experimental": 0,
+        "gnomad_resolved_benign_only_predictive": 1,
+        "gnomad_resolved_benign_both_evidence": 0,
+        "gnomad_resolved_benign_at_threshold": 1,
+        "gnomad_resolved_benign_at_threshold_single_source": 1,
+        "gnomad_resolved_benign_at_threshold_conflicting": 0,
+        "gnomad_unresolved": 1,
+        "gnomad_unresolved_concordant": 0,
+        "gnomad_unresolved_discordant": 0,
+        "gnomad_unresolved_only_experimental": 1,
+        "gnomad_unresolved_only_predictive": 0,
+        "gnomad_unresolved_neither": 0,
+        "gnomad_unresolved_zero_or_one_source": 1,
+        "gnomad_unresolved_near_pathogenic": 0,
+        "unobserved_total": 2,
+        "unobserved_resolved": 1,
+        # Unobserved P/LP (1) is both-evidence; Unobserved has no resolved-benign row.
+        "unobserved_resolved_pathogenic": 1,
+        "unobserved_resolved_pathogenic_only_experimental": 0,
+        "unobserved_resolved_pathogenic_only_predictive": 0,
+        "unobserved_resolved_pathogenic_both_evidence": 1,
+        "unobserved_resolved_benign": 0,
+        "unobserved_resolved_benign_only_experimental": 0,
+        "unobserved_resolved_benign_only_predictive": 0,
+        "unobserved_resolved_benign_both_evidence": 0,
+        "unobserved_resolved_benign_at_threshold": 0,
+        "unobserved_resolved_benign_at_threshold_single_source": 0,
+        "unobserved_resolved_benign_at_threshold_conflicting": 0,
+        # unobserved_total (2) - unobserved_resolved (1) = 1 unresolved row, concordant.
+        "unobserved_unresolved": 1,
+        "unobserved_unresolved_concordant": 1,
+        "unobserved_unresolved_discordant": 0,
+        "unobserved_unresolved_only_experimental": 0,
+        "unobserved_unresolved_only_predictive": 0,
+        "unobserved_unresolved_neither": 0,
+        "unobserved_unresolved_zero_or_one_source": 0,
+        "unobserved_unresolved_near_pathogenic": 0,
+    }
+
+    text = format_variant_classification_table(_variant_classification_stats_by_predictor(stats))
+
+    assert text.startswith(VARIANT_CLASSIFICATION_TITLE)
+    for predictor in VARIANT_CLASSIFICATION_PREDICTORS:
+        assert predictor in text
+    assert "ClinVar VUS resolved (reclassified pathogenic or benign):" in text
+    assert "ClinVar VUS unresolved:" in text
+    assert "gnomAD variants resolved (classified pathogenic or benign):" in text
+    assert "gnomAD variants unresolved:" in text
+    assert "Unobserved variants resolved (classified pathogenic or benign):" in text
+    assert "Unobserved variants unresolved:" in text
+    # One row per predictor per table -- these values are identical across
+    # REVEL/AlphaMissense/MutPred2 here, so each formatted count/pct string
+    # appears once per predictor occurrence (x3). Counts below were verified against the
+    # actual rendered table rather than hand-derived, given how many columns now overlap.
+    assert text.count("6 of 8 (75.0%)") == 3
+    assert text.count("2 of 3 (66.7%)") == 6  # VUS and gnomAD's "Resolved" columns
+    assert text.count("1 of 3 (33.3%)") == 24
+    assert text.count("1 of 2 (50.0%)") == 9
+    assert text.count("0 of 2 (0.0%)") == 6
+    assert text.count("1 of 1 (100.0%)") == 36
+    assert text.count("0 of 1 (0.0%)") == 84
+    assert text.count("0 of 0 (nan%)") == 15
+
+
+def test_format_variant_classification_table_uses_given_title():
+    stats = dict.fromkeys(
+        [
+            "total_classified",
+            "total_pathogenic_or_benign",
+            "vus_total",
+            "vus_resolved",
+            "vus_resolved_pathogenic",
+            "vus_resolved_pathogenic_only_experimental",
+            "vus_resolved_pathogenic_only_predictive",
+            "vus_resolved_pathogenic_both_evidence",
+            "vus_resolved_benign",
+            "vus_resolved_benign_only_experimental",
+            "vus_resolved_benign_only_predictive",
+            "vus_resolved_benign_both_evidence",
+            "vus_resolved_benign_at_threshold",
+            "vus_resolved_benign_at_threshold_single_source",
+            "vus_resolved_benign_at_threshold_conflicting",
+            "vus_unresolved",
+            "vus_unresolved_concordant",
+            "vus_unresolved_discordant",
+            "vus_unresolved_only_experimental",
+            "vus_unresolved_only_predictive",
+            "vus_unresolved_neither",
+            "vus_unresolved_zero_or_one_source",
+            "vus_unresolved_near_pathogenic",
+            "gnomad_total",
+            "gnomad_resolved",
+            "gnomad_resolved_pathogenic",
+            "gnomad_resolved_pathogenic_only_experimental",
+            "gnomad_resolved_pathogenic_only_predictive",
+            "gnomad_resolved_pathogenic_both_evidence",
+            "gnomad_resolved_benign",
+            "gnomad_resolved_benign_only_experimental",
+            "gnomad_resolved_benign_only_predictive",
+            "gnomad_resolved_benign_both_evidence",
+            "gnomad_resolved_benign_at_threshold",
+            "gnomad_resolved_benign_at_threshold_single_source",
+            "gnomad_resolved_benign_at_threshold_conflicting",
+            "gnomad_unresolved",
+            "gnomad_unresolved_concordant",
+            "gnomad_unresolved_discordant",
+            "gnomad_unresolved_only_experimental",
+            "gnomad_unresolved_only_predictive",
+            "gnomad_unresolved_neither",
+            "gnomad_unresolved_zero_or_one_source",
+            "gnomad_unresolved_near_pathogenic",
+            "unobserved_total",
+            "unobserved_resolved",
+            "unobserved_resolved_pathogenic",
+            "unobserved_resolved_pathogenic_only_experimental",
+            "unobserved_resolved_pathogenic_only_predictive",
+            "unobserved_resolved_pathogenic_both_evidence",
+            "unobserved_resolved_benign",
+            "unobserved_resolved_benign_only_experimental",
+            "unobserved_resolved_benign_only_predictive",
+            "unobserved_resolved_benign_both_evidence",
+            "unobserved_resolved_benign_at_threshold",
+            "unobserved_resolved_benign_at_threshold_single_source",
+            "unobserved_resolved_benign_at_threshold_conflicting",
+            "unobserved_unresolved",
+            "unobserved_unresolved_concordant",
+            "unobserved_unresolved_discordant",
+            "unobserved_unresolved_only_experimental",
+            "unobserved_unresolved_only_predictive",
+            "unobserved_unresolved_neither",
+            "unobserved_unresolved_zero_or_one_source",
+            "unobserved_unresolved_near_pathogenic",
+        ],
+        0,
+    )
+
+    text = format_variant_classification_table(
+        _variant_classification_stats_by_predictor(stats), title="=== custom title ==="
+    )
+
+    assert text.startswith("=== custom title ===")
+
+
+def test_format_variant_classification_table_handles_zero_totals():
+    stats = dict.fromkeys(
+        [
+            "total_classified",
+            "total_pathogenic_or_benign",
+            "vus_total",
+            "vus_resolved",
+            "vus_resolved_pathogenic",
+            "vus_resolved_pathogenic_only_experimental",
+            "vus_resolved_pathogenic_only_predictive",
+            "vus_resolved_pathogenic_both_evidence",
+            "vus_resolved_benign",
+            "vus_resolved_benign_only_experimental",
+            "vus_resolved_benign_only_predictive",
+            "vus_resolved_benign_both_evidence",
+            "vus_resolved_benign_at_threshold",
+            "vus_resolved_benign_at_threshold_single_source",
+            "vus_resolved_benign_at_threshold_conflicting",
+            "vus_unresolved",
+            "vus_unresolved_concordant",
+            "vus_unresolved_discordant",
+            "vus_unresolved_only_experimental",
+            "vus_unresolved_only_predictive",
+            "vus_unresolved_neither",
+            "vus_unresolved_zero_or_one_source",
+            "vus_unresolved_near_pathogenic",
+            "gnomad_total",
+            "gnomad_resolved",
+            "gnomad_resolved_pathogenic",
+            "gnomad_resolved_pathogenic_only_experimental",
+            "gnomad_resolved_pathogenic_only_predictive",
+            "gnomad_resolved_pathogenic_both_evidence",
+            "gnomad_resolved_benign",
+            "gnomad_resolved_benign_only_experimental",
+            "gnomad_resolved_benign_only_predictive",
+            "gnomad_resolved_benign_both_evidence",
+            "gnomad_resolved_benign_at_threshold",
+            "gnomad_resolved_benign_at_threshold_single_source",
+            "gnomad_resolved_benign_at_threshold_conflicting",
+            "gnomad_unresolved",
+            "gnomad_unresolved_concordant",
+            "gnomad_unresolved_discordant",
+            "gnomad_unresolved_only_experimental",
+            "gnomad_unresolved_only_predictive",
+            "gnomad_unresolved_neither",
+            "gnomad_unresolved_zero_or_one_source",
+            "gnomad_unresolved_near_pathogenic",
+            "unobserved_total",
+            "unobserved_resolved",
+            "unobserved_resolved_pathogenic",
+            "unobserved_resolved_pathogenic_only_experimental",
+            "unobserved_resolved_pathogenic_only_predictive",
+            "unobserved_resolved_pathogenic_both_evidence",
+            "unobserved_resolved_benign",
+            "unobserved_resolved_benign_only_experimental",
+            "unobserved_resolved_benign_only_predictive",
+            "unobserved_resolved_benign_both_evidence",
+            "unobserved_resolved_benign_at_threshold",
+            "unobserved_resolved_benign_at_threshold_single_source",
+            "unobserved_resolved_benign_at_threshold_conflicting",
+            "unobserved_unresolved",
+            "unobserved_unresolved_concordant",
+            "unobserved_unresolved_discordant",
+            "unobserved_unresolved_only_experimental",
+            "unobserved_unresolved_only_predictive",
+            "unobserved_unresolved_neither",
+            "unobserved_unresolved_zero_or_one_source",
+            "unobserved_unresolved_near_pathogenic",
+        ],
+        0,
+    )
+
+    text = format_variant_classification_table(_variant_classification_stats_by_predictor(stats))
+
+    assert "(nan%)" in text
+
+
+def test_compute_gene_discordance_stats_counts_and_ranks_genes(tmp_path):
+    controls_path = tmp_path / "controls.xlsx"
+    _write_gene_discordance_sheet(
+        controls_path,
+        [
+            ("GENEA", 1, 100, "A", "G", "Pathogenic", "Benign"),  # discordant: P/LP -> B/LB
+            ("GENEA", 1, 101, "A", "G", "Likely pathogenic", "Likely Benign"),  # discordant: P/LP -> B/LB
+            ("GENEA", 1, 102, "A", "G", "Pathogenic", "Pathogenic"),  # concordant
+            ("GENEB", 1, 103, "A", "G", "Benign", "Pathogenic"),  # discordant: B/LB -> P/LP
+            ("GENEB", 1, 104, "A", "G", "Benign", "Likely Pathogenic"),  # discordant: B/LB -> P/LP
+            ("GENEC", 1, 105, "A", "G", "Pathogenic", "Benign"),  # discordant: P/LP -> B/LB
+            ("GENED", 1, 106, "A", "G", "Likely benign", "Pathogenic"),  # discordant: B/LB -> P/LP
+        ],
+    )
+
+    by_gene, total_discordant, total_controls = compute_gene_discordance_stats(pd.ExcelFile(controls_path))
+
+    assert total_discordant == 6
+    assert total_controls == 7
+    # GENEA/GENEB tie at 2 (alphabetical), then GENEC/GENED tie at 1 (alphabetical).
+    assert by_gene.index.tolist() == ["GENEA", "GENEB", "GENEC", "GENED"]
+    assert by_gene["total"].tolist() == [2, 2, 1, 1]
+    assert by_gene[DISCORDANT_PATHOGENIC_TO_BENIGN_LABEL].tolist() == [2, 0, 1, 0]
+    assert by_gene[DISCORDANT_BENIGN_TO_PATHOGENIC_LABEL].tolist() == [0, 2, 0, 1]
+
+
+def test_compute_gene_discordance_stats_dedups_by_dna_variant(tmp_path):
+    controls_path = tmp_path / "controls.xlsx"
+    _write_gene_discordance_sheet(
+        controls_path,
+        [
+            # Same genomic coordinates -- only the first (discordant) row should survive dedup.
+            ("GENEX", 1, 100, "A", "G", "Pathogenic", "Benign"),
+            ("GENEX", 1, 100, "A", "G", "Pathogenic", "Pathogenic"),
+        ],
+    )
+
+    by_gene, total_discordant, total_controls = compute_gene_discordance_stats(pd.ExcelFile(controls_path))
+
+    assert total_controls == 1
+    assert total_discordant == 1
+    assert by_gene.loc["GENEX", "total"] == 1
+
+
+def test_format_gene_discordance_summary():
+    by_gene = pd.DataFrame(
+        {
+            "total": [3, 2, 1],
+            DISCORDANT_PATHOGENIC_TO_BENIGN_LABEL: [3, 0, 1],
+            DISCORDANT_BENIGN_TO_PATHOGENIC_LABEL: [0, 2, 0],
+        },
+        index=pd.Index(["GENEA", "GENEB", "GENEC"], name="Gene"),
+    )
+
+    text = format_gene_discordance_summary(by_gene, total_discordant=6, total_controls=100, top_n=2)
+
+    assert text.startswith(GENE_DISCORDANCE_TITLE)
+    assert "Total discordant control variants: 6 of 100" in text
+    assert "Top 2 genes by discordant-variant count:" in text
+    assert "GENEA" in text
+    assert "GENEB" in text
+    assert "GENEC" not in text  # truncated by top_n
 
 
 def test_points_are_pathogenic_or_benign():
@@ -1099,16 +3185,24 @@ def test_points_are_pathogenic_or_benign():
 
 def test_compute_variant_classification_stats_from_reclassification_file(tmp_path):
     reclassification_path = tmp_path / "reclassification.tsv"
+    # Row 3 is single-source (Functional_points 0, REVEL_points -1); row 8 is
+    # conflicting (Functional_points +2, REVEL_points -3, opposite signs,
+    # still summing to the -1-point threshold) -- together they cover both
+    # halves of the mutually-exclusive-and-exhaustive -1-point split, one in
+    # each of VUS/Unobserved.
     _write_reclassification_file(
         reclassification_path,
         [
-            ("Uncertain significance", None, "A", "G", 8),  # VUS, resolved
-            ("Uncertain significance", None, "A", "G", 2),  # VUS, not resolved
-            (None, None, "A", "G", -8),  # Unobserved SNV, resolved
-            (None, None, "A", "G", 1),  # Unobserved SNV, not resolved
-            ("Pathogenic", None, "A", "G", 11),  # controls-like, not VUS/Unobserved
-            (None, 0.01, "A", "G", -3),  # gnomAD-like, not Unobserved (gnomad_MAF set)
-            (None, None, "AC", "G", 8),  # not a SNV, excluded from Unobserved
+            ("Uncertain significance", None, "A", "G", 8, 8, 0),  # VUS, resolved
+            ("Uncertain significance", None, "A", "G", 2, 2, 0),  # VUS, not resolved
+            (None, None, "A", "G", -1, 0, -1),  # Unobserved SNV, -1-point threshold, single source
+            (None, None, "A", "G", 1, 1, 0),  # Unobserved SNV, not resolved
+            ("Pathogenic", None, "A", "G", 11, 11, 0),  # controls-like, not VUS/Unobserved
+            (None, 0.01, "A", "G", -3, -3, 0),  # gnomAD-like, not Unobserved (gnomad_MAF set)
+            (None, None, "AC", "G", 8, 8, 0),  # not a SNV, excluded from Unobserved
+            ("Uncertain significance", None, "A", "G", -1, 2, -3),  # VUS, -1-point threshold, conflicting
+            ("Uncertain significance", None, "A", "G", 5, 2, 3),  # VUS, unresolved, both sources, concordant
+            ("Uncertain significance", None, "A", "G", 3, 8, -5),  # VUS, unresolved, both sources, discordant
         ],
     )
     df = pd.read_csv(reclassification_path, sep="\t", usecols=RECLASSIFICATION_USECOLS)
@@ -1116,10 +3210,79 @@ def test_compute_variant_classification_stats_from_reclassification_file(tmp_pat
     stats = compute_variant_classification_stats_from_reclassification_file(df)
 
     assert stats == {
-        "total_classified": 7,
-        "total_pathogenic_or_benign": 5,
-        "vus_total": 2,
-        "vus_resolved": 1,
+        "total_classified": 10,
+        "total_pathogenic_or_benign": 6,
+        "vus_total": 5,
+        "vus_resolved": 2,
+        # row 1 (fxn 8, revel 0) is the sole resolved-pathogenic VUS: experimental only.
+        "vus_resolved_pathogenic": 1,
+        "vus_resolved_pathogenic_only_experimental": 1,
+        "vus_resolved_pathogenic_only_predictive": 0,
+        "vus_resolved_pathogenic_both_evidence": 0,
+        # row 8 (fxn 2, revel -3) is the sole resolved-benign VUS: both sources contributed.
+        "vus_resolved_benign": 1,
+        "vus_resolved_benign_only_experimental": 0,
+        "vus_resolved_benign_only_predictive": 0,
+        "vus_resolved_benign_both_evidence": 1,
+        "vus_resolved_benign_at_threshold": 1,
+        "vus_resolved_benign_at_threshold_single_source": 0,
+        "vus_resolved_benign_at_threshold_conflicting": 1,
+        # row 2 (fxn 2, revel 0): experimental only. New row (fxn 2, revel 3, same sign):
+        # concordant. New row (fxn 8, revel -5, opposite signs): discordant.
+        "vus_unresolved": 3,
+        "vus_unresolved_concordant": 1,
+        "vus_unresolved_discordant": 1,
+        "vus_unresolved_only_experimental": 1,
+        "vus_unresolved_only_predictive": 0,
+        "vus_unresolved_neither": 0,
+        "vus_unresolved_zero_or_one_source": 1,
+        # the concordant new row (points 5) is the sole VUS near-pathogenic row (the discordant
+        # new row's points, 3, don't qualify).
+        "vus_unresolved_near_pathogenic": 1,
+        # row 6 (gnomad_MAF 0.01, fxn -3, revel 0) is the sole gnomAD row: resolved benign,
+        # experimental only.
+        "gnomad_total": 1,
+        "gnomad_resolved": 1,
+        "gnomad_resolved_pathogenic": 0,
+        "gnomad_resolved_pathogenic_only_experimental": 0,
+        "gnomad_resolved_pathogenic_only_predictive": 0,
+        "gnomad_resolved_pathogenic_both_evidence": 0,
+        "gnomad_resolved_benign": 1,
+        "gnomad_resolved_benign_only_experimental": 1,
+        "gnomad_resolved_benign_only_predictive": 0,
+        "gnomad_resolved_benign_both_evidence": 0,
+        "gnomad_resolved_benign_at_threshold": 0,
+        "gnomad_resolved_benign_at_threshold_single_source": 0,
+        "gnomad_resolved_benign_at_threshold_conflicting": 0,
+        "gnomad_unresolved": 0,
+        "gnomad_unresolved_concordant": 0,
+        "gnomad_unresolved_discordant": 0,
+        "gnomad_unresolved_only_experimental": 0,
+        "gnomad_unresolved_only_predictive": 0,
+        "gnomad_unresolved_neither": 0,
+        "gnomad_unresolved_zero_or_one_source": 0,
+        "gnomad_unresolved_near_pathogenic": 0,
         "unobserved_total": 2,
         "unobserved_resolved": 1,
+        "unobserved_resolved_pathogenic": 0,
+        "unobserved_resolved_pathogenic_only_experimental": 0,
+        "unobserved_resolved_pathogenic_only_predictive": 0,
+        "unobserved_resolved_pathogenic_both_evidence": 0,
+        # row 3 (fxn 0, revel -1) is the sole resolved-benign Unobserved: predictive only.
+        "unobserved_resolved_benign": 1,
+        "unobserved_resolved_benign_only_experimental": 0,
+        "unobserved_resolved_benign_only_predictive": 1,
+        "unobserved_resolved_benign_both_evidence": 0,
+        "unobserved_resolved_benign_at_threshold": 1,
+        "unobserved_resolved_benign_at_threshold_single_source": 1,
+        "unobserved_resolved_benign_at_threshold_conflicting": 0,
+        # row 4 (fxn 1, revel 0) is the sole unresolved Unobserved: experimental only.
+        "unobserved_unresolved": 1,
+        "unobserved_unresolved_concordant": 0,
+        "unobserved_unresolved_discordant": 0,
+        "unobserved_unresolved_only_experimental": 1,
+        "unobserved_unresolved_only_predictive": 0,
+        "unobserved_unresolved_neither": 0,
+        "unobserved_unresolved_zero_or_one_source": 1,
+        "unobserved_unresolved_near_pathogenic": 0,
     }

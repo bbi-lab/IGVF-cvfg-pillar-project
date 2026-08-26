@@ -15,8 +15,13 @@ For each grouping it reports:
   "primary score set" dataset, per Supplementary Data 3)
 - Number of composite scores (condensed-file rows belonging to a
   meta-analysis/trained-predictor dataset, per Supplementary Data 3)
-- Number of distinct variants assayed (distinct `(hgvs_c, hgvs_p)` pairs in the
-  condensed file -- see note below)
+- Number of distinct protein variants assayed directly (distinct `hgvs_p`
+  among condensed-file rows reported at protein resolution,
+  `nucleotide_or_aa == "aa"` -- see note below)
+- Number of distinct DNA variants assayed directly (distinct `hgvs_c` among
+  condensed-file rows reported at DNA resolution, `nucleotide_or_aa == "nt"`)
+- Number of distinct variants assayed, total (distinct `(hgvs_c, hgvs_p)`
+  pairs in the condensed file, across all rows regardless of resolution)
 - Number of genes represented
 
 The non-IGVF grouping additionally reports the number of genes not also
@@ -61,7 +66,42 @@ It also reports two further sections, sourced from separate input files:
   matched to a gene via this script's own dataset metadata (the same
   `Dataset Name` -> `Gene` mapping used for the summary above), after
   stripping a trailing `_clinvar_2018` suffix and Unicode-normalizing both
-  sides -- see `excalibr_dataset_to_gene_map` in the script for why.
+  sides -- see `excalibr_dataset_to_gene_map` in the script for why. Each line
+  reports a second number in parentheses, excluding F9, TP53, and SFPQ
+  (`EXCALIBR_EXCLUDED_GENES`) -- F9 and TP53 use OddsPath rather than ExCALIBR
+  calibration (see `docs/variant_classification.md`).
+- **Filtering effects on the reclassification dataset**: a sequential funnel
+  from every DNA-level measurement row in the expanded file down to the
+  reclassification export (`--reclassification-file`), applying -- in the
+  pipeline's actual order -- every exclusion
+  `Variant_Classification_analysis.ipynb` and
+  `src/build_variant_reclassification_dataset.py` apply first. Each step's
+  effect is reported two ways: distinct DNA variants (the reclassification
+  pipeline's own dedup key, `Gene`/`Chrom`/`hg38_start`/`ref_allele`/
+  `alt_allele`) and distinct assayed variants -- *not* distinct
+  `mavedb_variant_urn` (that identifies one MaveDB score-set record, one per
+  dataset, so a variant assayed by two datasets would count twice); instead
+  each row's urn is mapped back to its parent condensed-file row's
+  `(hgvs_c, hgvs_p)` pair, the same key `distinct_variants_assayed` uses, so
+  this matches that figure exactly over the unfiltered file. An assayed
+  variant is only counted as filtered out once every one of its DNA-level
+  candidates has been. Two summary lines at the end report the final count
+  reclassified out of the starting count, at each resolution. See
+  `compute_reclassification_filter_funnel`'s docstring in the script for the
+  exact steps, and the two extra inputs this section needs:
+  - `--checkpoint-file` (default
+    `data/output/reclassification/integrated_variant_effect_dataset_analysis.csv.gz`):
+    the notebook's own checkpoint, saved just before its category split --
+    already has the LDLR LA-module-1 exclusion and F9/TP53 restricted-dataset
+    filter baked in, which this section reproduces separately (against the
+    expanded file) purely to report their individual effects.
+  - `--chek2-file` (default `data/input/maves/CHEK2_Gebbia_2024.xlsx`): same
+    CHEK2 QC workbook `build_variant_reclassification_dataset.py` uses.
+
+  If the funnel's own final distinct-DNA-variant count doesn't match the
+  reclassification export's actual row count, a note is appended -- a sign
+  the checkpoint/CHEK2/reclassification files are out of sync with each other
+  (e.g. after a partial pipeline rerun).
 - **Reclassification agreement** (Figure 4c): for every sheet in
   `--controls-file` (default `data/output/supplementary_data/Supplementary_Data_5.xlsx`)
   whose name starts with `controls_` -- one per predictor/calibration
@@ -70,6 +110,22 @@ It also reports two further sections, sourced from separate input files:
   (`ExC_points_2025`) and the functional class assignment (`OP_points`) agree
   with the row's ClinVar pathogenic-or-benign control label
   (`clnsig_group_18_25`).
+- **Control concordance** (ClinVar vs. ClinGen; OddsPath alone vs. combined
+  with REVEL): for the ClinVar (`controls_REVEL_GeneSpecific`) and ClinGen
+  Evidence Repository (`ClinGen_Repo_REVEL_GeneSpecific`) control sets
+  separately, how many variants (and what percent) are **concordant**
+  (evidence and the control classification agree on pathogenic vs. benign),
+  **discordant** (evidence and the control classification disagree), or
+  classified **VUS** (no determinate call from that evidence source) --
+  reported once for OddsPath calibration evidence alone (`OP_points` sign)
+  and once for the combined ExCALIBR/OddsPath + REVEL gene-specific evidence
+  (the sheets' precomputed `Class_REVEL` column), so the two can be compared
+  directly. ClinVar's control label is `clnsig_group_18_25`; ClinGen's is
+  `Updated_Classification_ClinGen_repo` (its own P/LP/B/LB assertion --
+  `clnsig_group_18_25` isn't a clean ClinVar label for these rows, since a
+  ClinGen Evidence Repository control need not have an unambiguous ClinVar
+  entry of its own). See `compute_control_concordance`'s docstring in the
+  script.
 - **Variant classification** (two versions, answering the same three
   questions -- how many distinct DNA variants have a classification, how
   many of those are pathogenic or benign, and how many ClinVar VUS /
@@ -100,6 +156,17 @@ It also reports two further sections, sourced from separate input files:
     `clinvar_sig_2025`/`gnomad_MAF` both null, restricted to SNVs (single-base
     `ref_allele`/`alt_allele`) -- the same category definitions
     Supplementary Data 5's split uses.
+- **Gene-level discordance**: the top 5 genes by number of control variants
+  where the Supplementary Data 5 `controls_REVEL_GeneSpecific` sheet's
+  `Class_REVEL` classification disagrees with the row's ClinVar
+  pathogenic-or-benign control label (`clnsig_group_18_25`) -- i.e. a ClinVar
+  Pathogenic/Likely pathogenic control classified Benign/Likely benign, or a
+  ClinVar Benign/Likely benign control classified Pathogenic/Likely
+  Pathogenic. Deduplicated to one row per distinct DNA variant the same way
+  as the Supplementary Data 5 variant classification section above. Each of
+  the top 5 genes is broken down by direction of discordance (ClinVar P/LP
+  reclassified B/LB, vs. ClinVar B/LB reclassified P/LP). See
+  `compute_gene_discordance_stats` in the script.
 
 ## Inputs
 
@@ -134,7 +201,20 @@ It also reports two further sections, sourced from separate input files:
   `data/output/reclassification/integrated_variant_effect_reclassification.tsv.gz`):
   one row per distinct DNA variant, using its `clinvar_sig_2025`,
   `gnomad_MAF`, `ref_allele`, `alt_allele`, and `Combined_points` columns, for
-  the reclassification-export variant classification section.
+  the reclassification-export variant classification section, and (its row
+  count only) as the filter-funnel section's cross-check.
+- **Checkpoint file** (`--checkpoint-file`, default
+  `data/output/reclassification/integrated_variant_effect_dataset_analysis.csv.gz`):
+  `Variant_Classification_analysis.ipynb`'s pre-category-split checkpoint, for
+  the filter-funnel section's post-checkpoint steps -- uses its `Gene`,
+  `Chrom`, `hg38_start`, `ref_allele`, `alt_allele`, `mavedb_variant_urn`,
+  `hgvs_p`, `auth_reported_score`, `Flag`, `VariantNotes`, `splice_var_amino`,
+  and `revel_train_amino` columns.
+- **CHEK2 QC workbook** (`--chek2-file`, default
+  `data/input/maves/CHEK2_Gebbia_2024.xlsx`): same file
+  `build_variant_reclassification_dataset.py` uses, for the filter-funnel
+  section's CHEK2 QC-flag step -- uses its `hgvs_pro`, `score`, and
+  `Filter_CI` columns.
 
 ### Note on `(hgvs_g, hgvs_p)`
 
@@ -142,9 +222,22 @@ The integrated dataset has no `hgvs_g` (genomic HGVS) column. Its DNA-level
 identifier is `hgvs_c` (transcript-relative HGVS, pipe-delimited per row when a
 protein-resolution measurement corresponds to more than one underlying DNA
 change). This script uses `hgvs_c` as that DNA-level key, so "distinct
-variants assayed" counts distinct `(hgvs_c, hgvs_p)` pairs in the condensed
-file. If a true genomic (`NC_...:g.`) identifier is later added to the
-integrated dataset, swap `GENOMIC_VARIANT_COL` in the script to point at it.
+variants assayed, total" counts distinct `(hgvs_c, hgvs_p)` pairs in the
+condensed file. If a true genomic (`NC_...:g.`) identifier is later added to
+the integrated dataset, swap `GENOMIC_VARIANT_COL` in the script to point at
+it.
+
+### Note on `nucleotide_or_aa`
+
+`nucleotide_or_aa` records each row's original assay resolution, from the
+variant-annotation pipeline's reverse-translation step (see
+`docs/variant_annotation_pipeline.md`): `"nt"` when the source assay reported
+a DNA-level variant directly, `"aa"` when it only reported a protein-level
+variant and one or more DNA candidates were reverse-translated into `hgvs_c`
+(the pipe-delimited case above). This is why the protein- and DNA-level
+distinct-variant counts don't sum to the total distinct `(hgvs_c, hgvs_p)`
+count above -- they're a resolution-based partition of the same rows, not an
+independent count.
 
 ## Usage
 
@@ -158,6 +251,8 @@ poetry run python -m src.mave_dataset_stats \
   [--excalibr-calibrations-file data/output/supplementary_data/Supplementary_Data_4.xlsx] \
   [--controls-file data/output/supplementary_data/Supplementary_Data_5.xlsx] \
   [--reclassification-file data/output/reclassification/integrated_variant_effect_reclassification.tsv.gz] \
+  [--checkpoint-file data/output/reclassification/integrated_variant_effect_dataset_analysis.csv.gz] \
+  [--chek2-file data/input/maves/CHEK2_Gebbia_2024.xlsx] \
   [--output stats.txt]
 ```
 
