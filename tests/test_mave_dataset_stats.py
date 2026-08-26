@@ -36,6 +36,8 @@ from src.mave_dataset_stats import (
     SNV_ACCESSIBLE_LABEL,
     SNV_LABEL,
     VARIANT_CLASSIFICATION_CATEGORY_SHEETS_BY_PREDICTOR,
+    VARIANT_CLASSIFICATION_CHI_SQUARED_COMPARISONS,
+    VARIANT_CLASSIFICATION_CHI_SQUARED_TITLE,
     VARIANT_CLASSIFICATION_CLASS_COL_BY_PREDICTOR,
     VARIANT_CLASSIFICATION_CONFLICTING_COL_BY_PREDICTOR,
     VARIANT_CLASSIFICATION_POINTS_COL_BY_PREDICTOR,
@@ -54,6 +56,7 @@ from src.mave_dataset_stats import (
     compute_gene_discordance_stats,
     compute_reclassification_agreement,
     compute_reclassification_filter_funnel,
+    compute_variant_classification_chi_squared_tests,
     compute_variant_classification_stats,
     compute_variant_classification_stats_from_reclassification_file,
     control_concordance_flags,
@@ -69,6 +72,7 @@ from src.mave_dataset_stats import (
     format_genomic_variant_count,
     format_reclassification_filter_funnel,
     format_reclassification_table,
+    format_variant_classification_chi_squared_tests,
     format_variant_classification_summary,
     format_variant_classification_table,
     funnel_distinct_dna_variants,
@@ -1282,7 +1286,7 @@ def test_cli_prints_table_and_writes_output(full_dataset_files, tmp_path):
     # written to all three predictors' sheets, so REVEL/AlphaMissense/MutPred2
     # each show these same numbers in their own table row.
     variant_classification_section = result.output.split(VARIANT_CLASSIFICATION_TITLE)[1].split(
-        RECLASSIFICATION_VARIANT_CLASSIFICATION_TITLE
+        VARIANT_CLASSIFICATION_CHI_SQUARED_TITLE
     )[0]
     for predictor in VARIANT_CLASSIFICATION_PREDICTORS:
         assert predictor in variant_classification_section
@@ -1307,6 +1311,24 @@ def test_cli_prints_table_and_writes_output(full_dataset_files, tmp_path):
     assert variant_classification_section.count("1 of 1 (100.0%)") == 33
     assert variant_classification_section.count("0 of 1 (0.0%)") == 66
     assert variant_classification_section.count("0 of 0 (nan%)") == 51
+
+    # Chi-squared section: gnomAD (1/1 PLP, 0/1 BLB), VUS (1/3 PLP, 1/3 BLB), and
+    # Unobserved (1/2 PLP) from the same rows above -- every comparison's 2x2 table
+    # is small enough that Yates' continuity correction zeroes it out (chi2=0, p=1)
+    # regardless of predictor, since all three predictors' sheets carry the same rows.
+    chi_squared_section = result.output.split(VARIANT_CLASSIFICATION_CHI_SQUARED_TITLE)[1].split(
+        RECLASSIFICATION_VARIANT_CLASSIFICATION_TITLE
+    )[0]
+    for predictor in VARIANT_CLASSIFICATION_PREDICTORS:
+        assert f"-- {predictor} --" in chi_squared_section
+    assert "Pathogenic/Likely Pathogenic rate: gnomAD vs. ClinVar VUS:" in chi_squared_section
+    assert "Benign/Likely Benign rate: gnomAD vs. ClinVar VUS:" in chi_squared_section
+    assert "Pathogenic/Likely Pathogenic rate: Unobserved vs. ClinVar VUS:" in chi_squared_section
+    assert "Pathogenic/Likely Pathogenic rate: Unobserved vs. gnomAD:" in chi_squared_section
+    assert chi_squared_section.count("chi2 = 0.0000, df = 1, p = 1") == 4 * len(VARIANT_CLASSIFICATION_PREDICTORS)
+    assert chi_squared_section.count("gnomAD: 1 of 1 (100.0%)") == 2 * len(VARIANT_CLASSIFICATION_PREDICTORS)
+    assert chi_squared_section.count("ClinVar VUS: 1 of 3 (33.3%)") == 3 * len(VARIANT_CLASSIFICATION_PREDICTORS)
+    assert chi_squared_section.count("Unobserved: 1 of 2 (50.0%)") == 2 * len(VARIANT_CLASSIFICATION_PREDICTORS)
 
     # See full_dataset_files' reclassification_path rows for the expected counts.
     reclassification_file_section = result.output.split(RECLASSIFICATION_VARIANT_CLASSIFICATION_TITLE)[1]

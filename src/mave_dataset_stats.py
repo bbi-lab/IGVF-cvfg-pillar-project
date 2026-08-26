@@ -181,6 +181,23 @@ Supplementary_Data_5.xlsx) respectively:
     membership is derived from `clinvar_sig_2025`/`gnomad_MAF` the same way
     Supplementary Data 5's category split is.
 
+Immediately after the Supplementary Data 5 version of that section, a
+"Chi-squared tests" section reports, for each predictor, whether the
+Pathogenic/Likely Pathogenic and Benign/Likely Benign rates cited in the
+manuscript's Fig. 6d/e paragraphs actually differ between gnomAD, ClinVar
+VUS, and Unobserved variants: gnomAD vs. ClinVar VUS (Pathogenic/Likely
+Pathogenic rate and, separately, Benign/Likely Benign rate), and Unobserved
+vs. ClinVar VUS and vs. gnomAD (Pathogenic/Likely Pathogenic rate only, the
+two comparisons the manuscript draws for the Unobserved category). Each
+comparison is a 2x2 Pearson's chi-squared test of independence with Yates'
+continuity correction (R's `chisq.test()` default for a 2x2 table,
+equivalent to `prop.test(..., correct = TRUE)`) between the two groups'
+raw counts/totals from the Supplementary Data 5 version's own
+`{category}_total`/`{category}_resolved_pathogenic`/`{category}_resolved_
+benign` stats -- the rate over the full category, not just the "resolved"
+(pathogenic-or-benign) subset. See
+`compute_variant_classification_chi_squared_tests`.
+
 A final section, "Gene-level discordance", reports the genes with the most
 control variants where the ExCALIBR/OddsPath + REVEL gene-specific
 classification (`Class_REVEL`, from the controls file's
@@ -217,7 +234,9 @@ import unicodedata
 from pathlib import Path
 
 import click
+import numpy as np
 import pandas as pd
+from scipy.stats import chi2_contingency
 
 DEFAULT_CONDENSED_FILE = Path("data/output/maves/integrated_variant_effect_dataset.condensed.tsv.gz")
 DEFAULT_EXPANDED_FILE = Path("data/output/maves/integrated_variant_effect_dataset.tsv.gz")
@@ -450,6 +469,43 @@ VARIANT_CLASSIFICATION_TITLE = (
     "=== Variant classification (Supplementary Data 5; "
     "ExCALIBR/OddsPath + REVEL/AlphaMissense/MutPred2, gene-specific + genome-wide fallback) ==="
 )
+
+# --- Chi-squared tests on the Supplementary Data 5 variant-classification rates ---
+# The four gnomAD-vs-ClinVar-VUS-vs-Unobserved PLP/BLB rate comparisons cited
+# in the manuscript's Fig. 6d/e paragraphs, run per predictor against the
+# same vus_total/gnomad_total/unobserved_total and _resolved_pathogenic/
+# _resolved_benign counts `compute_variant_classification_stats` already
+# computes -- see `compute_variant_classification_chi_squared_tests`.
+VARIANT_CLASSIFICATION_CHI_SQUARED_TITLE = (
+    "=== Chi-squared tests (Supplementary Data 5; PLP/BLB rate, "
+    "gnomAD vs. ClinVar VUS vs. Unobserved; Fig. 6d/e) ==="
+)
+VARIANT_CLASSIFICATION_CHI_SQUARED_COMPARISONS = [
+    {
+        "label": "Pathogenic/Likely Pathogenic rate: gnomAD vs. ClinVar VUS",
+        "count_key": "resolved_pathogenic",
+        "group_a": ("gnomAD", "gnomad"),
+        "group_b": ("ClinVar VUS", "vus"),
+    },
+    {
+        "label": "Benign/Likely Benign rate: gnomAD vs. ClinVar VUS",
+        "count_key": "resolved_benign",
+        "group_a": ("gnomAD", "gnomad"),
+        "group_b": ("ClinVar VUS", "vus"),
+    },
+    {
+        "label": "Pathogenic/Likely Pathogenic rate: Unobserved vs. ClinVar VUS",
+        "count_key": "resolved_pathogenic",
+        "group_a": ("Unobserved", "unobserved"),
+        "group_b": ("ClinVar VUS", "vus"),
+    },
+    {
+        "label": "Pathogenic/Likely Pathogenic rate: Unobserved vs. gnomAD",
+        "count_key": "resolved_pathogenic",
+        "group_a": ("Unobserved", "unobserved"),
+        "group_b": ("gnomAD", "gnomad"),
+    },
+]
 
 DEFAULT_RECLASSIFICATION_FILE = Path("data/output/reclassification/integrated_variant_effect_reclassification.tsv.gz")
 RECLASSIFICATION_COMBINED_POINTS_COL = "Combined_points"
@@ -2026,6 +2082,98 @@ def format_variant_classification_table(stats_by_predictor, title=VARIANT_CLASSI
     return "\n".join(lines)
 
 
+def _chi_squared_2x2(count_a, total_a, count_b, total_b):
+    """Pearson's chi-squared test of independence on a 2x2 contingency table
+    comparing two independent proportions, `count_a/total_a` vs.
+    `count_b/total_b`, with Yates' continuity correction -- R's
+    `chisq.test()` default for a 2x2 table (equivalent to
+    `prop.test(..., correct = TRUE)`), the standard test for "is this rate
+    different between two groups" cited as "chi-squared test" throughout the
+    manuscript.
+
+    Returns `(chi2, dof, p, table)`, where `table` is the 2x2
+    `[[count_a, total_a - count_a], [count_b, total_b - count_b]]` array
+    `chi2_contingency` was run on.
+    """
+    table = np.array([[count_a, total_a - count_a], [count_b, total_b - count_b]])
+    chi2, p, dof, _ = chi2_contingency(table, correction=True)
+    return chi2, dof, p, table
+
+
+def compute_variant_classification_chi_squared_tests(stats_by_predictor):
+    """For each predictor in `stats_by_predictor` (see
+    `compute_variant_classification_stats`), run `_chi_squared_2x2` on each
+    comparison in `VARIANT_CLASSIFICATION_CHI_SQUARED_COMPARISONS`: the
+    Pathogenic/Likely Pathogenic and Benign/Likely Benign rate comparisons
+    (gnomAD vs. ClinVar VUS, and Unobserved vs. ClinVar VUS / vs. gnomAD for
+    Pathogenic/Likely Pathogenic) cited in the manuscript's Fig. 6d/e
+    paragraphs.
+
+    Each comparison's two groups' counts/totals are read from that
+    predictor's own `{prefix}_total` and `{prefix}_{count_key}` stats (e.g.
+    `gnomad_resolved_pathogenic` out of `gnomad_total`) -- the rate over the
+    full category, not just the "resolved" (pathogenic-or-benign) subset --
+    where `prefix` is each comparison's `group_a`/`group_b` second element.
+
+    Returns `{predictor: [{label, group_a: {label, count, total}, group_b:
+    {label, count, total}, table, chi2, dof, p}, ...]}`, one dict per
+    comparison in `VARIANT_CLASSIFICATION_CHI_SQUARED_COMPARISONS`, same
+    order.
+    """
+    results = {}
+    for predictor, stats in stats_by_predictor.items():
+        predictor_results = []
+        for comparison in VARIANT_CLASSIFICATION_CHI_SQUARED_COMPARISONS:
+            count_key = comparison["count_key"]
+            a_label, a_prefix = comparison["group_a"]
+            b_label, b_prefix = comparison["group_b"]
+            count_a, total_a = stats[f"{a_prefix}_{count_key}"], stats[f"{a_prefix}_total"]
+            count_b, total_b = stats[f"{b_prefix}_{count_key}"], stats[f"{b_prefix}_total"]
+            chi2, dof, p, table = _chi_squared_2x2(count_a, total_a, count_b, total_b)
+            predictor_results.append(
+                {
+                    "label": comparison["label"],
+                    "group_a": {"label": a_label, "count": count_a, "total": total_a},
+                    "group_b": {"label": b_label, "count": count_b, "total": total_b},
+                    "table": table,
+                    "chi2": chi2,
+                    "dof": dof,
+                    "p": p,
+                }
+            )
+        results[predictor] = predictor_results
+    return results
+
+
+def format_variant_classification_chi_squared_tests(
+    results_by_predictor, title=VARIANT_CLASSIFICATION_CHI_SQUARED_TITLE
+):
+    """Text report for `compute_variant_classification_chi_squared_tests`'s
+    output: one block per predictor, one comparison per block, each showing
+    both groups' count/total/pct, the 2x2 contingency table the test was run
+    on, and the resulting chi2 statistic, degrees of freedom, and p-value.
+    """
+    lines = [
+        title,
+        "Pearson's chi-squared test of independence, 2x2 contingency table "
+        "([[group A count, group A total - count], [group B count, group B total - count]]), "
+        "with Yates' continuity correction (R's chisq.test() default for a 2x2 table, "
+        "equivalent to prop.test(..., correct = TRUE)).",
+    ]
+    for predictor, comparisons in results_by_predictor.items():
+        lines.append("")
+        lines.append(f"-- {predictor} --")
+        for comparison in comparisons:
+            group_a, group_b = comparison["group_a"], comparison["group_b"]
+            table = comparison["table"]
+            lines.append(comparison["label"] + ":")
+            lines.append(f"  {group_a['label']}: " + _format_count_and_pct(group_a["count"], group_a["total"]))
+            lines.append(f"  {group_b['label']}: " + _format_count_and_pct(group_b["count"], group_b["total"]))
+            lines.append(f"  2x2 table: [[{table[0, 0]}, {table[0, 1]}], [{table[1, 0]}, {table[1, 1]}]]")
+            lines.append(f"  chi2 = {comparison['chi2']:.4f}, df = {comparison['dof']}, p = {comparison['p']:.4g}")
+    return "\n".join(lines)
+
+
 GENE_DISCORDANCE_SHEET = VARIANT_CLASSIFICATION_CATEGORY_SHEETS["controls"]
 GENE_DISCORDANCE_TOP_N = 5
 DISCORDANT_PATHOGENIC_TO_BENIGN_LABEL = "ClinVar P/LP -> Class_REVEL B/LB"
@@ -2226,6 +2374,7 @@ def build_report_text(
     reclassification_sections,
     control_concordance_summary,
     variant_classification_summary,
+    variant_classification_chi_squared_summary,
     reclassification_file_variant_classification_summary,
     gene_discordance_summary,
     allow_clinvar_conflicts=False,
@@ -2254,6 +2403,7 @@ def build_report_text(
         *reclassification_sections,
         control_concordance_summary,
         variant_classification_summary,
+        variant_classification_chi_squared_summary,
         reclassification_file_variant_classification_summary,
         gene_discordance_summary,
     ]
@@ -2398,8 +2548,10 @@ def main(
     controls_workbook = pd.ExcelFile(controls_file)
     reclassification_sections = build_reclassification_report(controls_workbook)
     control_concordance_summary = format_control_concordance_report(compute_control_concordance(controls_workbook))
-    variant_classification_summary = format_variant_classification_table(
-        compute_variant_classification_stats(controls_workbook)
+    variant_classification_stats_by_predictor = compute_variant_classification_stats(controls_workbook)
+    variant_classification_summary = format_variant_classification_table(variant_classification_stats_by_predictor)
+    variant_classification_chi_squared_summary = format_variant_classification_chi_squared_tests(
+        compute_variant_classification_chi_squared_tests(variant_classification_stats_by_predictor)
     )
 
     reclassification_df = pd.read_csv(reclassification_file, sep="\t", usecols=RECLASSIFICATION_USECOLS)
@@ -2437,6 +2589,7 @@ def main(
         reclassification_sections,
         control_concordance_summary,
         variant_classification_summary,
+        variant_classification_chi_squared_summary,
         reclassification_file_variant_classification_summary,
         gene_discordance_summary,
         allow_clinvar_conflicts=allow_clinvar_conflicts,

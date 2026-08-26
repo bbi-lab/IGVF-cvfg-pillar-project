@@ -156,6 +156,19 @@ It also reports two further sections, sourced from separate input files:
     `clinvar_sig_2025`/`gnomad_MAF` both null, restricted to SNVs (single-base
     `ref_allele`/`alt_allele`) -- the same category definitions
     Supplementary Data 5's split uses.
+- **Chi-squared tests**: for each predictor, whether the Pathogenic/Likely
+  Pathogenic and Benign/Likely Benign rates cited in the manuscript's Fig.
+  6d/e paragraphs actually differ between gnomAD, ClinVar VUS, and
+  Unobserved variants: gnomAD vs. ClinVar VUS (both rates), and Unobserved
+  vs. ClinVar VUS and vs. gnomAD (Pathogenic/Likely Pathogenic rate only --
+  the two comparisons the manuscript draws for the Unobserved category).
+  Each comparison is a 2x2 Pearson's chi-squared test of independence with
+  Yates' continuity correction (R's `chisq.test()` default for a 2x2 table,
+  equivalent to `prop.test(..., correct = TRUE)`) run on the two groups'
+  raw counts/totals from the Supplementary Data 5 version's own stats --
+  the rate over the full category, not just the "resolved"
+  (pathogenic-or-benign) subset. See
+  `compute_variant_classification_chi_squared_tests` in the script.
 - **Gene-level discordance**: the top 5 genes by number of control variants
   where the Supplementary Data 5 `controls_REVEL_GeneSpecific` sheet's
   `Class_REVEL` classification disagrees with the row's ClinVar
