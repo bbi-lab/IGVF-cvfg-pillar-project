@@ -120,15 +120,15 @@ if [[ -z "$step" || "$step" == "1" ]]; then
   cp "$CVFG_PROJECT_DIR/data/input/maves/cvfg_variants.0.tsv" "$stage_dir/data/cvfg_variants.0.tsv"
 fi
 
-# Step 13's predictor files (AlphaMissense_hg38.tsv.gz, revel_hg38.tsv.gz,
+# Step 16's predictor files (AlphaMissense_hg38.tsv.gz, revel_hg38.tsv.gz,
 # their .tbi indexes, and data_frame_missense_variants_MP2_properties.csv.gz)
-# are hundreds of MB each, so they're only staged when Step 13 is actually
-# about to run -- a full run, or --step 13 -- same gating as
-# cvfg_variants.0.tsv above. Step 13 reads them as
+# are hundreds of MB each, so they're only staged when Step 16 is actually
+# about to run -- a full run, or --step 16 -- same gating as
+# cvfg_variants.0.tsv above. Step 16 reads them as
 # /work/data/AlphaMissense_hg38.tsv.gz, /work/data/revel_hg38.tsv.gz, and
 # /work/data/data_frame_missense_variants_MP2_properties.csv.gz; see
 # docs/variant_annotation_pipeline.md.
-if [[ -z "$step" || "$step" == "13" ]]; then
+if [[ -z "$step" || "$step" == "16" ]]; then
   echo "Staging data/input/predictors/ predictor files -> ${stage_dir#"$CVFG_PROJECT_DIR"/}/data/ ..."
   cp "$CVFG_PROJECT_DIR/data/input/predictors/AlphaMissense_hg38.tsv.gz" "$stage_dir/data/AlphaMissense_hg38.tsv.gz"
   cp "$CVFG_PROJECT_DIR/data/input/predictors/AlphaMissense_hg38.tsv.gz.tbi" "$stage_dir/data/AlphaMissense_hg38.tsv.gz.tbi"

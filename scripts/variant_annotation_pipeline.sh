@@ -289,6 +289,17 @@ src/scripts/run_utilities.sh merge-columns \
 # scripts/run_variant_annotation_pipeline.sh (gated on whether Step 16 is
 # actually about to run, same as cvfg_variants.0.tsv for Step 1) -- no
 # manual copy needed for any of them.
+# --revel-mode is set to "aa": the matched REVEL row's aaref/aaalt must equal
+# the variant's own amino-acid ref/alt, so a variant this project itself
+# calls non-missense (e.g. synonymous) can never pick up a REVEL score --
+# unlike annotate_predictors' legacy "coordinate" mode (max REVEL score
+# across every transcript overlapping a genomic position regardless of its
+# own amino-acid change), which could attach one from a *different*
+# transcript that's missense at the same position -- see the RAD51C
+# NM_058216.3:c.585T>C investigation. This requires our revel_hg38.tsv.gz to
+# be the extended file (aaref/aaalt/ensembl_transcriptid columns; see the
+# REVEL section of vendor/variant-annotation/docs/annotate_predictors.md),
+# not the plain 5-column layout "coordinate" mode works with.
 step_16() {
 "$CVFG_PROJECT_DIR/src/scripts/run_build_training_variant_files.sh"
 src/scripts/run_annotate_predictors.sh /work/data/cvfg_variants.15.tsv /work/data/cvfg_variants.16.tsv \
@@ -298,6 +309,7 @@ src/scripts/run_annotate_predictors.sh /work/data/cvfg_variants.15.tsv /work/dat
   --mutpred2-gene-aa-long-indels ignore \
   --mutpred2-gene-symbol-map-file /work/data/mp2_gene_symbol_map.tsv \
   --revel-file /work/data/revel_hg38.tsv.gz \
+  --revel-mode aa \
   --revel-training-file /work/data/revel_training_variants.tsv \
   --mutpred2-training-file /work/data/mutpred2_training_variants.tsv \
   --csv-field-size-limit 10000000
