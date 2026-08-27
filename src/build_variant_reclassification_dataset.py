@@ -6,7 +6,7 @@ Reads the notebook's own intermediate checkpoint
 (`data/output/reclassification/integrated_variant_effect_dataset_analysis.csv.gz`,
 written at its cell 69, *before* category split), which already has the
 LDLR LA-module-1 exclusion and the F9/TP53 restricted-dataset filter baked
-in. Three further exclusions the notebook applies later, downstream of that
+in. Four further exclusions the notebook applies later, downstream of that
 checkpoint, are re-applied here:
 
 - `SFPQ` is dropped entirely (insufficient ClinVar controls).
@@ -22,8 +22,13 @@ checkpoint, are re-applied here:
 - Rows tagged `conflicting_fxn_data`, `splice_variant_not_measured`, or
   `start_lost_variant_not_measured` in `VariantNotes`, or `splice_var_amino
   == 'Yes'`, are dropped.
+- Rows with `revel_train_amino == 'Yes'` are dropped -- variants used to
+  train the REVEL predictor, matching the notebook's own REVEL-specific
+  category sheets (`VUS_REVEL`, `Unobserved_REVEL`, `gnomAD_REVEL`,
+  `controls_REVEL_GeneSpecific`), which exclude them to avoid circularity
+  (this file's `Combined_points` is REVEL-based, per `REVEL_points` below).
 
-Four points columns are added:
+Six points columns are added:
 
 - `ExCALIBR_points`: the literal ExCALIBR score-interval calibration value
   (`ExC_points_2018`, falling back to `ExC_points_2025`, for `BRCA1`/
@@ -33,8 +38,13 @@ Four points columns are added:
 - `Functional_points`: `Fxn_points` verbatim -- the pipeline's own choice of
   `ExCALIBR_points` or `OddsPath_points` per gene (`F9`/`TP53` use
   `OddsPath_points`; every other gene uses `ExCALIBR_points`).
-- `Combined_points`: `Functional_points + Points_REVEL_GeneSpecific_GenomeWide`
-  (gene-specific REVEL, falling back to genome-wide) -- matches the
+- `REVEL_points`: `Points_REVEL_GeneSpecific_GenomeWide` verbatim
+  (gene-specific REVEL points, falling back to genome-wide).
+- `Conflict_REVEL_GeneSpecific`: `Conflicting_REVEL_GeneSpecific` verbatim --
+  the notebook's `split_zero`-derived column: `"Conflicting evidence"` when
+  `Functional_points` and `REVEL_points` disagree in sign, `"No evidence"`
+  when both are missing, otherwise `Combined_points`'s value restated.
+- `Combined_points`: `Functional_points + REVEL_points` -- matches the
   notebook's own `Total_Points_GeneSpecific_REVEL`.
 
 Finally, every surviving row is collapsed to one per DNA variant
@@ -46,7 +56,7 @@ their DNA coordinate, since they share the same genomic key columns as any
 nt-resolution row for the same physical variant.
 
 Output columns are `integrated_variant_effect_dataset.tsv`'s full schema,
-in its column order, with the four new points columns appended at the end.
+in its column order, with the six new points columns appended at the end.
 """
 
 from pathlib import Path
@@ -100,15 +110,16 @@ OUTPUT_COLUMNS = [
     "Updated_Classification_ClinGen_repo", "Updated_Evidence Codes_ClinGen_repo",
     "REVEL", "REVEL_train", "AM_score", "AM_class", "MutPred2", "MP2_train",
     "simplified_consequence", "condensed_consequence", "splice_variant", "splice_var_amino", "Flag",
-    "ExCALIBR_points", "OddsPath_points", "Functional_points", "Combined_points",
+    "ExCALIBR_points", "OddsPath_points", "Functional_points",
+    "REVEL_points", "Conflict_REVEL_GeneSpecific", "Combined_points",
 ]
 
 
 def apply_notebook_exclusions(df: pd.DataFrame, chek2_file: Path) -> pd.DataFrame:
     """Re-apply the checkpoint-downstream exclusions from
-    `Variant_Classification_analysis.ipynb` cells 71-77: `SFPQ`, the CHEK2
-    QC flag, conflicting/unmeasured-splice `VariantNotes` tags, and any
-    other `Flag == '*'` row.
+    `Variant_Classification_analysis.ipynb` cells 71-77 and 95: `SFPQ`, the
+    CHEK2 QC flag, conflicting/unmeasured-splice `VariantNotes` tags, any
+    other `Flag == '*'` row, and REVEL-training variants.
 
     The CHEK2 merge key is normalized (`hgvs_p`'s transcript prefix, e.g.
     `"NP_009125.1:"`, stripped before matching against `hgvs_pro`) rather
@@ -136,12 +147,14 @@ def apply_notebook_exclusions(df: pd.DataFrame, chek2_file: Path) -> pd.DataFram
         & (df["splice_var_amino"] != "Yes")
     ]
     df = df[df["Flag"] != "*"]
+    df = df[df["revel_train_amino"] != "Yes"]
     return df
 
 
 def add_points_columns(df: pd.DataFrame) -> pd.DataFrame:
-    """Add `ExCALIBR_points`, `OddsPath_points`, `Functional_points`, and
-    `Combined_points` -- see module docstring for the exact definitions.
+    """Add `ExCALIBR_points`, `OddsPath_points`, `Functional_points`,
+    `REVEL_points`, `Conflict_REVEL_GeneSpecific`, and `Combined_points` --
+    see module docstring for the exact definitions.
     """
     df = df.copy()
 
@@ -153,9 +166,11 @@ def add_points_columns(df: pd.DataFrame) -> pd.DataFrame:
 
     df["OddsPath_points"] = df["OP_points"]
     df["Functional_points"] = df["Fxn_points"]
+    df["REVEL_points"] = df["Points_REVEL_GeneSpecific_GenomeWide"]
+    df["Conflict_REVEL_GeneSpecific"] = df["Conflicting_REVEL_GeneSpecific"]
     df["Combined_points"] = (
         pd.to_numeric(df["Functional_points"], errors="coerce").fillna(0)
-        + pd.to_numeric(df["Points_REVEL_GeneSpecific_GenomeWide"], errors="coerce").fillna(0)
+        + pd.to_numeric(df["REVEL_points"], errors="coerce").fillna(0)
     )
     return df
 

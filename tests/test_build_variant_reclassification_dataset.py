@@ -10,9 +10,10 @@ from src.build_variant_reclassification_dataset import (
     build_reclassification_dataset,
 )
 
-CHECKPOINT_COLS = OUTPUT_COLUMNS[:-4] + [
+CHECKPOINT_COLS = OUTPUT_COLUMNS[:-6] + [
     "VariantNotes", "ExC_points_2025", "ExC_points_2018",
     "OP_points", "Fxn_points", "Points_REVEL_GeneSpecific_GenomeWide",
+    "Conflicting_REVEL_GeneSpecific", "revel_train_amino",
 ]
 
 
@@ -36,6 +37,8 @@ def _checkpoint_row(**overrides):
         "OP_points": None,
         "Fxn_points": 5,
         "Points_REVEL_GeneSpecific_GenomeWide": 2,
+        "Conflicting_REVEL_GeneSpecific": 7,
+        "revel_train_amino": "No",
     })
     row.update(overrides)
     return row
@@ -108,6 +111,19 @@ def test_pre_existing_flag_still_removed(chek2_file):
     assert pd.isna(out["Flag"].iloc[0])
 
 
+def test_revel_train_amino_dropped(chek2_file):
+    """Variants used to train REVEL are excluded, matching the notebook's
+    REVEL-specific category sheets (VUS_REVEL, Unobserved_REVEL, etc.),
+    which drop them to avoid circularity with this file's REVEL-based
+    Combined_points."""
+    df = _checkpoint_frame([
+        {"revel_train_amino": "Yes"},
+        {"revel_train_amino": "No"},
+    ])
+    out = apply_notebook_exclusions(df, chek2_file)
+    assert list(out["revel_train_amino"]) == ["No"]
+
+
 # --- add_points_columns -------------------------------------------------------------------
 
 
@@ -149,6 +165,18 @@ def test_combined_points_treats_missing_revel_as_zero():
     df = _checkpoint_frame([{"Fxn_points": 5, "Points_REVEL_GeneSpecific_GenomeWide": None}])
     out = add_points_columns(df)
     assert out["Combined_points"].iloc[0] == 5
+
+
+def test_revel_points_is_renamed_from_points_revel_gene_specific_genome_wide():
+    df = _checkpoint_frame([{"Points_REVEL_GeneSpecific_GenomeWide": 3}])
+    out = add_points_columns(df)
+    assert out["REVEL_points"].iloc[0] == 3
+
+
+def test_conflict_revel_gene_specific_is_renamed_from_conflicting_revel_gene_specific():
+    df = _checkpoint_frame([{"Conflicting_REVEL_GeneSpecific": "Conflicting evidence"}])
+    out = add_points_columns(df)
+    assert out["Conflict_REVEL_GeneSpecific"].iloc[0] == "Conflicting evidence"
 
 
 # --- build_reclassification_dataset (end to end) -------------------------------------------
