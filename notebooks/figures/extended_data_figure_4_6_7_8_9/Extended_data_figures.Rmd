@@ -1193,6 +1193,11 @@ library(dplyr)
 library(tidyr)
 library(ggplot2)
 library(ggforce)
+library(geomtextpath)
+library(extrafont)
+library(grid)
+
+loadfonts(device = 'all')
 
 
 ###----- 1. Load and filter the dataset----
@@ -1248,232 +1253,19 @@ plot_summary_2 <- plot_summary %>%
 
 
 ###------------------------------------------------------------
-### 3. Compute the 3 rings
+### 3. Ring geometry and plot functions (shared with Figure 6c)
 ###------------------------------------------------------------
+# build_three_rings(), make_three_ring_plot(), make_three_ring_plot_no_labels(),
+# and the calibrated real-print-size variant (make_three_ring_plot_calibrated()
+# and its helpers) all live in lib/three_ring_donut.R now, shared with
+# Figure5_6.Rmd's equivalent donut charts.
 
-build_three_rings <- function(df_subset) {
-  
-  # ---- Ring 1: inner = Total_Points_REVEL bins ----
-  inner_ring <- df_subset %>%
-    distinct(Total_Points_REVEL, total_variants) %>%
-    arrange(Total_Points_REVEL) %>%
-    mutate(
-      cum = cumsum(total_variants),
-      start = lag(cum, default = 0),
-      end = cum
-    )
-  
-  total_sum <- sum(inner_ring$total_variants)
-  
-  inner_ring <- inner_ring %>%
-    mutate(
-      start = start / total_sum * 2*pi,
-      end   = end   / total_sum * 2*pi,
-      r0 = 0.3, 
-      r1 = 0.55
-    )
-  
-  # ---- Ring 2: middle = point_source ----
-  middle_ring <- df_subset %>%
-    group_by(Total_Points_REVEL, point_source) %>%
-    summarise(n_middle = sum(n), .groups = "drop") %>%
-    left_join(inner_ring, by = "Total_Points_REVEL") %>%
-    group_by(Total_Points_REVEL) %>%
-    mutate(
-      total_bin = sum(n_middle),
-      local_start = lag(cumsum(n_middle), default = 0),
-      local_end   = cumsum(n_middle),
-      start = start + (local_start / total_bin) * (end - start),
-      end   = start + (local_end   / total_bin) * (end - start),
-      r0 = 0.55,
-      r1 = 0.85
-    ) %>%
-    ungroup()
-  
-  # ---- Ring 3: outer = conflict_status ----
-  outer_ring <- df_subset %>%
-    group_by(Total_Points_REVEL, conflict_status) %>%
-    summarise(n_outer = sum(n), .groups = "drop") %>%
-    left_join(inner_ring, by = "Total_Points_REVEL") %>%
-    group_by(Total_Points_REVEL) %>%
-    mutate(
-      total_bin = sum(n_outer),
-      local_start = lag(cumsum(n_outer), default = 0),
-      local_end   = cumsum(n_outer),
-      start = start + (local_start / total_bin) * (end - start),
-      end   = start + (local_end   / total_bin) * (end - start),
-      r0 = 0.85,
-      r1 = 1.15
-    ) %>%
-    ungroup()
-  
-  list(inner = inner_ring, middle = middle_ring, outer = outer_ring)
-}
+source("../../../src/lib/figures/three_ring_donut.R")
 
+# The outer circle's own placed diameter in the assembled figure (mm) -- not
+# the panel/canvas width, just the ring itself.
+RING_DIAMETER_MM <- 34.5
 
-###------------------------------------------------------------
-### 4. Plot function
-###------------------------------------------------------------
-
-make_three_ring_plot <- function(df_subset, title = NULL) {
-  
-  rings <- build_three_rings(df_subset)
-  inner_ring  <- rings$inner
-  middle_ring <- rings$middle
-  outer_ring  <- rings$outer
-  
-  inner_label <- inner_ring %>%
-  mutate(
-    mid = (start + end) / 2,
-    x = (r0 + r1)/2 * cos(mid - pi/2),
-    y = -(r0 + r1)/2 * sin(mid - pi/2),
-    label_text = as.character(Total_Points_REVEL)
-  )
-  
-  middle_label <- middle_ring %>%
-  mutate(
-    mid = (start + end)/2,
-    x = (r0 + r1)/2 * cos(mid - pi/2),
-    y = -(r0 + r1)/2 * sin(mid - pi/2),
-    label_text = n_middle
-  )
-  
-  outer_label <- outer_ring %>%
-  mutate(
-    mid = (start + end)/2,
-    x = (r0 + r1)/2 * cos(mid - pi/2),
-    y = -(r0 + r1)/2 * sin(mid - pi/2),
-    label_text = n_outer
-  )
-  
-  list(
-  inner = inner_ring,
-  middle = middle_ring,
-  outer = outer_ring,
-  inner_label = inner_label,
-  middle_label = middle_label,
-  outer_label = outer_label
-)
-
-
-  ggplot() +
-    geom_arc_bar(
-      data = inner_ring,
-      aes(x0 = 0, y0 = 0, r0 = r0, r = r1,
-          start = start, end = end, fill = Total_Points_REVEL)
-    ) +
-    geom_arc_bar(
-      data = middle_ring,
-      aes(x0 = 0, y0 = 0, r0 = r0, r = r1,
-          start = start, end = end, fill = point_source)
-    ) +
-    geom_arc_bar(
-      data = outer_ring,
-      aes(x0 = 0, y0 = 0, r0 = r0, r = r1,
-          start = start, end = end, fill = conflict_status)
-    ) + 
-    geom_text(
-    data = inner_label,
-    aes(x = x, y = y, label = label_text),
-    size = 3.8,
-    fontface = "bold",
-    color = "black"
-  ) +
-
-  # 🔹 Middle ring → NUMBER OF VARIANTS
-  geom_text(
-    data = middle_label,
-    aes(x = x, y = y, label = label_text),
-    size = 3.2,
-    fontface = "bold",
-    color = "black"
-  ) +
-
-  # 🔹 Outer ring → NUMBER OF VARIANTS
-  geom_text(
-    data = outer_label,
-    aes(x = x, y = y, label = label_text),
-    size = 2.7,
-    fontface = "bold",
-    color = "black"
-  ) +
-    coord_fixed() +
-    theme_void() +
-    scale_fill_manual(values = colors_custom) +
-    labs(title = title) +
-    theme(
-      legend.position = "right",
-      plot.title = element_text(hjust = 0.5, face = "bold")
-    )
-}
-
-make_three_ring_plot_no_labels =  function(df_subset, title = NULL) {
-  
-  rings <- build_three_rings(df_subset)
-  inner_ring  <- rings$inner
-  middle_ring <- rings$middle
-  outer_ring  <- rings$outer
-  
-  inner_label <- inner_ring %>%
-  mutate(
-    mid = (start + end) / 2,
-    x = (r0 + r1)/2 * cos(mid - pi/2),
-    y = -(r0 + r1)/2 * sin(mid - pi/2),
-    label_text = as.character(Total_Points_REVEL)
-  )
-  
-  middle_label <- middle_ring %>%
-  mutate(
-    mid = (start + end)/2,
-    x = (r0 + r1)/2 * cos(mid - pi/2),
-    y = -(r0 + r1)/2 * sin(mid - pi/2),
-    label_text = n_middle
-  )
-  
-  outer_label <- outer_ring %>%
-  mutate(
-    mid = (start + end)/2,
-    x = (r0 + r1)/2 * cos(mid - pi/2),
-    y = -(r0 + r1)/2 * sin(mid - pi/2),
-    label_text = n_outer
-  )
-  
-  list(
-  inner = inner_ring,
-  middle = middle_ring,
-  outer = outer_ring,
-  inner_label = inner_label,
-  middle_label = middle_label,
-  outer_label = outer_label
-)
-
-
-  ggplot() +
-    geom_arc_bar(
-      data = inner_ring,
-      aes(x0 = 0, y0 = 0, r0 = r0, r = r1,
-          start = start, end = end, fill = Total_Points_REVEL)
-    ) +
-    geom_arc_bar(
-      data = middle_ring,
-      aes(x0 = 0, y0 = 0, r0 = r0, r = r1,
-          start = start, end = end, fill = point_source)
-    ) +
-    geom_arc_bar(
-      data = outer_ring,
-      aes(x0 = 0, y0 = 0, r0 = r0, r = r1,
-          start = start, end = end, fill = conflict_status)
-    ) +
-    coord_fixed() +
-    theme_void() +
-    scale_fill_manual(values = colors_custom) +
-    labs(title = title) +
-    theme(
-      legend.position = "none",
-      plot.title = element_text(hjust = 0.5, face = "bold")
-    )
-  
-}
 
 ###------------------------------------------------------------
 ### 5. Build plots for bins (pathogenic / uncertain / benign)
@@ -1503,9 +1295,26 @@ path_plot
 unc_plot
 ben_plot
 
-ggsave('../../../data/output/figures/extended_data_figure_6/pie_path_REVEL_gnomad_GeneSpecific_nolab.png',path_plot_no_lab, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7)
-ggsave('../../../data/output/figures/extended_data_figure_6/pie_ben_REVEL_gnomad_GeneSpecific_nolab.png',unc_plot_no_lab, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7)
-ggsave('../../../data/output/figures/extended_data_figure_6/pie_unc_REVEL_gnomad_GeneSpecific_nolab.png',ben_plot_no_lab, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7)
+# nolab filenames -- ben_/unc_ were previously swapped relative to their
+# plot data (pie_ben_..._nolab.png held the uncertain plot and vice versa);
+# fixed here to match, alongside adding the previously-ungenerated lab
+# versions and the new calibrated (real-print-size) versions.
+ggsave('../../../data/output/figures/extended_data_figure_6/pie_path_REVEL_gnomad_GeneSpecific_nolab.png',path_plot_no_lab, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7, create.dir = TRUE)
+ggsave('../../../data/output/figures/extended_data_figure_6/pie_ben_REVEL_gnomad_GeneSpecific_nolab.png',ben_plot_no_lab, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7, create.dir = TRUE)
+ggsave('../../../data/output/figures/extended_data_figure_6/pie_unc_REVEL_gnomad_GeneSpecific_nolab.png',unc_plot_no_lab, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7, create.dir = TRUE)
+
+ggsave('../../../data/output/figures/extended_data_figure_6/pie_path_REVEL_gnomad_GeneSpecific_lab.png',path_plot, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7, create.dir = TRUE)
+ggsave('../../../data/output/figures/extended_data_figure_6/pie_ben_REVEL_gnomad_GeneSpecific_lab.png',ben_plot, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7, create.dir = TRUE)
+ggsave('../../../data/output/figures/extended_data_figure_6/pie_unc_REVEL_gnomad_GeneSpecific_lab.png',unc_plot, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7, create.dir = TRUE)
+
+# Calibrated versions: real print size, baked-in labels (see lib/three_ring_donut.R)
+path_calibrated <- make_three_ring_plot_calibrated(pathogenic)
+unc_calibrated  <- make_three_ring_plot_calibrated(uncertain)
+ben_calibrated  <- make_three_ring_plot_calibrated(benign)
+
+ggsave('../../../data/output/figures/extended_data_figure_6/pie_path_REVEL_gnomad_GeneSpecific_calibrated.pdf', path_calibrated$plot, width = path_calibrated$width_mm, height = path_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave('../../../data/output/figures/extended_data_figure_6/pie_unc_REVEL_gnomad_GeneSpecific_calibrated.pdf', unc_calibrated$plot, width = unc_calibrated$width_mm, height = unc_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave('../../../data/output/figures/extended_data_figure_6/pie_ben_REVEL_gnomad_GeneSpecific_calibrated.pdf', ben_calibrated$plot, width = ben_calibrated$width_mm, height = ben_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
 
 
 ```
@@ -1587,9 +1396,26 @@ unc_plot_pc
 ben_plot_pc
 
 
-ggsave('../../../data/output/figures/extended_data_figure_6/pie_path_REVEL_preclass_GeneSpecific_nolab.png',path_plot_no_lab_pc, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7)
-ggsave('../../../data/output/figures/extended_data_figure_6/pie_ben_REVEL_preclass_GeneSpecific_nolab.png',unc_plot_no_lab_pc, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7)
-ggsave('../../../data/output/figures/extended_data_figure_6/pie_unc_REVEL_preclass_GeneSpecific_nolab.png',ben_plot_no_lab_pc, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7)
+# nolab filenames -- ben_/unc_ were previously swapped relative to their
+# plot data, same as the gnomad block above; fixed here too, alongside
+# adding the previously-ungenerated lab versions and the new calibrated
+# (real-print-size) versions.
+ggsave('../../../data/output/figures/extended_data_figure_6/pie_path_REVEL_preclass_GeneSpecific_nolab.png',path_plot_no_lab_pc, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7, create.dir = TRUE)
+ggsave('../../../data/output/figures/extended_data_figure_6/pie_ben_REVEL_preclass_GeneSpecific_nolab.png',ben_plot_no_lab_pc, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7, create.dir = TRUE)
+ggsave('../../../data/output/figures/extended_data_figure_6/pie_unc_REVEL_preclass_GeneSpecific_nolab.png',unc_plot_no_lab_pc, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7, create.dir = TRUE)
+
+ggsave('../../../data/output/figures/extended_data_figure_6/pie_path_REVEL_preclass_GeneSpecific_lab.png',path_plot_pc, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7, create.dir = TRUE)
+ggsave('../../../data/output/figures/extended_data_figure_6/pie_ben_REVEL_preclass_GeneSpecific_lab.png',ben_plot_pc, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7, create.dir = TRUE)
+ggsave('../../../data/output/figures/extended_data_figure_6/pie_unc_REVEL_preclass_GeneSpecific_lab.png',unc_plot_pc, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7, create.dir = TRUE)
+
+# Calibrated versions: real print size, baked-in labels (see lib/three_ring_donut.R)
+path_calibrated_pc <- make_three_ring_plot_calibrated(pathogenic_pc)
+unc_calibrated_pc  <- make_three_ring_plot_calibrated(uncertain_pc)
+ben_calibrated_pc  <- make_three_ring_plot_calibrated(benign_pc)
+
+ggsave('../../../data/output/figures/extended_data_figure_6/pie_path_REVEL_preclass_GeneSpecific_calibrated.pdf', path_calibrated_pc$plot, width = path_calibrated_pc$width_mm, height = path_calibrated_pc$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave('../../../data/output/figures/extended_data_figure_6/pie_unc_REVEL_preclass_GeneSpecific_calibrated.pdf', unc_calibrated_pc$plot, width = unc_calibrated_pc$width_mm, height = unc_calibrated_pc$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave('../../../data/output/figures/extended_data_figure_6/pie_ben_REVEL_preclass_GeneSpecific_calibrated.pdf', ben_calibrated_pc$plot, width = ben_calibrated_pc$width_mm, height = ben_calibrated_pc$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
 
 
 
