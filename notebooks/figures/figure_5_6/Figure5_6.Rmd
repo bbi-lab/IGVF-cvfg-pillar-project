@@ -910,6 +910,11 @@ library(dplyr)
 library(tidyr)
 library(ggplot2)
 library(ggforce)
+library(geomtextpath)
+library(extrafont)
+library(grid)
+
+loadfonts(device = 'all')
 
 
 ###----- 1. Load and filter the dataset----
@@ -998,12 +1003,20 @@ build_three_rings <- function(df_subset) {
       total_bin = sum(n_middle),
       local_start = lag(cumsum(n_middle), default = 0),
       local_end   = cumsum(n_middle),
-      start = start + (local_start / total_bin) * (end - start),
-      end   = start + (local_end   / total_bin) * (end - start),
+      # Capture the bin's own start/end before overwriting them below -- the
+      # end formula must divide the *original* bin span, not the already-
+      # reassigned start (which it would otherwise pick up in the same
+      # mutate(), inflating every category after the first and giving a
+      # true-zero-count category a spurious nonzero width).
+      bin_start = start,
+      bin_end = end,
+      start = bin_start + (local_start / total_bin) * (bin_end - bin_start),
+      end   = bin_start + (local_end   / total_bin) * (bin_end - bin_start),
       r0 = 0.55,
       r1 = 0.85
     ) %>%
-    ungroup()
+    ungroup() %>%
+    select(-bin_start, -bin_end)
   
   # ---- Ring 3: outer = conflict_status ----
   outer_ring <- df_subset %>%
@@ -1015,12 +1028,15 @@ build_three_rings <- function(df_subset) {
       total_bin = sum(n_outer),
       local_start = lag(cumsum(n_outer), default = 0),
       local_end   = cumsum(n_outer),
-      start = start + (local_start / total_bin) * (end - start),
-      end   = start + (local_end   / total_bin) * (end - start),
+      bin_start = start,
+      bin_end = end,
+      start = bin_start + (local_start / total_bin) * (bin_end - bin_start),
+      end   = bin_start + (local_end   / total_bin) * (bin_end - bin_start),
       r0 = 0.85,
       r1 = 1.15
     ) %>%
-    ungroup()
+    ungroup() %>%
+    select(-bin_start, -bin_end)
   
   list(inner = inner_ring, middle = middle_ring, outer = outer_ring)
 }
@@ -1187,7 +1203,400 @@ make_three_ring_plot_no_labels =  function(df_subset, title = NULL) {
       legend.position = "none",
       plot.title = element_text(hjust = 0.5, face = "bold")
     )
-  
+
+}
+
+###------------------------------------------------------------
+### 4b. Calibrated donut: real print size, baked-in labels
+###------------------------------------------------------------
+# Renders at the *exact* final placed size (cairo_pdf, mm units, Arial),
+# matching Figure_6b.R's convention -- so at 100% placement scale in the
+# assembled figure, text renders at true point size, instead of the
+# pie_*_lab.png workflow above (arbitrary 7x7in @300dpi raster, default
+# font, hand-finished label placement/sizing in Illustrator). Keep
+# generating the lab/nolab versions above; this is an additional variant,
+# not a replacement, until it's validated across all three panels.
+
+point_in_mm <- 0.3527778
+LABEL_PT <- 5.5
+LABEL_MM <- LABEL_PT * point_in_mm
+# Smaller size for two-line-wrapped inner-ring labels, matching the original
+# hand-placed figure's convention of shrinking text for this specific case.
+WRAP_LABEL_PT <- 4.2
+WRAP_LABEL_MM <- WRAP_LABEL_PT * point_in_mm
+FONT_FAMILY <- "Arial"
+
+# The outer circle's own placed diameter in the assembled figure (mm) -- not
+# the panel/canvas width, just the ring itself. Confirmed for the Benign
+# panel; assumed identical for Pathogenic/Uncertain since all three donuts
+# are laid out as same-size panels in Fig 6c -- confirm if that's not so.
+RING_DIAMETER_MM <- 28.7
+
+# Display text for inner-ring bin labels -- reads closer-to-zero value first,
+# regardless of how the underlying Total_Points_REVEL bin factor is ordered
+# (which also drives colors_custom's keys above, left as-is). Uses the
+# Unicode minus sign (U+2212), not a hyphen -- geomtextpath's glyph-curving
+# silently drops a plain ASCII hyphen-minus regardless of font (reproduced
+# with both Arial and sans), so a hyphen here would render as "1 to  3".
+bin_display_labels <- c(
+  "< -12" = "< −12",
+  "-12 to -6" = "−6 to −12",
+  "-5 to -4" = "−4 to −5",
+  "-3 to -1" = "−1 to −3",
+  "0" = "0",
+  "1 to 3" = "1 to 3",
+  "4 to 5" = "4 to 5",
+  "6 to 9" = "6 to 9",
+  "10 to 12" = "10 to 12",
+  "> 12" = "> 12"
+)
+
+# Device-independent-ish text width in mm, via grid (resolves Arial through
+# fontconfig on the r-figures container's default cairo_pdf device).
+text_width_mm <- function(label, pt = LABEL_PT, family = FONT_FAMILY) {
+  gp <- gpar(fontfamily = family, fontsize = pt)
+  vapply(
+    label,
+    function(l) convertWidth(grobWidth(textGrob(l, gp = gp)), "mm", valueOnly = TRUE),
+    numeric(1)
+  )
+}
+
+# angle=0 is 12 o'clock, increasing clockwise -- same convention as the
+# inner_label/middle_label/outer_label x/y formulas above.
+polar_xy <- function(r, angle) {
+  tibble(x = r * cos(angle - pi/2), y = -r * sin(angle - pi/2))
+}
+
+arc_length_mm <- function(r, theta, mm_per_unit) r * theta * mm_per_unit
+chord_mm <- function(r, theta, mm_per_unit) 2 * r * sin(theta / 2) * mm_per_unit
+
+# For a horizontal label at radius r, angle theta (0/2pi = top, pi = bottom,
+# pi/2 & 3pi/2 = sides), the room before hitting either straight radial
+# boundary scales with |r * cos(theta)| -- maximal toward the top/bottom of
+# the wedge, minimal toward the sides. Reposition within [start, end] toward
+# whichever of {0, pi, 2pi} is reachable, keeping a margin off both edges so
+# the label doesn't crowd the wedge boundary lines.
+best_horizontal_angle <- function(start, end, margin_frac = 0.15) {
+  theta <- end - start
+  margin <- max(theta * margin_frac, 0.02)
+  lo <- start + margin
+  hi <- end - margin
+  if (lo >= hi) return((start + end) / 2)
+  candidates <- c(lo, hi)
+  ks <- seq(floor(lo / pi), ceiling(hi / pi))
+  interior <- ks * pi
+  interior <- interior[interior >= lo & interior <= hi]
+  candidates <- c(candidates, interior)
+  candidates[which.max(abs(cos(candidates)))]
+}
+
+WIDE_WEDGE_THRESHOLD_RAD <- 80 * pi / 180
+
+# Only reposition wide wedges (>80 degrees) whose bisector sits close to the
+# 90/270-degree sides, where horizontal room is genuinely short -- not near
+# the 0/180-degree top/bottom, where it's already generous (chord_mm can't
+# tell these apart: it's the same number for a wedge centered at either
+# position, even though the true room at the bisector differs a lot -- see
+# best_horizontal_angle's |r*cos(theta)| reasoning). Narrow wedges, and wide
+# ones already centered near the top/bottom, are left at their bisector.
+needs_reposition <- function(start, end, cos_threshold = 0.5) {
+  theta <- end - start
+  if (theta <= WIDE_WEDGE_THRESHOLD_RAD) return(FALSE)
+  mid <- (start + end) / 2
+  abs(cos(mid)) < cos_threshold
+}
+
+# White text on dark/saturated fills (e.g. the "-12 to -6" navy, "Functional
+# only" teal), black text otherwise -- generalizes across panels instead of
+# hardcoding which categories are "dark".
+text_color_for_fill <- function(fill_value) {
+  hex <- colors_custom[fill_value]
+  vapply(hex, function(h) {
+    if (is.na(h)) return("black")
+    rgb <- grDevices::col2rgb(h) / 255
+    luminance <- 0.299 * rgb[1] + 0.587 * rgb[2] + 0.114 * rgb[3]
+    if (luminance < 0.5) "white" else "black"
+  }, character(1), USE.NAMES = FALSE)
+}
+
+# Balanced two-line word-wrap (not greedy) -- for "10 to 12" gives
+# c("10", "to 12") rather than piling words onto the first line. Returns
+# c(line1, NA) if the label has no space to break on.
+wrap_two_lines <- function(label) {
+  words <- strsplit(label, " ")[[1]]
+  if (length(words) < 2) return(c(label, NA_character_))
+  best <- c(label, NA_character_)
+  best_diff <- Inf
+  for (i in seq_len(length(words) - 1)) {
+    l1 <- paste(words[1:i], collapse = " ")
+    l2 <- paste(words[(i + 1):length(words)], collapse = " ")
+    d <- abs(nchar(l1) - nchar(l2))
+    if (d < best_diff) {
+      best_diff <- d
+      best <- c(l1, l2)
+    }
+  }
+  best
+}
+
+make_three_ring_plot_calibrated <- function(df_subset, ring_diameter_mm = RING_DIAMETER_MM) {
+
+  outer_r_max <- 1.15
+  mm_per_unit <- ring_diameter_mm / (outer_r_max * 2)
+
+  rings <- build_three_rings(df_subset)
+
+  # ---- classify each label as "inside" (fits) or "outside" (leader line) ----
+  # Curved (inner-ring) text follows the arc exactly, so arc length is a
+  # precise measure of the space available; straight text at r_mid in a
+  # tapering wedge only approximately fits within the chord width, so it
+  # keeps a bigger safety margin.
+  fit_fudge_straight <- 0.85
+  fit_fudge_curved <- 0.95
+  EXT_R <- outer_r_max + 0.15   # leader-line/label radius, same for every ring
+
+  classify_ring <- function(ring_df, count_col, fill_col, curved = FALSE, relabel = FALSE) {
+    fit_fudge <- if (curved) fit_fudge_curved else fit_fudge_straight
+    ring_df %>%
+      mutate(theta = end - start) %>%
+      filter(theta > 1e-9) %>%   # skip zero-size regions entirely -- nothing to label
+      mutate(
+        mid = (start + end) / 2,
+        r_mid = (r0 + r1) / 2,
+        label_text = as.character(.data[[count_col]]),
+        label_text = if (relabel) unname(bin_display_labels[label_text]) else label_text,
+        avail_mm = if (curved) arc_length_mm(r_mid, theta, mm_per_unit)
+                   else chord_mm(r_mid, theta, mm_per_unit),
+        text_mm = text_width_mm(label_text),
+        fits = text_mm < avail_mm * fit_fudge,
+        text_color = text_color_for_fill(as.character(.data[[fill_col]]))
+      )
+  }
+
+  inner_ring  <- classify_ring(rings$inner,  "Total_Points_REVEL", "Total_Points_REVEL", curved = TRUE, relabel = TRUE)
+  middle_ring <- classify_ring(rings$middle, "n_middle", "point_source")
+  outer_ring  <- classify_ring(rings$outer,  "n_outer", "conflict_status")
+
+  # For a curved label too wide for one line, try splitting it into two
+  # shorter lines stacked within the ring's own radial band, set a size
+  # smaller (WRAP_LABEL_PT) -- matches how the original hand-placed figure
+  # handled "10 to 12" -- before falling back to an external leader line.
+  fit_fudge_wrap <- 0.95
+  inner_ring <- inner_ring %>%
+    rowwise() %>%
+    mutate(
+      wrap_line1 = if (!fits) wrap_two_lines(label_text)[1] else NA_character_,
+      wrap_line2 = if (!fits) wrap_two_lines(label_text)[2] else NA_character_,
+      wrap_fits = !fits && !is.na(wrap_line2) &&
+        max(text_width_mm(wrap_line1, pt = WRAP_LABEL_PT), text_width_mm(wrap_line2, pt = WRAP_LABEL_PT)) <
+          avail_mm * fit_fudge_wrap
+    ) %>%
+    ungroup()
+
+  # ---- inside placements ----
+  # Straight (non-curved) labels reposition toward the top/bottom of their
+  # own wedge, where horizontal room is greatest (see best_horizontal_angle) --
+  # but only for wide, genuinely-crowded wedges (see needs_reposition);
+  # curved inner-ring text follows the whole arc so this doesn't apply to it.
+  inner_inside <- inner_ring %>% filter(fits)
+  inner_inside_wrapped <- inner_ring %>% filter(!fits & wrap_fits)
+  middle_inside_xy <- middle_ring %>% filter(fits) %>%
+    rowwise() %>%
+    mutate(
+      label_angle = if (needs_reposition(start, end))
+        best_horizontal_angle(start, end) else mid
+    ) %>%
+    ungroup() %>%
+    bind_cols(polar_xy(.$r_mid, .$label_angle))
+  outer_inside_xy <- outer_ring %>% filter(fits) %>%
+    rowwise() %>%
+    mutate(
+      label_angle = if (needs_reposition(start, end))
+        best_horizontal_angle(start, end) else mid
+    ) %>%
+    ungroup() %>%
+    bind_cols(polar_xy(.$r_mid, .$label_angle))
+
+  # ---- outside placements (any ring, fallback for inner too) ----
+  # Non-outermost rings anchor their leader line at their own mid-radius,
+  # not r1 -- starting exactly on a ring boundary reads as a continuation of
+  # that boundary's wedge divisions in the ring(s) outside it. The outermost
+  # ring has nothing beyond its own r1 to be confused with, so it keeps it.
+  make_outside <- function(ring_df, anchor_at_mid = TRUE) {
+    if (nrow(ring_df) == 0) return(ring_df)
+    ring_df %>%
+      mutate(r_anchor = if (anchor_at_mid) r_mid else r1) %>%
+      bind_cols(polar_xy(.$r_anchor, .$mid) %>% rename(x_anchor = x, y_anchor = y)) %>%
+      bind_cols(polar_xy(EXT_R, .$mid)) %>%
+      mutate(
+        hjust = case_when(
+          x > 0.02 ~ 0,
+          x < -0.02 ~ 1,
+          TRUE ~ 0.5
+        ),
+        # Side labels (hjust 0/1) already clear the leader line -- the line
+        # ends at the text's near edge, not its middle. Near-vertical labels
+        # (hjust 0.5) need the same treatment on the vertical axis: anchor at
+        # the near edge (bottom of text if above the ring, top if below) so
+        # the line ends at the label instead of running into its middle.
+        vjust = case_when(
+          hjust != 0.5 ~ 0.5,
+          y > 0 ~ 0,
+          TRUE ~ 1
+        )
+      )
+  }
+  inner_outside  <- make_outside(inner_ring  %>% filter(!fits & !wrap_fits), anchor_at_mid = TRUE)
+  middle_outside <- make_outside(middle_ring %>% filter(!fits), anchor_at_mid = TRUE)
+  outer_outside  <- make_outside(outer_ring  %>% filter(!fits), anchor_at_mid = FALSE)
+  all_outside <- bind_rows(inner_outside, middle_outside, outer_outside)
+
+  # ---- canvas: keep the ring itself pixel-identical across panels; only
+  # grow the coordinate range (and physical canvas) to fit outside labels ----
+  if (nrow(all_outside) > 0) {
+    max_label_mm <- max(all_outside$text_mm)
+    x_pad <- max_label_mm / mm_per_unit
+    y_pad <- (LABEL_MM + 1) / mm_per_unit
+  } else {
+    x_pad <- 0
+    y_pad <- 0
+  }
+  x_range <- c(-(EXT_R + x_pad), EXT_R + x_pad)
+  y_range <- c(-(EXT_R + y_pad), EXT_R + y_pad)
+
+  p <- ggplot() +
+    geom_arc_bar(
+      data = rings$inner,
+      aes(x0 = 0, y0 = 0, r0 = r0, r = r1, start = start, end = end,
+          fill = Total_Points_REVEL),
+      linewidth = 0.5 * point_in_mm, color = "black"
+    ) +
+    geom_arc_bar(
+      data = rings$middle,
+      aes(x0 = 0, y0 = 0, r0 = r0, r = r1, start = start, end = end,
+          fill = point_source),
+      linewidth = 0.5 * point_in_mm, color = "black"
+    ) +
+    geom_arc_bar(
+      data = rings$outer,
+      aes(x0 = 0, y0 = 0, r0 = r0, r = r1, start = start, end = end,
+          fill = conflict_status),
+      linewidth = 0.5 * point_in_mm, color = "black"
+    )
+
+  if (nrow(inner_inside) > 0) {
+    # geomtextpath's vjust=0.5 centers the font's full ascent+descent box on
+    # the path; our labels (digits/"to"/minus sign) never have descenders, so
+    # the visible glyphs sit high (toward larger radius) within that box.
+    # Nudge the path radius inward by a fixed physical amount to compensate --
+    # proportional to font size, not ring size, since it's a font-metrics
+    # effect, so it holds across panels/ring diameters.
+    inward_nudge_mm <- 0.3
+    arc_pts <- inner_inside %>%
+      rowwise() %>%
+      reframe(
+        Total_Points_REVEL = Total_Points_REVEL,
+        label_text = label_text,
+        angle = seq(start, end, length.out = 40),
+        r_mid = r_mid - inward_nudge_mm / mm_per_unit,
+        text_color = text_color
+      ) %>%
+      bind_cols(polar_xy(.$r_mid, .$angle))
+    p <- p + geom_textpath(
+      data = arc_pts,
+      aes(x = x, y = y, label = label_text, group = Total_Points_REVEL,
+          color = text_color),
+      size = LABEL_MM, family = FONT_FAMILY,
+      upright = TRUE, hjust = 0.5, text_only = TRUE
+    )
+  }
+  if (nrow(inner_inside_wrapped) > 0) {
+    # Font-metrics nudge scales with font size (see the single-line case
+    # above); line_gap is snug (1x font size, center-to-center) since these
+    # are short fragments that read fine close together, and it directly
+    # trades off against how much radial room is left within the ring band.
+    inward_nudge_mm <- 0.3 * (WRAP_LABEL_PT / LABEL_PT)
+    line_gap_mm <- WRAP_LABEL_MM * 1.0
+    half_gap_r <- (line_gap_mm / 2) / mm_per_unit
+    base_r <- inner_inside_wrapped$r_mid - inward_nudge_mm / mm_per_unit
+    # Which physical radius (page-space, not path-space) reads as "line 1" (on
+    # top) depends on which half of the circle the wedge sits in: in the
+    # upper half, larger radius = higher on the page; in the lower half, it's
+    # reversed. polar_xy's y = r*cos(angle) at the bisector gives that sign.
+    page_y_sign <- sign(cos((inner_inside_wrapped$start + inner_inside_wrapped$end) / 2))
+    build_wrapped_line <- function(line_col, r_sign) {
+      inner_inside_wrapped %>%
+        mutate(r_mid_line = base_r + r_sign * page_y_sign * half_gap_r) %>%
+        rowwise() %>%
+        reframe(
+          Total_Points_REVEL = Total_Points_REVEL,
+          label_text = .data[[line_col]],
+          angle = seq(start, end, length.out = 40),
+          r_mid = r_mid_line,
+          text_color = text_color
+        ) %>%
+        bind_cols(polar_xy(.$r_mid, .$angle))
+    }
+    arc_pts_l1 <- build_wrapped_line("wrap_line1", +1)
+    arc_pts_l2 <- build_wrapped_line("wrap_line2", -1)
+    p <- p +
+      geom_textpath(
+        data = arc_pts_l1,
+        aes(x = x, y = y, label = label_text, group = Total_Points_REVEL,
+            color = text_color),
+        size = WRAP_LABEL_MM, family = FONT_FAMILY,
+        upright = TRUE, hjust = 0.5, text_only = TRUE
+      ) +
+      geom_textpath(
+        data = arc_pts_l2,
+        aes(x = x, y = y, label = label_text, group = Total_Points_REVEL,
+            color = text_color),
+        size = WRAP_LABEL_MM, family = FONT_FAMILY,
+        upright = TRUE, hjust = 0.5, text_only = TRUE
+      )
+  }
+  if (nrow(middle_inside_xy) > 0) {
+    p <- p + geom_text(
+      data = middle_inside_xy,
+      aes(x = x, y = y, label = label_text, color = text_color),
+      size = LABEL_MM, family = FONT_FAMILY
+    )
+  }
+  if (nrow(outer_inside_xy) > 0) {
+    p <- p + geom_text(
+      data = outer_inside_xy,
+      aes(x = x, y = y, label = label_text, color = text_color),
+      size = LABEL_MM, family = FONT_FAMILY
+    )
+  }
+  if (nrow(all_outside) > 0) {
+    p <- p +
+      geom_segment(
+        data = all_outside,
+        aes(x = x_anchor, y = y_anchor, xend = x, yend = y),
+        color = "grey40", linewidth = 0.5 * point_in_mm
+      ) +
+      geom_text(
+        data = all_outside,
+        aes(x = x, y = y, label = label_text, hjust = hjust, vjust = vjust),
+        size = LABEL_MM, family = FONT_FAMILY, color = "black"
+      )
+  }
+
+  p <- p +
+    coord_fixed(xlim = x_range, ylim = y_range, expand = FALSE, clip = "off") +
+    theme_void() +
+    scale_fill_manual(values = colors_custom) +
+    scale_color_identity() +
+    theme(legend.position = "none", plot.margin = margin(0, 0, 0, 0))
+
+  list(
+    plot = p,
+    width_mm = diff(x_range) * mm_per_unit,
+    height_mm = diff(y_range) * mm_per_unit,
+    ring_diameter_mm = 2 * outer_r_max * mm_per_unit
+  )
 }
 
 ###------------------------------------------------------------
@@ -1225,6 +1634,15 @@ ggsave(file.path(OUT_DIR, 'figure_6/pie_unc_REVEL_GeneSpecific_lab.png'), unc_pl
 ggsave(file.path(OUT_DIR, 'figure_6/pie_path_REVEL_GeneSpecific_nolab.png'), path_plot_no_lab, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7, create.dir = TRUE)
 ggsave(file.path(OUT_DIR, 'figure_6/pie_ben_REVEL_GeneSpecific_nolab.png'), ben_plot_no_lab, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7, create.dir = TRUE)
 ggsave(file.path(OUT_DIR, 'figure_6/pie_unc_REVEL_GeneSpecific_nolab.png'), unc_plot_no_lab, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7, create.dir = TRUE)
+
+# Calibrated versions: real print size, baked-in labels (see section 4b above)
+path_calibrated <- make_three_ring_plot_calibrated(pathogenic)
+unc_calibrated  <- make_three_ring_plot_calibrated(uncertain)
+ben_calibrated  <- make_three_ring_plot_calibrated(benign)
+
+ggsave(file.path(OUT_DIR, 'figure_6/pie_path_REVEL_GeneSpecific_calibrated.pdf'), path_calibrated$plot, width = path_calibrated$width_mm, height = path_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave(file.path(OUT_DIR, 'figure_6/pie_unc_REVEL_GeneSpecific_calibrated.pdf'), unc_calibrated$plot, width = unc_calibrated$width_mm, height = unc_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave(file.path(OUT_DIR, 'figure_6/pie_ben_REVEL_GeneSpecific_calibrated.pdf'), ben_calibrated$plot, width = ben_calibrated$width_mm, height = ben_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
 
 
 

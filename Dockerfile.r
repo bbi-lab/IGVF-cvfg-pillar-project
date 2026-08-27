@@ -72,6 +72,7 @@ RUN install2.r --error --skipinstalled --repos https://p3m.dev/cran/2025-10-15 \
     ggforce \
     ggrepel \
     ggsci \
+    geomtextpath \
     plotly \
     readxl \
     eulerr \
