@@ -200,7 +200,7 @@ poetry run jupyter nbconvert --to notebook --execute \
 poetry run python -m src.load_oddspath_calibrations
 
 # 3-4. Remaining notebooks above, in order
-for nb in OddsPath_classifications Variant_Classification_analysis; do
+for nb in Variant_Classification_analysis OddsPath_classifications; do
   poetry run jupyter nbconvert --to notebook --execute \
     --ExecutePreprocessor.kernel_name=igvf-cvfg-pillar-project \
     --ExecutePreprocessor.timeout=600 \
