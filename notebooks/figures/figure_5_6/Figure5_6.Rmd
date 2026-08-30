@@ -92,12 +92,55 @@ colors_custom <- c(
 
 ```{r}
 
+#---- Figure 5 consequence filtering options ----
+
+# Restrict Figure 5 (controls + ClinGen panels below) to rows whose
+# simplified_consequence is one of these values. Set to NULL to disable and
+# keep every consequence type.
+FIGURE_5_ALLOWED_CONSEQUENCES <- NULL
+# FIGURE_5_ALLOWED_CONSEQUENCES <- c("missense_variant", "start_lost", "splicing_variant")
+
+# When TRUE, additionally drop splicing_variant rows whose hgvs_c shows the
+# actual base change falls outside the coding sequence -- i.e. an intronic
+# offset (e.g. "c.122-13A>T") or a 5'/3' UTR position (e.g. "c.-45G>A",
+# "c.*12A>G") -- rather than a base within the CDS itself. Has no effect on
+# other consequence types.
+FIGURE_5_EXCLUDE_NONCODING_SPLICE_VARIANTS <- FALSE
+
+# TRUE for an hgvs_c whose coding-DNA position is intronic (digits then a
+# +/- offset) or UTR (leading "-" or "*"), rather than a plain CDS position.
+is_noncoding_hgvs_c <- function(hgvs_c) {
+  coding_pos <- sub("^[^:]*:c\\.", "", hgvs_c)
+  grepl("^[*-]", coding_pos) | grepl("^[0-9]+[+-]", coding_pos)
+}
+
+filter_figure_5_consequences <- function(df,
+                                          allowed = FIGURE_5_ALLOWED_CONSEQUENCES,
+                                          exclude_noncoding_splice = FIGURE_5_EXCLUDE_NONCODING_SPLICE_VARIANTS) {
+  if (!is.null(allowed)) {
+    df <- df[df$simplified_consequence %in% allowed, ]
+  }
+  if (isTRUE(exclude_noncoding_splice)) {
+    drop <- df$simplified_consequence == "splicing_variant" & is_noncoding_hgvs_c(df$hgvs_c)
+    df <- df[!drop, ]
+  }
+  df
+}
+
+```
+
+```{r}
+
 #Figure 5a
 
-#read in csv 
+#read in csv
 controls_REVEL_YP  = read_excel(file.path(DATA_DIR, "supplementary_data/Supplementary_Data_5.xlsx"), sheet = "controls_REVEL_GeneSpecific")
 controls_AM_YP  = read_excel(file.path(DATA_DIR, "supplementary_data/Supplementary_Data_5.xlsx"), sheet = "controls_AM_GeneSpecific")
 controls_MP2_YP  = read_excel(file.path(DATA_DIR, "supplementary_data/Supplementary_Data_5.xlsx"), sheet = "controls_MP2_GeneSpecific")
+
+controls_REVEL_YP <- filter_figure_5_consequences(controls_REVEL_YP)
+controls_AM_YP <- filter_figure_5_consequences(controls_AM_YP)
+controls_MP2_YP <- filter_figure_5_consequences(controls_MP2_YP)
 
 
 ##------------Controls Sankey plot --------------------
@@ -539,6 +582,10 @@ ggsave(file.path(OUT_DIR, "figure_5/sankey_controls_MP2_GeneSpecific_calibrated.
 ClinGen_REVEL_YP  =  read_excel(file.path(DATA_DIR, "supplementary_data/Supplementary_Data_5.xlsx"), sheet = "ClinGen_Repo_REVEL_GeneSpecific")
 ClinGen_AM_YP  = read_excel(file.path(DATA_DIR, "supplementary_data/Supplementary_Data_5.xlsx"), sheet = "ClinGen_Repo_AM_GeneSpecific")
 ClinGen_MP2_YP  = read_excel(file.path(DATA_DIR, "supplementary_data/Supplementary_Data_5.xlsx"), sheet = "ClinGen_Repo_MP2_GeneSpecific")
+
+ClinGen_REVEL_YP <- filter_figure_5_consequences(ClinGen_REVEL_YP)
+ClinGen_AM_YP <- filter_figure_5_consequences(ClinGen_AM_YP)
+ClinGen_MP2_YP <- filter_figure_5_consequences(ClinGen_MP2_YP)
 
 
 # ------ Sankey function for clingen controls ------
