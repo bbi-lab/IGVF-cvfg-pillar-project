@@ -94,7 +94,7 @@ colors_custom <- c(
 
 #---- Figure 5 consequence filtering options ----
 
-# Restrict Figure 5 (controls + ClinGen panels below) to rows whose
+# Restrict Figure 5 (clinvar + ClinGen panels below) to rows whose
 # simplified_consequence is one of these values. Set to NULL to disable and
 # keep every consequence type.
 FIGURE_5_ALLOWED_CONSEQUENCES <- NULL
@@ -134,17 +134,17 @@ filter_figure_5_consequences <- function(df,
 #Figure 5a
 
 #read in csv
-controls_REVEL_YP  = read_excel(file.path(DATA_DIR, "supplementary_data/Supplementary_Data_5.xlsx"), sheet = "controls_REVEL_GeneSpecific")
-controls_AM_YP  = read_excel(file.path(DATA_DIR, "supplementary_data/Supplementary_Data_5.xlsx"), sheet = "controls_AM_GeneSpecific")
-controls_MP2_YP  = read_excel(file.path(DATA_DIR, "supplementary_data/Supplementary_Data_5.xlsx"), sheet = "controls_MP2_GeneSpecific")
+clinvar_REVEL_YP  = read_excel(file.path(DATA_DIR, "supplementary_data/Supplementary_Data_5.xlsx"), sheet = "controls_REVEL_GeneSpecific")
+clinvar_AM_YP  = read_excel(file.path(DATA_DIR, "supplementary_data/Supplementary_Data_5.xlsx"), sheet = "controls_AM_GeneSpecific")
+clinvar_MP2_YP  = read_excel(file.path(DATA_DIR, "supplementary_data/Supplementary_Data_5.xlsx"), sheet = "controls_MP2_GeneSpecific")
 
-controls_REVEL_YP <- filter_figure_5_consequences(controls_REVEL_YP)
-controls_AM_YP <- filter_figure_5_consequences(controls_AM_YP)
-controls_MP2_YP <- filter_figure_5_consequences(controls_MP2_YP)
+clinvar_REVEL_YP <- filter_figure_5_consequences(clinvar_REVEL_YP)
+clinvar_AM_YP <- filter_figure_5_consequences(clinvar_AM_YP)
+clinvar_MP2_YP <- filter_figure_5_consequences(clinvar_MP2_YP)
 
 
 ##------------Controls Sankey plot --------------------
-make_sankey_controls <- function(df, points_col, colors_custom, clinvar, label_nodes = FALSE) {
+make_sankey_clinvar <- function(df, points_col, colors_custom, clinvar, label_nodes = FALSE) {
 
   df <- df %>% mutate(clinvar = {{ clinvar }})
 
@@ -204,7 +204,7 @@ make_sankey_controls <- function(df, points_col, colors_custom, clinvar, label_n
 }
 
 ##----- confusion matrix function ----
-make_confusion_matrix_controls_chek2 <- function(df, points_col, clnsig_col, predictor, func_col, pred_col) {
+make_confusion_matrix_clinvar_chek2 <- function(df, points_col, clnsig_col, predictor, func_col, pred_col) {
 
   # ---- Collapse ClinVar ----
   df[[clnsig_col]] <- dplyr::case_when(
@@ -360,34 +360,34 @@ make_confusion_matrix_controls_chek2 <- function(df, points_col, clnsig_col, pre
 
 ##----apply confusion matrix ----
 
-cm_controls_REVEL_YP_1star <- make_confusion_matrix_controls_chek2(controls_REVEL_YP, "Class_REVEL", "clnsig_group_18_25", "REVEL_GeneSpecific","Fxn_points", 'Points_REVEL_GeneSpecific_GenomeWide')
+cm_clinvar_REVEL_YP_1star <- make_confusion_matrix_clinvar_chek2(clinvar_REVEL_YP, "Class_REVEL", "clnsig_group_18_25", "REVEL_GeneSpecific","Fxn_points", 'Points_REVEL_GeneSpecific_GenomeWide')
 
-cm_controls_AM_YP_1star <- make_confusion_matrix_controls_chek2(controls_AM_YP, "Class_AM", "clnsig_group_18_25", "AM_GeneSpecific","Fxn_points", "Points_AM_GeneSpecific_GenomeWide")
+cm_clinvar_AM_YP_1star <- make_confusion_matrix_clinvar_chek2(clinvar_AM_YP, "Class_AM", "clnsig_group_18_25", "AM_GeneSpecific","Fxn_points", "Points_AM_GeneSpecific_GenomeWide")
 
-cm_controls_MP2_YP_1star <- make_confusion_matrix_controls_chek2(controls_MP2_YP, "Class_MP2", "clnsig_group_18_25", "MP2_GeneSpecific","Fxn_points", "Points_MP2_GeneSpecific_GenomeWide")
+cm_clinvar_MP2_YP_1star <- make_confusion_matrix_clinvar_chek2(clinvar_MP2_YP, "Class_MP2", "clnsig_group_18_25", "MP2_GeneSpecific","Fxn_points", "Points_MP2_GeneSpecific_GenomeWide")
 
 
-sankey_controls_REVEL_YP = make_sankey_controls(controls_REVEL_YP, Class_REVEL, colors_custom, clnsig_group_18_25)
+sankey_clinvar_REVEL_YP = make_sankey_clinvar(clinvar_REVEL_YP, Class_REVEL, colors_custom, clnsig_group_18_25)
 
-sankey_controls_MP2_YP = make_sankey_controls(controls_MP2_YP, Class_MP2, colors_custom, clnsig_group_18_25)
+sankey_clinvar_MP2_YP = make_sankey_clinvar(clinvar_MP2_YP, Class_MP2, colors_custom, clnsig_group_18_25)
 
-sankey_controls_AM_YP = make_sankey_controls(controls_AM_YP, Class_AM, colors_custom, clnsig_group_18_25)
+sankey_clinvar_AM_YP = make_sankey_clinvar(clinvar_AM_YP, Class_AM, colors_custom, clnsig_group_18_25)
 
 # Labeled (node-name) variants of the same three sankeys
-sankey_controls_REVEL_YP_lab = make_sankey_controls(controls_REVEL_YP, Class_REVEL, colors_custom, clnsig_group_18_25, label_nodes = TRUE)
+sankey_clinvar_REVEL_YP_lab = make_sankey_clinvar(clinvar_REVEL_YP, Class_REVEL, colors_custom, clnsig_group_18_25, label_nodes = TRUE)
 
-sankey_controls_MP2_YP_lab = make_sankey_controls(controls_MP2_YP, Class_MP2, colors_custom, clnsig_group_18_25, label_nodes = TRUE)
+sankey_clinvar_MP2_YP_lab = make_sankey_clinvar(clinvar_MP2_YP, Class_MP2, colors_custom, clnsig_group_18_25, label_nodes = TRUE)
 
-sankey_controls_AM_YP_lab = make_sankey_controls(controls_AM_YP, Class_AM, colors_custom, clnsig_group_18_25, label_nodes = TRUE)
+sankey_clinvar_AM_YP_lab = make_sankey_clinvar(clinvar_AM_YP, Class_AM, colors_custom, clnsig_group_18_25, label_nodes = TRUE)
 
 
 ##----predictor metrics function----
 
-cm_controls_REVEL_YP_1star$metrics$Predictor <- "REVEL"
-cm_controls_AM_YP_1star$metrics$Predictor <- "AlphaMissense"
-cm_controls_MP2_YP_1star$metrics$Predictor <- "MutPred2"
+cm_clinvar_REVEL_YP_1star$metrics$Predictor <- "REVEL"
+cm_clinvar_AM_YP_1star$metrics$Predictor <- "AlphaMissense"
+cm_clinvar_MP2_YP_1star$metrics$Predictor <- "MutPred2"
 
-metrics_one_star_YP <- rbind(cm_controls_REVEL_YP_1star$metrics,cm_controls_AM_YP_1star$metrics,cm_controls_MP2_YP_1star$metrics)
+metrics_one_star_YP <- rbind(cm_clinvar_REVEL_YP_1star$metrics,cm_clinvar_AM_YP_1star$metrics,cm_clinvar_MP2_YP_1star$metrics)
 
 
 plot_clinvar_metrics <- function(metrics_df) {
@@ -456,41 +456,37 @@ save_my_plot <- function(plot, filename, folder,
   message("Saved: ", filepath)
 }
 
-controls_1star_YP <- list(
+clinvar_1star_YP <- list(
   "metrics_controls_GeneSpecific.png" = metrics_controls_YP,
-  "cm_controls_REVEL_GeneSpecific_1star.png" = cm_controls_REVEL_YP_1star$plot,
-  "cm_controls_AM_GeneSpecific_1star.png" = cm_controls_AM_YP_1star$plot,
-  "cm_controls_MP2_GeneSpecific_1star.png" = cm_controls_MP2_YP_1star$plot,
+  "cm_clinvar_ExOP_REVEL_GeneSpecific.png" = cm_clinvar_REVEL_YP_1star$plot,
+  "cm_clinvar_ExOP_AM_GeneSpecific.png" = cm_clinvar_AM_YP_1star$plot,
+  "cm_clinvar_ExOP_MP2_GeneSpecific.png" = cm_clinvar_MP2_YP_1star$plot,
 
-  "sankey_controls_REVEL_GeneSpecific.png" = sankey_controls_REVEL_YP,
-  "sankey_controls_AM_GeneSpecific.png" = sankey_controls_AM_YP,
-  "sankey_controls_MP2_GeneSpecific.png" = sankey_controls_MP2_YP,
+  "sankey_clinvar_ExOP_REVEL_GeneSpecific.png" = sankey_clinvar_REVEL_YP,
+  "sankey_clinvar_ExOP_AM_GeneSpecific.png" = sankey_clinvar_AM_YP,
+  "sankey_clinvar_ExOP_MP2_GeneSpecific.png" = sankey_clinvar_MP2_YP,
 
-  "sankey_controls_REVEL_GeneSpecific_lab.png" = sankey_controls_REVEL_YP_lab,
-  "sankey_controls_AM_GeneSpecific_lab.png" = sankey_controls_AM_YP_lab,
-  "sankey_controls_MP2_GeneSpecific_lab.png" = sankey_controls_MP2_YP_lab
+  "sankey_clinvar_ExOP_REVEL_GeneSpecific_lab.png" = sankey_clinvar_REVEL_YP_lab,
+  "sankey_clinvar_ExOP_AM_GeneSpecific_lab.png" = sankey_clinvar_AM_YP_lab,
+  "sankey_clinvar_ExOP_MP2_GeneSpecific_lab.png" = sankey_clinvar_MP2_YP_lab
 
 )
 
 square_plots <- c(
-  "sankey_controls_REVEL_GeneSpecific.png",
-  "sankey_controls_AM_GeneSpecific.png",
-  "sankey_controls_MP2_GeneSpecific.png",
+  "sankey_clinvar_ExOP_REVEL_GeneSpecific.png",
+  "sankey_clinvar_ExOP_AM_GeneSpecific.png",
+  "sankey_clinvar_ExOP_MP2_GeneSpecific.png",
 
-  "sankey_controls_REVEL_GeneSpecific_lab.png",
-  "sankey_controls_AM_GeneSpecific_lab.png",
-  "sankey_controls_MP2_GeneSpecific_lab.png",
-
-  "sankey_controls_REVEL_OP.png",
-  "sankey_controls_AM_OP.png",
-  "sankey_controls_MP2_OP.png"
+  "sankey_clinvar_ExOP_REVEL_GeneSpecific_lab.png",
+  "sankey_clinvar_ExOP_AM_GeneSpecific_lab.png",
+  "sankey_clinvar_ExOP_MP2_GeneSpecific_lab.png"
 )
 
 square_plots_ds <- c(
   "metrics_controls_GeneSpecific.png"
 )
 
-for (nm in names(controls_1star_YP)) {
+for (nm in names(clinvar_1star_YP)) {
   if (nm %in% square_plots) {
     w <- 7; h <- 7
   } else if (nm %in% square_plots_ds) {
@@ -500,7 +496,7 @@ for (nm in names(controls_1star_YP)) {
     w <- 7; h <- 6
   }
   save_my_plot(
-    plot = controls_1star_YP[[nm]],
+    plot = clinvar_1star_YP[[nm]],
     filename = nm,
     folder = file.path(OUT_DIR, "figure_5"),
     width = w,
@@ -538,7 +534,7 @@ levels_order_fig5 <- c(
   "Likely pathogenic", "Likely Pathogenic", "Pathogenic"
 )
 
-# make_sankey_controls() only sets/fixes $clinvar on its own local copy of
+# make_sankey_clinvar() only sets/fixes $clinvar on its own local copy of
 # the data, so it's added again here for our own calls.
 add_clinvar <- function(df) {
   df$clinvar <- df$clnsig_group_18_25
@@ -546,32 +542,32 @@ add_clinvar <- function(df) {
   df$clinvar[df$clinvar == 'Benign/Likely benign'] <- "Likely benign"
   df
 }
-controls_REVEL_YP <- add_clinvar(controls_REVEL_YP)
-controls_AM_YP <- add_clinvar(controls_AM_YP)
-controls_MP2_YP <- add_clinvar(controls_MP2_YP)
+clinvar_REVEL_YP <- add_clinvar(clinvar_REVEL_YP)
+clinvar_AM_YP <- add_clinvar(clinvar_AM_YP)
+clinvar_MP2_YP <- add_clinvar(clinvar_MP2_YP)
 
-sankey_controls_REVEL_calibrated <- make_sankey_calibrated(
-  controls_REVEL_YP, source_col = clinvar, points_col = Class_REVEL,
+sankey_clinvar_REVEL_calibrated <- make_sankey_calibrated(
+  clinvar_REVEL_YP, source_col = clinvar, points_col = Class_REVEL,
   colors_custom = colors_custom, levels_order = levels_order_fig5,
   width_mm = 33, height_mm = 58, label_pt = 6, show_count = FALSE,
   wrap_destination_labels = TRUE
 )
-sankey_controls_AM_calibrated <- make_sankey_calibrated(
-  controls_AM_YP, source_col = clinvar, points_col = Class_AM,
+sankey_clinvar_AM_calibrated <- make_sankey_calibrated(
+  clinvar_AM_YP, source_col = clinvar, points_col = Class_AM,
   colors_custom = colors_custom, levels_order = levels_order_fig5,
   width_mm = 33, height_mm = 58, label_pt = 6, show_count = FALSE,
   wrap_destination_labels = TRUE
 )
-sankey_controls_MP2_calibrated <- make_sankey_calibrated(
-  controls_MP2_YP, source_col = clinvar, points_col = Class_MP2,
+sankey_clinvar_MP2_calibrated <- make_sankey_calibrated(
+  clinvar_MP2_YP, source_col = clinvar, points_col = Class_MP2,
   colors_custom = colors_custom, levels_order = levels_order_fig5,
   width_mm = 33, height_mm = 58, label_pt = 6, show_count = FALSE,
   wrap_destination_labels = TRUE
 )
 
-ggsave(file.path(OUT_DIR, "figure_5/sankey_controls_REVEL_GeneSpecific_calibrated.pdf"), sankey_controls_REVEL_calibrated$plot, width = sankey_controls_REVEL_calibrated$width_mm, height = sankey_controls_REVEL_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
-ggsave(file.path(OUT_DIR, "figure_5/sankey_controls_AM_GeneSpecific_calibrated.pdf"), sankey_controls_AM_calibrated$plot, width = sankey_controls_AM_calibrated$width_mm, height = sankey_controls_AM_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
-ggsave(file.path(OUT_DIR, "figure_5/sankey_controls_MP2_GeneSpecific_calibrated.pdf"), sankey_controls_MP2_calibrated$plot, width = sankey_controls_MP2_calibrated$width_mm, height = sankey_controls_MP2_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave(file.path(OUT_DIR, "figure_5/sankey_clinvar_ExOP_REVEL_GeneSpecific_calibrated.pdf"), sankey_clinvar_REVEL_calibrated$plot, width = sankey_clinvar_REVEL_calibrated$width_mm, height = sankey_clinvar_REVEL_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave(file.path(OUT_DIR, "figure_5/sankey_clinvar_ExOP_AM_GeneSpecific_calibrated.pdf"), sankey_clinvar_AM_calibrated$plot, width = sankey_clinvar_AM_calibrated$width_mm, height = sankey_clinvar_AM_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave(file.path(OUT_DIR, "figure_5/sankey_clinvar_ExOP_MP2_GeneSpecific_calibrated.pdf"), sankey_clinvar_MP2_calibrated$plot, width = sankey_clinvar_MP2_calibrated$width_mm, height = sankey_clinvar_MP2_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
 
 ```
 
@@ -588,7 +584,7 @@ ClinGen_AM_YP <- filter_figure_5_consequences(ClinGen_AM_YP)
 ClinGen_MP2_YP <- filter_figure_5_consequences(ClinGen_MP2_YP)
 
 
-# ------ Sankey function for clingen controls ------
+# ------ Sankey function for ClinGen ------
 
 make_sankey_clingen <- function(df, points_col, colors_custom, label_nodes = FALSE) {
 
@@ -846,32 +842,28 @@ metrics_clingen_YP_plot = plot_clinvar_metrics(metrics_clingen_YP)
 
 
 clingen_YP_pejaver <- list(
-  "cm_clingen_REVEL_GeneSpecific.png" = cm_ClinGen_REVEL_YP$plot,
+  "cm_clingen_ExOP_REVEL_GeneSpecific.png" = cm_ClinGen_REVEL_YP$plot,
   "metrics_clingen_GeneSpecific_plot.png" = metrics_clingen_YP_plot,
-   "cm_clingen_MP2_GeneSpecific.png" = cm_ClinGen_MP2_YP$plot,
-   "cm_clingen_AM_GeneSpecific.png" = cm_ClinGen_AM_YP$plot,
+   "cm_clingen_ExOP_MP2_GeneSpecific.png" = cm_ClinGen_MP2_YP$plot,
+   "cm_clingen_ExOP_AM_GeneSpecific.png" = cm_ClinGen_AM_YP$plot,
 
-  "sankey_clingen_REVEL_GeneSpecific.png" = sankey_clingen_YP_REVEL,
-  "sankey_clingen_AM_GeneSpecific.png" = sankey_clingen_YP_AM,
-  "sankey_clingen_MP2_GeneSpecific.png" = sankey_clingen_YP_MP2,
+  "sankey_clingen_ExOP_REVEL_GeneSpecific.png" = sankey_clingen_YP_REVEL,
+  "sankey_clingen_ExOP_AM_GeneSpecific.png" = sankey_clingen_YP_AM,
+  "sankey_clingen_ExOP_MP2_GeneSpecific.png" = sankey_clingen_YP_MP2,
 
-  "sankey_clingen_REVEL_GeneSpecific_lab.png" = sankey_clingen_YP_REVEL_lab,
-  "sankey_clingen_AM_GeneSpecific_lab.png" = sankey_clingen_YP_AM_lab,
-  "sankey_clingen_MP2_GeneSpecific_lab.png" = sankey_clingen_YP_MP2_lab
+  "sankey_clingen_ExOP_REVEL_GeneSpecific_lab.png" = sankey_clingen_YP_REVEL_lab,
+  "sankey_clingen_ExOP_AM_GeneSpecific_lab.png" = sankey_clingen_YP_AM_lab,
+  "sankey_clingen_ExOP_MP2_GeneSpecific_lab.png" = sankey_clingen_YP_MP2_lab
 )
 
 square_plots <- c(
-  "sankey_clingen_REVEL_GeneSpecific.png",
-  "sankey_clingen_AM_GeneSpecific.png",
-  "sankey_clingen_MP2_GeneSpecific.png",
+  "sankey_clingen_ExOP_REVEL_GeneSpecific.png",
+  "sankey_clingen_ExOP_AM_GeneSpecific.png",
+  "sankey_clingen_ExOP_MP2_GeneSpecific.png",
 
-  "sankey_clingen_REVEL_GeneSpecific_lab.png",
-  "sankey_clingen_AM_GeneSpecific_lab.png",
-  "sankey_clingen_MP2_GeneSpecific_lab.png",
-
-  "sankey_clingen_OP_REVEL.png",
-  "sankey_clingen_OP_AM.png",
-  "sankey_clingen_OP_MP2.png"
+  "sankey_clingen_ExOP_REVEL_GeneSpecific_lab.png",
+  "sankey_clingen_ExOP_AM_GeneSpecific_lab.png",
+  "sankey_clingen_ExOP_MP2_GeneSpecific_lab.png"
 )
 
 square_plots_d <- c(
@@ -898,7 +890,7 @@ for (nm in names(clingen_YP_pejaver)) {
 
 # Calibrated versions: real print size, baked-in name-only labels (no count
 # boxes), 6pt Arial, 33 x 58mm excluding label overflow (see
-# lib/sankey_calibrated.R and the controls panel above, which sources it and
+# lib/sankey_calibrated.R and the clinvar panel above, which sources it and
 # defines levels_order_fig5). make_sankey_clingen() only excludes VUS rows
 # and fixes classification naming on its own local copy of the data, so
 # that's repeated here for our own calls.
@@ -934,9 +926,9 @@ sankey_clingen_MP2_calibrated <- make_sankey_calibrated(
   wrap_destination_labels = TRUE
 )
 
-ggsave(file.path(OUT_DIR, "figure_5/sankey_clingen_REVEL_GeneSpecific_calibrated.pdf"), sankey_clingen_REVEL_calibrated$plot, width = sankey_clingen_REVEL_calibrated$width_mm, height = sankey_clingen_REVEL_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
-ggsave(file.path(OUT_DIR, "figure_5/sankey_clingen_AM_GeneSpecific_calibrated.pdf"), sankey_clingen_AM_calibrated$plot, width = sankey_clingen_AM_calibrated$width_mm, height = sankey_clingen_AM_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
-ggsave(file.path(OUT_DIR, "figure_5/sankey_clingen_MP2_GeneSpecific_calibrated.pdf"), sankey_clingen_MP2_calibrated$plot, width = sankey_clingen_MP2_calibrated$width_mm, height = sankey_clingen_MP2_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave(file.path(OUT_DIR, "figure_5/sankey_clingen_ExOP_REVEL_GeneSpecific_calibrated.pdf"), sankey_clingen_REVEL_calibrated$plot, width = sankey_clingen_REVEL_calibrated$width_mm, height = sankey_clingen_REVEL_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave(file.path(OUT_DIR, "figure_5/sankey_clingen_ExOP_AM_GeneSpecific_calibrated.pdf"), sankey_clingen_AM_calibrated$plot, width = sankey_clingen_AM_calibrated$width_mm, height = sankey_clingen_AM_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave(file.path(OUT_DIR, "figure_5/sankey_clingen_ExOP_MP2_GeneSpecific_calibrated.pdf"), sankey_clingen_MP2_calibrated$plot, width = sankey_clingen_MP2_calibrated$width_mm, height = sankey_clingen_MP2_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
 
 ```
 
@@ -1053,7 +1045,7 @@ make_uncertain_confusion <- function(df, points_col, xlabel) {
 cm_REVEL_VUS_YP <- make_uncertain_confusion(VUS_REVEL_YP, Class_REVEL, "REVEL_GeneSpecific")
 
 
-ggsave(file.path(OUT_DIR, "figure_6/sankey_VUS_REVEL_GeneSpecific.png"), sankey_VUS_REVEL_YP, dpi = 300, device = 'png', bg = 'transparent', create.dir = TRUE)
+ggsave(file.path(OUT_DIR, "figure_6/sankey_VUS_ExOP_REVEL_GeneSpecific.png"), sankey_VUS_REVEL_YP, dpi = 300, device = 'png', bg = 'transparent', create.dir = TRUE)
 
 ggsave(file.path(OUT_DIR, "figure_6/cm_VUS_REVEL_GeneSpecific.png"), cm_REVEL_VUS_YP, dpi = 300, device = 'png', bg = 'transparent', create.dir = TRUE)
 
@@ -1080,7 +1072,7 @@ sankey_VUS_calibrated <- make_sankey_calibrated(
   width_mm = 48.5, height_mm = 94.5, source_label = "Uncertain significance"
 )
 
-ggsave(file.path(OUT_DIR, "figure_6/sankey_VUS_REVEL_GeneSpecific_calibrated.pdf"), sankey_VUS_calibrated$plot, width = sankey_VUS_calibrated$width_mm, height = sankey_VUS_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave(file.path(OUT_DIR, "figure_6/sankey_VUS_ExOP_REVEL_GeneSpecific_calibrated.pdf"), sankey_VUS_calibrated$plot, width = sankey_VUS_calibrated$width_mm, height = sankey_VUS_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
   
 
 ```
@@ -1342,7 +1334,7 @@ make_gnomad_confusion <- function(df, points_col, xlabel) {
 cm_REVEL_gnomad_YP <- make_gnomad_confusion(gnomad_REVEL_YP, Class_REVEL, "REVEL_GeneSpecific")
 
 
-ggsave(file.path(OUT_DIR, 'figure_6/gnomad_sankey_REVEL_YP.png'), sankey_gnomad_REVEL_YP, dpi = 300, device = 'png', bg = 'transparent', create.dir = TRUE)
+ggsave(file.path(OUT_DIR, 'figure_6/sankey_gnomAD_ExOP_REVEL_GeneSpecific.png'), sankey_gnomad_REVEL_YP, dpi = 300, device = 'png', bg = 'transparent', create.dir = TRUE)
 
 ggsave(file.path(OUT_DIR, 'figure_6/cm_REVEL_gnomad_YP.png'), cm_REVEL_gnomad_YP, dpi = 300, device = 'png', bg = 'transparent', height = 4, width = 6, create.dir = TRUE)
 
@@ -1364,7 +1356,7 @@ sankey_gnomad_calibrated <- make_sankey_calibrated(
   wrap_destination_labels = TRUE
 )
 
-ggsave(file.path(OUT_DIR, 'figure_6/gnomad_sankey_REVEL_YP_calibrated.pdf'), sankey_gnomad_calibrated$plot, width = sankey_gnomad_calibrated$width_mm, height = sankey_gnomad_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave(file.path(OUT_DIR, 'figure_6/sankey_gnomAD_ExOP_REVEL_GeneSpecific_calibrated.pdf'), sankey_gnomad_calibrated$plot, width = sankey_gnomad_calibrated$width_mm, height = sankey_gnomad_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
 
 ```
 
@@ -1447,7 +1439,7 @@ library(dplyr)
 cm_REVEL_preclass_YP <- make_uncertain_confusion(preclass_REVEL_YP, Class_REVEL, "REVEL_dan_YP")
 
 
-ggsave(file.path(OUT_DIR, 'figure_6/unseen_sankey_REVEL_GeneSpecific.png'), preclass_REVEL_YP_sankey, dpi = 300, device = 'png', bg = 'transparent', create.dir = TRUE)
+ggsave(file.path(OUT_DIR, 'figure_6/sankey_unseen_ExOP_REVEL_GeneSpecific.png'), preclass_REVEL_YP_sankey, dpi = 300, device = 'png', bg = 'transparent', create.dir = TRUE)
 
 ggsave(file.path(OUT_DIR, 'figure_6/cm_REVEL_unseen_GeneSpecific.png'), cm_REVEL_preclass_YP, dpi = 300, device = 'png', bg = 'transparent', height = 4, width = 6, create.dir = TRUE)
 
@@ -1469,7 +1461,7 @@ sankey_preclass_calibrated <- make_sankey_calibrated(
   wrap_destination_labels = TRUE
 )
 
-ggsave(file.path(OUT_DIR, 'figure_6/unseen_sankey_REVEL_GeneSpecific_calibrated.pdf'), sankey_preclass_calibrated$plot, width = sankey_preclass_calibrated$width_mm, height = sankey_preclass_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave(file.path(OUT_DIR, 'figure_6/sankey_unseen_ExOP_REVEL_GeneSpecific_calibrated.pdf'), sankey_preclass_calibrated$plot, width = sankey_preclass_calibrated$width_mm, height = sankey_preclass_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
 
 
 ```
