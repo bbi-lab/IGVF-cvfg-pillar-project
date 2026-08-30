@@ -19,6 +19,10 @@ library(tidyr)
 library(ggsankey)
 library(tidyverse)
 library(readxl)
+library(extrafont)
+library(grid)
+
+loadfonts(device = 'all')
 
 #----color palette----
 
@@ -461,6 +465,71 @@ for (nm in names(controls_1star_YP)) {
   )
 }
 
+# Calibrated versions: real print size, baked-in name-only labels (no count
+# boxes -- show_count = FALSE), 6pt Arial, 33 x 58mm excluding label overflow
+# (see lib/sankey_calibrated.R, shared with the Fig 6 sankeys). Unlike Fig 6,
+# both the source (clinvar) and destination (predictor class) columns share
+# the same ClinVar-style category vocabulary, so flows take their color from
+# their own individual source node rather than one dominant source.
+#
+# Sourced into its own environment, not straight into globalenv: this file
+# and lib/three_ring_donut.R both declare same-named top-level constants
+# (LABEL_PT, FONT_FAMILY, point_in_mm, ...) with DIFFERENT values, and this
+# document sources both. Sourcing either one straight into globalenv lets
+# whichever is sourced *last* silently clobber the other's globals -- e.g.
+# three_ring_donut.R's LABEL_PT (5.5) overwriting this file's own LABEL_PT
+# (7) once sourced later in this same document, silently shrinking every
+# later make_sankey_calibrated() call's default label_pt (reproduced: the
+# gnomAD/Unobserved sankeys, built after the donut-chart source() call
+# further down, rendered their labels at 5.5pt instead of the intended 7pt,
+# despite make_sankey_calibrated()'s own code never changing). Only the
+# function this document actually calls is pulled out into globalenv; every
+# constant/helper it relies on stays private to this environment.
+.sankey_lib <- new.env(parent = globalenv())
+source("../../../src/lib/figures/sankey_calibrated.R", local = .sankey_lib)
+make_sankey_calibrated <- .sankey_lib$make_sankey_calibrated
+
+levels_order_fig5 <- c(
+  'Benign', "Likely benign", "Likely Benign",
+  'Uncertain', "No Classification",
+  "Likely pathogenic", "Likely Pathogenic", "Pathogenic"
+)
+
+# make_sankey_controls() only sets/fixes $clinvar on its own local copy of
+# the data, so it's added again here for our own calls.
+add_clinvar <- function(df) {
+  df$clinvar <- df$clnsig_group_18_25
+  df$clinvar[df$clinvar == 'Pathogenic/Likely pathogenic'] <- "Likely pathogenic"
+  df$clinvar[df$clinvar == 'Benign/Likely benign'] <- "Likely benign"
+  df
+}
+controls_REVEL_YP <- add_clinvar(controls_REVEL_YP)
+controls_AM_YP <- add_clinvar(controls_AM_YP)
+controls_MP2_YP <- add_clinvar(controls_MP2_YP)
+
+sankey_controls_REVEL_calibrated <- make_sankey_calibrated(
+  controls_REVEL_YP, source_col = clinvar, points_col = Class_REVEL,
+  colors_custom = colors_custom, levels_order = levels_order_fig5,
+  width_mm = 33, height_mm = 58, label_pt = 6, show_count = FALSE,
+  wrap_destination_labels = TRUE
+)
+sankey_controls_AM_calibrated <- make_sankey_calibrated(
+  controls_AM_YP, source_col = clinvar, points_col = Class_AM,
+  colors_custom = colors_custom, levels_order = levels_order_fig5,
+  width_mm = 33, height_mm = 58, label_pt = 6, show_count = FALSE,
+  wrap_destination_labels = TRUE
+)
+sankey_controls_MP2_calibrated <- make_sankey_calibrated(
+  controls_MP2_YP, source_col = clinvar, points_col = Class_MP2,
+  colors_custom = colors_custom, levels_order = levels_order_fig5,
+  width_mm = 33, height_mm = 58, label_pt = 6, show_count = FALSE,
+  wrap_destination_labels = TRUE
+)
+
+ggsave(file.path(OUT_DIR, "figure_5/sankey_controls_REVEL_GeneSpecific_calibrated.pdf"), sankey_controls_REVEL_calibrated$plot, width = sankey_controls_REVEL_calibrated$width_mm, height = sankey_controls_REVEL_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave(file.path(OUT_DIR, "figure_5/sankey_controls_AM_GeneSpecific_calibrated.pdf"), sankey_controls_AM_calibrated$plot, width = sankey_controls_AM_calibrated$width_mm, height = sankey_controls_AM_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave(file.path(OUT_DIR, "figure_5/sankey_controls_MP2_GeneSpecific_calibrated.pdf"), sankey_controls_MP2_calibrated$plot, width = sankey_controls_MP2_calibrated$width_mm, height = sankey_controls_MP2_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+
 ```
 
 ```{r}
@@ -780,6 +849,48 @@ for (nm in names(clingen_YP_pejaver)) {
   )
 }
 
+# Calibrated versions: real print size, baked-in name-only labels (no count
+# boxes), 6pt Arial, 33 x 58mm excluding label overflow (see
+# lib/sankey_calibrated.R and the controls panel above, which sources it and
+# defines levels_order_fig5). make_sankey_clingen() only excludes VUS rows
+# and fixes classification naming on its own local copy of the data, so
+# that's repeated here for our own calls.
+ClinGen_REVEL_YP_det <- ClinGen_REVEL_YP %>% filter(Updated_Classification_ClinGen_repo != "VUS")
+ClinGen_AM_YP_det <- ClinGen_AM_YP %>% filter(Updated_Classification_ClinGen_repo != "VUS")
+ClinGen_MP2_YP_det <- ClinGen_MP2_YP %>% filter(Updated_Classification_ClinGen_repo != "VUS")
+
+fix_clingen_naming <- function(df) {
+  df$Updated_Classification_ClinGen_repo[df$Updated_Classification_ClinGen_repo == 'Pathogenic/Likely pathogenic'] <- "Likely pathogenic"
+  df$Updated_Classification_ClinGen_repo[df$Updated_Classification_ClinGen_repo == 'Benign/Likely benign'] <- "Likely benign"
+  df
+}
+ClinGen_REVEL_YP_det <- fix_clingen_naming(ClinGen_REVEL_YP_det)
+ClinGen_AM_YP_det <- fix_clingen_naming(ClinGen_AM_YP_det)
+ClinGen_MP2_YP_det <- fix_clingen_naming(ClinGen_MP2_YP_det)
+
+sankey_clingen_REVEL_calibrated <- make_sankey_calibrated(
+  ClinGen_REVEL_YP_det, source_col = Updated_Classification_ClinGen_repo, points_col = Class_REVEL,
+  colors_custom = colors_custom, levels_order = levels_order_fig5,
+  width_mm = 33, height_mm = 58, label_pt = 6, show_count = FALSE,
+  wrap_destination_labels = TRUE
+)
+sankey_clingen_AM_calibrated <- make_sankey_calibrated(
+  ClinGen_AM_YP_det, source_col = Updated_Classification_ClinGen_repo, points_col = Class_AM,
+  colors_custom = colors_custom, levels_order = levels_order_fig5,
+  width_mm = 33, height_mm = 58, label_pt = 6, show_count = FALSE,
+  wrap_destination_labels = TRUE
+)
+sankey_clingen_MP2_calibrated <- make_sankey_calibrated(
+  ClinGen_MP2_YP_det, source_col = Updated_Classification_ClinGen_repo, points_col = Class_MP2,
+  colors_custom = colors_custom, levels_order = levels_order_fig5,
+  width_mm = 33, height_mm = 58, label_pt = 6, show_count = FALSE,
+  wrap_destination_labels = TRUE
+)
+
+ggsave(file.path(OUT_DIR, "figure_5/sankey_clingen_REVEL_GeneSpecific_calibrated.pdf"), sankey_clingen_REVEL_calibrated$plot, width = sankey_clingen_REVEL_calibrated$width_mm, height = sankey_clingen_REVEL_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave(file.path(OUT_DIR, "figure_5/sankey_clingen_AM_GeneSpecific_calibrated.pdf"), sankey_clingen_AM_calibrated$plot, width = sankey_clingen_AM_calibrated$width_mm, height = sankey_clingen_AM_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave(file.path(OUT_DIR, "figure_5/sankey_clingen_MP2_GeneSpecific_calibrated.pdf"), sankey_clingen_MP2_calibrated$plot, width = sankey_clingen_MP2_calibrated$width_mm, height = sankey_clingen_MP2_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+
 ```
 
 ```{r}
@@ -898,6 +1009,31 @@ cm_REVEL_VUS_YP <- make_uncertain_confusion(VUS_REVEL_YP, Class_REVEL, "REVEL_Ge
 ggsave(file.path(OUT_DIR, "figure_6/sankey_VUS_REVEL_GeneSpecific.png"), sankey_VUS_REVEL_YP, dpi = 300, device = 'png', bg = 'transparent', create.dir = TRUE)
 
 ggsave(file.path(OUT_DIR, "figure_6/cm_VUS_REVEL_GeneSpecific.png"), cm_REVEL_VUS_YP, dpi = 300, device = 'png', bg = 'transparent', create.dir = TRUE)
+
+# Calibrated version: real print size, baked-in labels (see lib/sankey_calibrated.R,
+# shared with the gnomAD/Unobserved sankeys further down).
+#
+# Sourced into its own environment -- see the matching comment above the
+# first source() call in this document for why (this file and
+# lib/three_ring_donut.R, sourced further down, declare colliding same-named
+# globals with different values).
+.sankey_lib <- new.env(parent = globalenv())
+source("../../../src/lib/figures/sankey_calibrated.R", local = .sankey_lib)
+make_sankey_calibrated <- .sankey_lib$make_sankey_calibrated
+
+levels_order_vus <- c(
+  -12.0:-1.0, "Uncertain significance", "No evidence", "Benign", "Likely benign", "Likely Benign",
+  "Uncertain", "Likely pathogenic", "Likely Pathogenic", "Pathogenic",
+  0, "No Classification", "Conflicting evidence", 1.0:12.0
+)
+
+sankey_VUS_calibrated <- make_sankey_calibrated(
+  VUS_REVEL_YP, source_col = clinvar_sig_2025, points_col = Class_REVEL,
+  colors_custom = colors_custom, levels_order = levels_order_vus,
+  width_mm = 48.5, height_mm = 94.5, source_label = "Uncertain significance"
+)
+
+ggsave(file.path(OUT_DIR, "figure_6/sankey_VUS_REVEL_GeneSpecific_calibrated.pdf"), sankey_VUS_calibrated$plot, width = sankey_VUS_calibrated$width_mm, height = sankey_VUS_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
   
 
 ```
@@ -974,8 +1110,20 @@ plot_summary_2 <- plot_summary %>%
 # and the calibrated real-print-size variant (make_three_ring_plot_calibrated()
 # and its helpers) all live in lib/three_ring_donut.R now, shared with
 # Extended_data_figures.Rmd's equivalent donut charts.
-
-source("../../../src/lib/figures/three_ring_donut.R")
+#
+# Sourced into its own environment -- see the comment above this document's
+# first sankey_calibrated.R source() call for why (this file and
+# sankey_calibrated.R, sourced earlier in this document, declare colliding
+# same-named globals -- LABEL_PT, FONT_FAMILY, point_in_mm, etc -- with
+# different values). RING_DIAMETER_MM below still resolves correctly as
+# make_three_ring_plot_calibrated()'s default arg: default-arg lookups run
+# in the function's defining environment chain, and .three_ring_lib's parent
+# is this chunk's own globalenv, so the lookup still finds it there.
+.three_ring_lib <- new.env(parent = globalenv())
+source("../../../src/lib/figures/three_ring_donut.R", local = .three_ring_lib)
+make_three_ring_plot_calibrated <- .three_ring_lib$make_three_ring_plot_calibrated
+make_three_ring_plot <- .three_ring_lib$make_three_ring_plot
+make_three_ring_plot_no_labels <- .three_ring_lib$make_three_ring_plot_no_labels
 
 # The outer circle's own placed diameter in the assembled figure (mm) -- not
 # the panel/canvas width, just the ring itself. Confirmed for the Benign
@@ -1151,6 +1299,26 @@ ggsave(file.path(OUT_DIR, 'figure_6/gnomad_sankey_REVEL_YP.png'), sankey_gnomad_
 
 ggsave(file.path(OUT_DIR, 'figure_6/cm_REVEL_gnomad_YP.png'), cm_REVEL_gnomad_YP, dpi = 300, device = 'png', bg = 'transparent', height = 4, width = 6, create.dir = TRUE)
 
+# Calibrated version: real print size, baked-in labels (see lib/sankey_calibrated.R).
+# make_sankey_gnomad() only sets $gnomad on its own local copy of the data, so
+# it's added again here for our own call.
+gnomad_REVEL_YP$gnomad <- 'Gnomad'
+
+levels_order_gnomad <- c(
+  -12:-1, "Gnomad", "No evidence", "Benign", "Likely benign", "Likely Benign",
+  "Uncertain", "Likely pathogenic", "Likely Pathogenic", "Pathogenic",
+  0, "No Classification", "Conflicting evidence", 1:12
+)
+
+sankey_gnomad_calibrated <- make_sankey_calibrated(
+  gnomad_REVEL_YP, source_col = gnomad, points_col = Class_REVEL,
+  colors_custom = colors_custom, levels_order = levels_order_gnomad,
+  width_mm = 36.5, height_mm = 78, source_label = "gnomAD variant",
+  wrap_destination_labels = TRUE
+)
+
+ggsave(file.path(OUT_DIR, 'figure_6/gnomad_sankey_REVEL_YP_calibrated.pdf'), sankey_gnomad_calibrated$plot, width = sankey_gnomad_calibrated$width_mm, height = sankey_gnomad_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+
 ```
 
 ```{r}
@@ -1235,6 +1403,26 @@ cm_REVEL_preclass_YP <- make_uncertain_confusion(preclass_REVEL_YP, Class_REVEL,
 ggsave(file.path(OUT_DIR, 'figure_6/unseen_sankey_REVEL_GeneSpecific.png'), preclass_REVEL_YP_sankey, dpi = 300, device = 'png', bg = 'transparent', create.dir = TRUE)
 
 ggsave(file.path(OUT_DIR, 'figure_6/cm_REVEL_unseen_GeneSpecific.png'), cm_REVEL_preclass_YP, dpi = 300, device = 'png', bg = 'transparent', height = 4, width = 6, create.dir = TRUE)
+
+# Calibrated version: real print size, baked-in labels (see lib/sankey_calibrated.R).
+# make_sankey_preclass() only sets $preclass on its own local copy of the data,
+# so it's added again here for our own call.
+preclass_REVEL_YP$preclass <- 'No Classification'
+
+levels_order_preclass <- c(
+  -12:-1, "Preclass", "No evidence", "Benign", "Likely benign", "Likely Benign",
+  "Uncertain", "Likely pathogenic", "Likely Pathogenic", "Pathogenic",
+  0, "No Classification", "Conflicting evidence", 1:12
+)
+
+sankey_preclass_calibrated <- make_sankey_calibrated(
+  preclass_REVEL_YP, source_col = preclass, points_col = Class_REVEL,
+  colors_custom = colors_custom, levels_order = levels_order_preclass,
+  width_mm = 36.5, height_mm = 78, source_label = "Unobserved variant",
+  wrap_destination_labels = TRUE
+)
+
+ggsave(file.path(OUT_DIR, 'figure_6/unseen_sankey_REVEL_GeneSpecific_calibrated.pdf'), sankey_preclass_calibrated$plot, width = sankey_preclass_calibrated$width_mm, height = sankey_preclass_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
 
 
 ```

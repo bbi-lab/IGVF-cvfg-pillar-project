@@ -1259,8 +1259,22 @@ plot_summary_2 <- plot_summary %>%
 # and the calibrated real-print-size variant (make_three_ring_plot_calibrated()
 # and its helpers) all live in lib/three_ring_donut.R now, shared with
 # Figure5_6.Rmd's equivalent donut charts.
-
-source("../../../src/lib/figures/three_ring_donut.R")
+#
+# Sourced into its own environment, not straight into globalenv: this file
+# declares top-level constants (LABEL_PT, FONT_FAMILY, point_in_mm, ...) that
+# collide with lib/sankey_calibrated.R's own same-named constants (different
+# values) -- sourcing both straight into globalenv in the same document lets
+# whichever is sourced last silently clobber the other's globals (reproduced
+# in Figure5_6.Rmd: a later three_ring_donut.R source() call silently shrank
+# every subsequent make_sankey_calibrated() call's default label size). This
+# document doesn't source sankey_calibrated.R today, but keeping the same
+# isolated-sourcing pattern here avoids re-introducing that bug if a future
+# supplementary sankey chart is added to it.
+.three_ring_lib <- new.env(parent = globalenv())
+source("../../../src/lib/figures/three_ring_donut.R", local = .three_ring_lib)
+make_three_ring_plot_calibrated <- .three_ring_lib$make_three_ring_plot_calibrated
+make_three_ring_plot <- .three_ring_lib$make_three_ring_plot
+make_three_ring_plot_no_labels <- .three_ring_lib$make_three_ring_plot_no_labels
 
 # The outer circle's own placed diameter in the assembled figure (mm) -- not
 # the panel/canvas width, just the ring itself.
