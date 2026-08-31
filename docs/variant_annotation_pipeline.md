@@ -236,8 +236,8 @@ against that checkout's copy instead (`_open_maybe_gzipped` in
 `remap_transcript_ids.py` reads the `.gz` transparently) -- see
 `data/raw_mave_data/README.md`.
 
-**Exception: Step 13's AlphaMissense/REVEL/MutPred2-properties files.** Unlike
-the rest, `step_13` passes `--alphamissense-file`/`--revel-file`/
+**Exception: Step 16's AlphaMissense/REVEL/MutPred2-properties files.** Unlike
+the rest, `step_16` passes `--alphamissense-file`/`--revel-file`/
 `--mutpred2-properties-file` as `/work/data/...` paths, so
 `AlphaMissense_hg38.tsv.gz`, `revel_hg38.tsv.gz` (plus their `.tbi` indexes),
 and `data_frame_missense_variants_MP2_properties.csv.gz` must all resolve
@@ -248,10 +248,10 @@ too widely shared across projects to duplicate here), all three of these
 files are pinned copies specific to this pipeline run, so they're committed
 to this project's own `data/input/predictors/` alongside the other predictor
 inputs (see [`build_training_variant_files`: a preparatory step before Step
-13](#build_training_variant_files-a-preparatory-step-before-step-13) below),
+16](#build_training_variant_files-a-preparatory-step-before-step-16) below),
 and `scripts/run_variant_annotation_pipeline.sh` copies all of them into
 `data/intermediate/variant_annotation/data/` automatically -- but only when
-Step 13 is actually about to run (a full run, or `--step 13`), the same
+Step 16 is actually about to run (a full run, or `--step 16`), the same
 gating `cvfg_variants.0.tsv` gets for Step 1, since together they're well
 over a gigabyte and too big to copy on every single-step invocation. No
 manual copy is needed for any of them.
@@ -259,10 +259,10 @@ manual copy is needed for any of them.
 **Exception: `score_sets.tsv` and `Supplementary_Data_3.xlsx` (Steps 11, 15,
 and 16).** These two CVFG-specific inputs live in this project's own
 `data/input/maves/` (committed to git, alongside `data/input/predictors/` --
-see [`build_training_variant_files`](#build_training_variant_files-a-preparatory-step-before-step-13)
+see [`build_training_variant_files`](#build_training_variant_files-a-preparatory-step-before-step-16)
 below) rather than in a `variant-annotation` checkout or
-`data/raw_mave_data/`. Unlike Step 13's predictor files above (staged only
-when Step 13 is about to run), staging these two is unconditional:
+`data/raw_mave_data/`. Unlike Step 16's predictor files above (staged only
+when Step 16 is about to run), staging these two is unconditional:
 `scripts/run_variant_annotation_pipeline.sh` copies both
 into `data/intermediate/variant_annotation/data/` on every run, right after
 rsyncing `data/raw_mave_data/` in. `step_11`'s `--requested-calibrations-file`
@@ -313,8 +313,8 @@ override on MaveDB variant URN prefix rather than dataset name, since dataset
 names aren't merged in until step 15.
 
 `add_mavedb_active_calibration_columns` runs on `cvfg_variants.12.tsv`
-(right after `annotate_predictors`, step 13's own preceding input) and writes
-`cvfg_variants.13.tsv` -- see `docs/add_mavedb_active_calibration_columns.md`.
+(right after `postprocess_mavedb_functional_classifications`, step 12) and
+writes `cvfg_variants.13.tsv` -- see `docs/add_mavedb_active_calibration_columns.md`.
 It's a Dockerized Python/click port of `add_mavedb_active_calibration_columns.sh`
 from the sibling `variant-annotation` project's own `src/scripts/`; unlike
 that script, whose input/output paths default to a hard-coded
@@ -348,9 +348,9 @@ after `annotate_simplified_consequence`) and writes `cvfg_variants.18.tsv`,
 which `flag_variants` then reads to produce `.19.tsv` -- see
 `docs/recalculate_clingen_classification.md`.
 
-## `build_training_variant_files`: a preparatory step before Step 13
+## `build_training_variant_files`: a preparatory step before Step 16
 
-`step_13` (REVEL and AlphaMissense annotation) first calls
+`step_16` (REVEL and AlphaMissense annotation) first calls
 `src/scripts/run_build_training_variant_files.sh` (also from the CVFG pillar
 project) to regenerate `revel_training_variants.tsv` and
 `mutpred2_training_variants.tsv` from this project's own upstream
@@ -358,7 +358,7 @@ training-variant sources, then passes them to `run_annotate_predictors.sh`
 via `--revel-training-file`/`--mutpred2-training-file` -- see
 `docs/build_training_variant_files.md`.
 
-All five of `step_13`'s predictor-file flags (`--alphamissense-file`,
+All five of `step_16`'s predictor-file flags (`--alphamissense-file`,
 `--mutpred2-properties-file`, `--revel-file`, `--revel-training-file`,
 `--mutpred2-training-file`) are written as `/work/data/...` rather than a
 bare `data/...` path, so every one of them resolves against our own
@@ -378,7 +378,7 @@ This means `AlphaMissense_hg38.tsv.gz` and `revel_hg38.tsv.gz` (normally
 left in the `variant-annotation` checkout for every other step -- see
 [above](#the-variant_data_dir-path-mapping-subtlety)) are also copied,
 together with their `.tbi` indexes, into
-`data/intermediate/variant_annotation/data/` specifically for Step 13 --
+`data/intermediate/variant_annotation/data/` specifically for Step 16 --
 committed to `data/input/predictors/` and staged automatically like
 `data_frame_missense_variants_MP2_properties.csv.gz`, rather than requiring
 a manual copy.
