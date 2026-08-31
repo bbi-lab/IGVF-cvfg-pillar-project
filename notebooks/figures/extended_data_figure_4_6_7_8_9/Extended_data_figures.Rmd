@@ -30,6 +30,10 @@ library(tidyr)
 library(ggsankey)
 library(tidyverse)
 library(readxl)
+library(extrafont)
+library(grid)
+
+loadfonts(device = 'all')
 
 #----color palette----
 
@@ -450,6 +454,88 @@ for (nm in names(clinvar_oddspath)) {
   )
 }
 
+# Calibrated versions: real print size, baked-in name-only labels (no count
+# boxes -- show_count = FALSE), 6pt Arial, 37 x 64mm excluding label overflow
+# (see lib/sankey_calibrated.R, shared with the Fig 5/6 sankeys and the
+# ClinGen panel below, which reuses levels_order_extdata_4_6 and sources
+# sankey_calibrated.R again into its own fresh environment).
+#
+# Sourced into its own environment -- this file and lib/three_ring_donut.R
+# (sourced later, for the Fig 9 donuts) declare colliding same-named globals
+# (LABEL_PT, FONT_FAMILY, point_in_mm, ...) with different values; see the
+# matching comment in Figure5_6.Rmd for the reproduced bug this avoids.
+.sankey_lib <- new.env(parent = globalenv())
+source("../../../src/lib/figures/sankey_calibrated.R", local = .sankey_lib)
+make_sankey_calibrated <- .sankey_lib$make_sankey_calibrated
+
+levels_order_extdata_4_6 <- c(
+  'Benign', "Likely benign", "Likely Benign",
+  'Uncertain', "No Classification",
+  "Likely pathogenic", "Likely Pathogenic", "Pathogenic"
+)
+
+# make_sankey_clinvar() collapses "Benign/Likely benign" ->  "Likely
+# benign" and "Pathogenic/Likely pathogenic" -> "Likely pathogenic" on its
+# own local copy of the data before factoring against levels_order (the
+# controls_AM_GeneSpecific/controls_MP2_GeneSpecific sheets still use these
+# raw un-collapsed labels -- reproduced: skipping this step left those rows
+# outside levels_order, so factor() turned them into NA, and this library's
+# own to_sentence_case(as.character(NA)) renders as the literal string
+# "NANA", with a fully visible node box, rather than silently disappearing
+# the way the original geom_sankey_label()-based PNG does). Repeated here
+# so the calibrated versions match; the OP sheets already use the
+# collapsed labels, but applying this is a harmless no-op there.
+add_clinvar <- function(df) {
+  df$clinvar <- df$clnsig_group_18_25
+  df$clinvar[df$clinvar == 'Pathogenic/Likely pathogenic'] <- "Likely pathogenic"
+  df$clinvar[df$clinvar == 'Benign/Likely benign'] <- "Likely benign"
+  df
+}
+clinvar_AM_YP <- add_clinvar(clinvar_AM_YP)
+clinvar_MP2_YP <- add_clinvar(clinvar_MP2_YP)
+clinvar_REVEL_OP <- add_clinvar(clinvar_REVEL_OP)
+clinvar_AM_OP <- add_clinvar(clinvar_AM_OP)
+clinvar_MP2_OP <- add_clinvar(clinvar_MP2_OP)
+
+sankey_clinvar_AM_calibrated <- make_sankey_calibrated(
+  clinvar_AM_YP, source_col = clinvar, points_col = Class_AM,
+  colors_custom = colors_custom, levels_order = levels_order_extdata_4_6,
+  width_mm = 37, height_mm = 64, label_pt = 6, show_count = FALSE,
+  wrap_destination_labels = TRUE
+)
+sankey_clinvar_MP2_calibrated <- make_sankey_calibrated(
+  clinvar_MP2_YP, source_col = clinvar, points_col = Class_MP2,
+  colors_custom = colors_custom, levels_order = levels_order_extdata_4_6,
+  width_mm = 37, height_mm = 64, label_pt = 6, show_count = FALSE,
+  wrap_destination_labels = TRUE
+)
+
+ggsave(file.path(dirname(OUT_DIR), "extended_data_figure_4/sankey_clinvar_ExOP_AM_GeneSpecific_calibrated.pdf"), sankey_clinvar_AM_calibrated$plot, width = sankey_clinvar_AM_calibrated$width_mm, height = sankey_clinvar_AM_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave(file.path(dirname(OUT_DIR), "extended_data_figure_4/sankey_clinvar_ExOP_MP2_GeneSpecific_calibrated.pdf"), sankey_clinvar_MP2_calibrated$plot, width = sankey_clinvar_MP2_calibrated$width_mm, height = sankey_clinvar_MP2_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+
+sankey_clinvar_REVEL_OP_calibrated <- make_sankey_calibrated(
+  clinvar_REVEL_OP, source_col = clinvar, points_col = Class_OP_REVEL,
+  colors_custom = colors_custom, levels_order = levels_order_extdata_4_6,
+  width_mm = 37, height_mm = 64, label_pt = 6, show_count = FALSE,
+  wrap_destination_labels = TRUE
+)
+sankey_clinvar_AM_OP_calibrated <- make_sankey_calibrated(
+  clinvar_AM_OP, source_col = clinvar, points_col = Class_OP_AM,
+  colors_custom = colors_custom, levels_order = levels_order_extdata_4_6,
+  width_mm = 37, height_mm = 64, label_pt = 6, show_count = FALSE,
+  wrap_destination_labels = TRUE
+)
+sankey_clinvar_MP2_OP_calibrated <- make_sankey_calibrated(
+  clinvar_MP2_OP, source_col = clinvar, points_col = Class_OP_MP2,
+  colors_custom = colors_custom, levels_order = levels_order_extdata_4_6,
+  width_mm = 37, height_mm = 64, label_pt = 6, show_count = FALSE,
+  wrap_destination_labels = TRUE
+)
+
+ggsave(file.path(dirname(OUT_DIR), "extended_data_figure_6/sankey_clinvar_OP_REVEL_Universal_calibrated.pdf"), sankey_clinvar_REVEL_OP_calibrated$plot, width = sankey_clinvar_REVEL_OP_calibrated$width_mm, height = sankey_clinvar_REVEL_OP_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave(file.path(dirname(OUT_DIR), "extended_data_figure_6/sankey_clinvar_OP_AM_Universal_calibrated.pdf"), sankey_clinvar_AM_OP_calibrated$plot, width = sankey_clinvar_AM_OP_calibrated$width_mm, height = sankey_clinvar_AM_OP_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave(file.path(dirname(OUT_DIR), "extended_data_figure_6/sankey_clinvar_OP_MP2_Universal_calibrated.pdf"), sankey_clinvar_MP2_OP_calibrated$plot, width = sankey_clinvar_MP2_OP_calibrated$width_mm, height = sankey_clinvar_MP2_OP_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+
 
  
 
@@ -788,6 +874,68 @@ for (nm in names(clingen_oddspath)) {
     height = h
   )
 }
+
+# Calibrated versions: real print size, baked-in name-only labels, 6pt
+# Arial, 37 x 64mm excluding label overflow (see lib/sankey_calibrated.R
+# and the clinvar panel above, which sources it and defines
+# levels_order_extdata_4_6). make_sankey_clingen() only excludes VUS rows
+# and fixes classification naming on its own local copy of the data, so
+# that's repeated here for our own calls.
+ClinGen_AM_YP_det <- ClinGen_AM_YP %>% filter(Updated_Classification_ClinGen_repo != "VUS")
+ClinGen_MP2_YP_det <- ClinGen_MP2_YP %>% filter(Updated_Classification_ClinGen_repo != "VUS")
+ClinGen_REVEL_OP_det <- ClinGen_REVEL_OP %>% filter(Updated_Classification_ClinGen_repo != "VUS")
+ClinGen_AM_OP_det <- ClinGen_AM_OP %>% filter(Updated_Classification_ClinGen_repo != "VUS")
+ClinGen_MP2_OP_det <- ClinGen_MP2_OP %>% filter(Updated_Classification_ClinGen_repo != "VUS")
+
+fix_clingen_naming <- function(df) {
+  df$Updated_Classification_ClinGen_repo[df$Updated_Classification_ClinGen_repo == 'Pathogenic/Likely pathogenic'] <- "Likely pathogenic"
+  df$Updated_Classification_ClinGen_repo[df$Updated_Classification_ClinGen_repo == 'Benign/Likely benign'] <- "Likely benign"
+  df
+}
+ClinGen_AM_YP_det <- fix_clingen_naming(ClinGen_AM_YP_det)
+ClinGen_MP2_YP_det <- fix_clingen_naming(ClinGen_MP2_YP_det)
+ClinGen_REVEL_OP_det <- fix_clingen_naming(ClinGen_REVEL_OP_det)
+ClinGen_AM_OP_det <- fix_clingen_naming(ClinGen_AM_OP_det)
+ClinGen_MP2_OP_det <- fix_clingen_naming(ClinGen_MP2_OP_det)
+
+sankey_clingen_AM_calibrated <- make_sankey_calibrated(
+  ClinGen_AM_YP_det, source_col = Updated_Classification_ClinGen_repo, points_col = Class_AM,
+  colors_custom = colors_custom, levels_order = levels_order_extdata_4_6,
+  width_mm = 37, height_mm = 64, label_pt = 6, show_count = FALSE,
+  wrap_destination_labels = TRUE
+)
+sankey_clingen_MP2_calibrated <- make_sankey_calibrated(
+  ClinGen_MP2_YP_det, source_col = Updated_Classification_ClinGen_repo, points_col = Class_MP2,
+  colors_custom = colors_custom, levels_order = levels_order_extdata_4_6,
+  width_mm = 37, height_mm = 64, label_pt = 6, show_count = FALSE,
+  wrap_destination_labels = TRUE
+)
+
+ggsave(file.path(dirname(OUT_DIR), "extended_data_figure_4/sankey_clingen_ExOP_AM_GeneSpecific_calibrated.pdf"), sankey_clingen_AM_calibrated$plot, width = sankey_clingen_AM_calibrated$width_mm, height = sankey_clingen_AM_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave(file.path(dirname(OUT_DIR), "extended_data_figure_4/sankey_clingen_ExOP_MP2_GeneSpecific_calibrated.pdf"), sankey_clingen_MP2_calibrated$plot, width = sankey_clingen_MP2_calibrated$width_mm, height = sankey_clingen_MP2_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+
+sankey_clingen_REVEL_OP_calibrated <- make_sankey_calibrated(
+  ClinGen_REVEL_OP_det, source_col = Updated_Classification_ClinGen_repo, points_col = Class_OP_REVEL,
+  colors_custom = colors_custom, levels_order = levels_order_extdata_4_6,
+  width_mm = 37, height_mm = 64, label_pt = 6, show_count = FALSE,
+  wrap_destination_labels = TRUE
+)
+sankey_clingen_AM_OP_calibrated <- make_sankey_calibrated(
+  ClinGen_AM_OP_det, source_col = Updated_Classification_ClinGen_repo, points_col = Class_OP_AM,
+  colors_custom = colors_custom, levels_order = levels_order_extdata_4_6,
+  width_mm = 37, height_mm = 64, label_pt = 6, show_count = FALSE,
+  wrap_destination_labels = TRUE
+)
+sankey_clingen_MP2_OP_calibrated <- make_sankey_calibrated(
+  ClinGen_MP2_OP_det, source_col = Updated_Classification_ClinGen_repo, points_col = Class_OP_MP2,
+  colors_custom = colors_custom, levels_order = levels_order_extdata_4_6,
+  width_mm = 37, height_mm = 64, label_pt = 6, show_count = FALSE,
+  wrap_destination_labels = TRUE
+)
+
+ggsave(file.path(dirname(OUT_DIR), "extended_data_figure_6/sankey_clingen_OP_REVEL_Universal_calibrated.pdf"), sankey_clingen_REVEL_OP_calibrated$plot, width = sankey_clingen_REVEL_OP_calibrated$width_mm, height = sankey_clingen_REVEL_OP_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave(file.path(dirname(OUT_DIR), "extended_data_figure_6/sankey_clingen_OP_AM_Universal_calibrated.pdf"), sankey_clingen_AM_OP_calibrated$plot, width = sankey_clingen_AM_OP_calibrated$width_mm, height = sankey_clingen_AM_OP_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave(file.path(dirname(OUT_DIR), "extended_data_figure_6/sankey_clingen_OP_MP2_Universal_calibrated.pdf"), sankey_clingen_MP2_OP_calibrated$plot, width = sankey_clingen_MP2_OP_calibrated$width_mm, height = sankey_clingen_MP2_OP_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
 ```
 
 ```{r}
@@ -906,7 +1054,21 @@ sankey_VUS_AM_YP <- make_sankey_VUS(VUS_AM_YP, Class_AM, colors_custom)
 
 sankey_VUS_MP2_YP <- make_sankey_VUS(VUS_MP2_YP, Class_MP2, colors_custom)
 
-VUS_REVEL_YP$Conflicting_REVEL <- as.integer(VUS_REVEL_YP$Conflicting_REVEL)
+# A plain as.integer() cast here would silently turn every "Conflicting
+# evidence" row (a real, intentional category -- see docs/
+# variant_classification.md) into NA, since as.integer() can't parse that
+# string (reproduced: this rendered as a mislabeled/unlabeled node in both
+# the PNG below and the calibrated PDF further down). Use the same
+# regex-guarded normalizer as the Extended Data Figure 9 points charts
+# below instead: it cleans up numeric-looking strings (dropping a
+# trailing ".0") while leaving "Conflicting evidence" untouched.
+vus_revel_conflicting_raw <- as.character(VUS_REVEL_YP$Conflicting_REVEL)
+
+VUS_REVEL_YP$Conflicting_REVEL <- ifelse(
+  grepl("^-?\\d+(\\.0+)?$", vus_revel_conflicting_raw),
+  as.character(as.integer(as.numeric(vus_revel_conflicting_raw))),
+  vus_revel_conflicting_raw
+)
 
 cm_AM_VUS_YP <- make_uncertain_confusion(VUS_AM_YP, Class_AM, "AM_GeneSpecific")
 
@@ -918,7 +1080,44 @@ ggsave("../../../data/output/figures/extended_data_figure_7/sankey_VUS_ExOP_MP2_
 
 sankey_VUS_REVEL_YP_points <- make_sankey_VUS(VUS_REVEL_YP, Conflicting_REVEL, colors_custom)
 
-ggsave("../../../data/output/figures/extended_data_figure_7/sankey_VUS_ExOP_REVEL_GeneSpecific_points.png",sankey_VUS_REVEL_YP_points, dpi = 300, device = 'png', bg = 'transparent', create.dir = TRUE)       
+ggsave("../../../data/output/figures/extended_data_figure_7/sankey_VUS_ExOP_REVEL_GeneSpecific_points.png",sankey_VUS_REVEL_YP_points, dpi = 300, device = 'png', bg = 'transparent', create.dir = TRUE)
+
+# Calibrated versions: real print size, 6pt Arial, 31 x 54mm excluding label
+# overflow (see lib/sankey_calibrated.R; make_sankey_calibrated() is already
+# in scope from the Extended Data Figure 4/6 chunk above, sourced into its
+# own environment there). Unlike Fig 4/6, these keep count labels
+# (show_count defaults to TRUE) since no confusion matrix is shown
+# alongside them here.
+levels_order_extdata_7_vus <- c(
+  -12:-1, "Uncertain significance", "No evidence", "Benign", "Likely benign", "Likely Benign",
+  "Uncertain", "Likely pathogenic", "Likely Pathogenic", "Pathogenic",
+  0, "No Classification", "Conflicting evidence", 1:12
+)
+
+sankey_VUS_AM_calibrated <- make_sankey_calibrated(
+  VUS_AM_YP, source_col = clinvar_sig_2025, points_col = Class_AM,
+  colors_custom = colors_custom, levels_order = levels_order_extdata_7_vus,
+  width_mm = 31, height_mm = 54, source_label = "Uncertain significance",
+  wrap_destination_labels = TRUE, center_label_nodes = c("Pathogenic", "Likely pathogenic")
+)
+sankey_VUS_MP2_calibrated <- make_sankey_calibrated(
+  VUS_MP2_YP, source_col = clinvar_sig_2025, points_col = Class_MP2,
+  colors_custom = colors_custom, levels_order = levels_order_extdata_7_vus,
+  width_mm = 31, height_mm = 54, source_label = "Uncertain significance",
+  wrap_destination_labels = TRUE, center_label_nodes = c("Pathogenic", "Likely pathogenic")
+)
+sankey_VUS_REVEL_points_calibrated <- make_sankey_calibrated(
+  VUS_REVEL_YP, source_col = clinvar_sig_2025, points_col = Conflicting_REVEL,
+  colors_custom = colors_custom, levels_order = levels_order_extdata_7_vus,
+  width_mm = 31, height_mm = 54, source_label = "Uncertain significance",
+  wrap_destination_labels = FALSE, label_overrides = c("0" = "No evidence"),
+  white_text_nodes = c("4", "5", "-8", "-9", "-10"),
+  label_box_height_scale = 1.1
+)
+
+ggsave(file.path(dirname(OUT_DIR), "extended_data_figure_7/sankey_VUS_ExOP_AM_GeneSpecific_calibrated.pdf"), sankey_VUS_AM_calibrated$plot, width = sankey_VUS_AM_calibrated$width_mm, height = sankey_VUS_AM_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave(file.path(dirname(OUT_DIR), "extended_data_figure_7/sankey_VUS_ExOP_MP2_GeneSpecific_calibrated.pdf"), sankey_VUS_MP2_calibrated$plot, width = sankey_VUS_MP2_calibrated$width_mm, height = sankey_VUS_MP2_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave(file.path(dirname(OUT_DIR), "extended_data_figure_7/sankey_VUS_ExOP_REVEL_GeneSpecific_points_calibrated.pdf"), sankey_VUS_REVEL_points_calibrated$plot, width = sankey_VUS_REVEL_points_calibrated$width_mm, height = sankey_VUS_REVEL_points_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
 
 ```
 
@@ -1223,6 +1422,57 @@ unseen_REVEL_YP$Conflicting_REVEL <- ifelse(
 sankey_unseen_REVEL_YP_points = make_sankey_unseen(unseen_REVEL_YP, Conflicting_REVEL, colors_custom)
 
 ggsave('../../../data/output/figures/extended_data_figure_9/sankey_unseen_ExOP_REVEL_GeneSpecific_points.png',sankey_unseen_REVEL_YP_points, dpi = 300, device = 'png', bg = 'transparent')
+
+# Calibrated versions: real print size, 5.5pt Arial, 47 x 86mm excluding
+# label overflow (see lib/sankey_calibrated.R; make_sankey_calibrated() is
+# already in scope from the Extended Data Figure 4/6 chunk above). No count
+# labels here (show_count = FALSE) -- just node names, which for these
+# three charts are mostly the raw REVEL point values themselves (an
+# integer, e.g. "-6"/"6") rather than a Pathogenic/Benign-style category,
+# aside from "Conflicting evidence" and "No evidence". Shares one
+# levels_order across all three since they differ only in which single
+# literal source value each one actually uses (gnomad_REVEL_YP$gnomad and
+# unseen_REVEL_YP$unseen are set again here, same as their make_sankey_*()
+# functions do internally on their own local copy of the data).
+levels_order_extdata_9_points <- c(
+  -12:-1, "Uncertain significance", "Gnomad", "No Classification", "No evidence",
+  0, "Conflicting evidence", 1:12
+)
+
+gnomad_REVEL_YP$gnomad <- 'Gnomad'
+unseen_REVEL_YP$unseen <- 'No Classification'
+
+sankey_VUS_REVEL_YP_points_calibrated <- make_sankey_calibrated(
+  VUS_REVEL_YP, source_col = clinvar_sig_2025, points_col = Conflicting_REVEL,
+  colors_custom = colors_custom, levels_order = levels_order_extdata_9_points,
+  width_mm = 47, height_mm = 86, label_pt = 5.5, show_count = FALSE,
+  source_label = "Uncertain significance", wrap_destination_labels = FALSE,
+  label_overrides = c("0" = "No evidence"),
+  white_text_nodes = c("4", "5", "-8", "-9", "-10"),
+  label_box_height_scale = 1.1
+)
+sankey_gnomad_REVEL_YP_points_calibrated <- make_sankey_calibrated(
+  gnomad_REVEL_YP, source_col = gnomad, points_col = Conflicting_REVEL,
+  colors_custom = colors_custom, levels_order = levels_order_extdata_9_points,
+  width_mm = 47, height_mm = 86, label_pt = 5.5, show_count = FALSE,
+  source_label = "gnomAD variant", wrap_destination_labels = FALSE,
+  label_overrides = c("0" = "No evidence"),
+  white_text_nodes = c("4", "5", "-8", "-9", "-10"),
+  label_box_height_scale = 1.1
+)
+sankey_unseen_REVEL_YP_points_calibrated <- make_sankey_calibrated(
+  unseen_REVEL_YP, source_col = unseen, points_col = Conflicting_REVEL,
+  colors_custom = colors_custom, levels_order = levels_order_extdata_9_points,
+  width_mm = 47, height_mm = 86, label_pt = 5.5, show_count = FALSE,
+  source_label = "Unobserved variant", wrap_destination_labels = FALSE,
+  label_overrides = c("0" = "No evidence"),
+  white_text_nodes = c("4", "5", "-8", "-9", "-10"),
+  label_box_height_scale = 1.1
+)
+
+ggsave(file.path(dirname(OUT_DIR), "extended_data_figure_9/sankey_VUS_ExOP_REVEL_GeneSpecific_points_calibrated.pdf"), sankey_VUS_REVEL_YP_points_calibrated$plot, width = sankey_VUS_REVEL_YP_points_calibrated$width_mm, height = sankey_VUS_REVEL_YP_points_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave(file.path(dirname(OUT_DIR), "extended_data_figure_9/sankey_gnomAD_ExOP_REVEL_GeneSpecific_points_calibrated.pdf"), sankey_gnomad_REVEL_YP_points_calibrated$plot, width = sankey_gnomad_REVEL_YP_points_calibrated$width_mm, height = sankey_gnomad_REVEL_YP_points_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave(file.path(dirname(OUT_DIR), "extended_data_figure_9/sankey_unseen_ExOP_REVEL_GeneSpecific_points_calibrated.pdf"), sankey_unseen_REVEL_YP_points_calibrated$plot, width = sankey_unseen_REVEL_YP_points_calibrated$width_mm, height = sankey_unseen_REVEL_YP_points_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
 
 ```
 

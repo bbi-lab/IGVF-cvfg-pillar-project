@@ -153,12 +153,22 @@ wrap_labels_if_multiword <- function(labels) {
 # otherwise (including mid-gray fallback fills) -- takes the already-resolved
 # hex color directly, not a name lookup, since every box (label and count
 # alike) now shares that color. Threshold sits below grey50's own luminance
-# (~0.498) so a mid-gray fallback fill stays black.
+# (~0.498) so a mid-gray fallback fill stays black, and above the point-value
+# palette's own +6 ("#B85C6B", luminance ~0.4754) and -11 ("#1D7AAB",
+# luminance ~0.3913) -- reproduced: at the old 0.45 threshold, +6 through
+# +12 and -11/-12 rendered correctly, but +6 itself and -9/-10 (whose
+# luminance, ~0.574/~0.496, both sit above +6's) still got black text
+# despite their dark, saturated fills. Raising the threshold to 0.48 fixes
+# +6 without disturbing any categorical chart's own text color (checked
+# against every Pathogenic/Benign/etc. color already in use). Note this
+# means white text now starts at -11, not -9 -- -9/-10's colors are
+# measurably lighter than +6's by this same luminance formula, so no single
+# threshold can treat +6 as "dark" while treating -9/-10 as "light".
 text_color_for_fill <- function(hex) {
   vapply(hex, function(h) {
     rgb <- grDevices::col2rgb(h) / 255
     luminance <- 0.299 * rgb[1] + 0.587 * rgb[2] + 0.114 * rgb[3]
-    if (luminance < 0.45) "white" else "black"
+    if (luminance < 0.48) "white" else "black"
   }, character(1), USE.NAMES = FALSE)
 }
 
@@ -192,10 +202,38 @@ blend_over_white <- function(hex, alpha) {
 # or, when FALSE, just the name (Fig 5, which also has multiple distinct
 # source categories rather than one dominant one -- see the flow-color
 # comment below for why that's handled generically either way).
+# center_label_nodes names (post sentence-case, e.g. "Likely pathogenic")
+# any node whose name label should center on the node itself rather than
+# block-center with its count, even though the node's own height would
+# otherwise qualify it for the normal block-centered layout -- for a node
+# tightly stacked next to another whose own label/count reaches into its
+# space (see the is_small comment below for the reproduced case this was
+# added for). label_overrides is a named vector keyed by a node's raw
+# underlying value (e.g. c("0" = "No evidence")) whose display text should
+# be replaced outright, verbatim -- for a numeric points chart, where "0"
+# is really a stand-in for "no functional or predictive evidence at all"
+# rather than a literal zero score. white_text_nodes names (matched the
+# same way as center_label_nodes, post sentence-case/wrap) any node that
+# should get white label text regardless of what text_color_for_fill()'s
+# shared luminance threshold would otherwise choose for its fill color --
+# for specific point-value colors a caller has judged too dark for black
+# text but not dark enough to trip that global threshold, without raising
+# the threshold itself (which would also affect every other node sharing
+# a similar-luminance fill in every other chart, point-based or not,
+# including this chart's own gray-fallback source node). label_box_height_scale
+# multiplies the label (and count, if shown) box's own computed height --
+# text height plus PAD_MM on top and bottom -- by this factor, leaving the
+# box's width untouched; 1 (the default) reproduces the original unscaled
+# height exactly, since (text_height_mm + 2*PAD_MM)/2*1 ==
+# text_height_mm/2 + PAD_MM.
 make_sankey_calibrated <- function(df, source_col, points_col, colors_custom, levels_order,
                                     width_mm, height_mm, source_label = NULL,
                                     wrap_destination_labels = FALSE,
-                                    label_pt = LABEL_PT, show_count = TRUE) {
+                                    label_pt = LABEL_PT, show_count = TRUE,
+                                    center_label_nodes = character(0),
+                                    label_overrides = character(0),
+                                    white_text_nodes = character(0),
+                                    label_box_height_scale = 1) {
   # text_width_mm()/text_height_mm() (via grid::convertWidth/Height on a
   # textGrob) measure against whatever graphics device is currently active --
   # font metrics are device-dependent, and a knitr chunk device active at
@@ -263,7 +301,19 @@ make_sankey_calibrated <- function(df, source_col, points_col, colors_custom, le
     distinct() %>%
     mutate(
       fill_color = resolve_fill(label),
-      label = to_sentence_case(as.character(label)),
+      # label_overrides is keyed by the raw underlying value (e.g. "0"),
+      # looked up before sentence-casing, and used verbatim (not
+      # sentence-cased) so the caller's own capitalization always wins --
+      # for a numeric points chart's "0" node, which is really a stand-in
+      # for "no functional or predictive evidence at all" rather than a
+      # literal zero score, "No evidence" is a clearer label than a bare
+      # digit. Doesn't touch fill_color's own lookup just above, which
+      # still keys off the raw value.
+      label = ifelse(
+        as.character(label) %in% names(label_overrides),
+        unname(label_overrides[as.character(label)]),
+        to_sentence_case(as.character(label))
+      ),
       center_x = (xmin + xmax) / 2,
       center_y = (ymin + ymax) / 2
     )
@@ -310,31 +360,55 @@ make_sankey_calibrated <- function(df, source_col, points_col, colors_custom, le
   # below the label's own bottom edge). A node too short for that offset to
   # keep the label's own center within the node's own span instead centers
   # just the label on the node, with the count hung the normal distance
-  # below it. Box half-heights are computed per row (not a single shared
-  # constant) so a two-line-wrapped label -- taller than the usual
-  # single-line box -- is handled correctly too. Without show_count, there's
-  # no pair to center: the (only) name box just centers on the node.
+  # below it -- also forced for any node named in center_label_nodes,
+  # regardless of its own height: this block-centering only accounts for a
+  # node's own size, not a neighboring node's label/count reaching into its
+  # space, so a node whose block-centered label collides with a tightly
+  # adjacent node's own label/count (reproduced: Ext. Data Fig 7's AM/MP2
+  # charts, "Likely pathogenic"'s label overlapping "Pathogenic"'s count)
+  # needs the same override even though it isn't "small" on its own. Box
+  # half-heights are computed per row (not a single shared constant) so a
+  # two-line-wrapped label -- taller than the usual single-line box -- is
+  # handled correctly too. Without show_count, there's no pair to center:
+  # the (only) name box just centers on the node.
   if (show_count) {
     node_geom <- node_geom %>%
       mutate(
         count_text = format_count(freq),
-        label_box_half_h_mm = text_height_mm(label, pt = label_pt) / 2 + PAD_MM,
-        count_box_half_h_mm = text_height_mm(count_text, pt = label_pt) / 2 + PAD_MM,
+        label_box_half_h_mm = (text_height_mm(label, pt = label_pt) + 2 * PAD_MM) / 2 * label_box_height_scale,
+        count_box_half_h_mm = (text_height_mm(count_text, pt = label_pt) + 2 * PAD_MM) / 2 * label_box_height_scale,
         half_gap_y = ((label_box_half_h_mm + count_box_half_h_mm) / 2 + BOX_GAP_MM / 2) / mm_per_y,
-        is_small = (ymax - ymin) * mm_per_y < (count_box_half_h_mm - label_box_half_h_mm + BOX_GAP_MM),
+        # gsub() undoes wrap_destination_labels' embedded newline (e.g.
+        # "Likely\npathogenic") before matching against center_label_nodes,
+        # which callers specify as the plain unwrapped name -- matching the
+        # raw `label` column here would silently never fire for any
+        # multi-word name once wrapped (reproduced: "Likely pathogenic" was
+        # already wrapped to two lines by this point, so `label %in%
+        # center_label_nodes` compared "Likely\npathogenic" against "Likely
+        # pathogenic" and never matched).
+        is_small = (ymax - ymin) * mm_per_y < (count_box_half_h_mm - label_box_half_h_mm + BOX_GAP_MM) |
+          gsub("\n", " ", label, fixed = TRUE) %in% center_label_nodes,
         label_y = ifelse(is_small, center_y, center_y + half_gap_y),
         count_y = label_y - 2 * half_gap_y,
         label_w_mm = text_width_mm(label, pt = label_pt),
         count_w_mm = text_width_mm(count_text, pt = label_pt),
-        text_color = text_color_for_fill(fill_color)
+        text_color = ifelse(
+          gsub("\n", " ", label, fixed = TRUE) %in% white_text_nodes,
+          "white",
+          text_color_for_fill(fill_color)
+        )
       )
   } else {
     node_geom <- node_geom %>%
       mutate(
-        label_box_half_h_mm = text_height_mm(label, pt = label_pt) / 2 + PAD_MM,
+        label_box_half_h_mm = (text_height_mm(label, pt = label_pt) + 2 * PAD_MM) / 2 * label_box_height_scale,
         label_y = center_y,
         label_w_mm = text_width_mm(label, pt = label_pt),
-        text_color = text_color_for_fill(fill_color)
+        text_color = ifelse(
+          gsub("\n", " ", label, fixed = TRUE) %in% white_text_nodes,
+          "white",
+          text_color_for_fill(fill_color)
+        )
       )
   }
 
