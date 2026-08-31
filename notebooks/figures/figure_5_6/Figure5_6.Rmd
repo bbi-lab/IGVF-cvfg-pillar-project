@@ -354,7 +354,7 @@ make_confusion_matrix_clinvar_chek2 <- function(df, points_col, clnsig_col, pred
     theme(legend.position = "none")
 
   list(plot = p, metrics = metrics_df, summary = summary_data,FP_stats = FP_stats,
-  FN_stats = FN_stats)
+  FN_stats = FN_stats, total_n = nrow(df))
 }
 
 
@@ -568,6 +568,36 @@ sankey_clinvar_MP2_calibrated <- make_sankey_calibrated(
 ggsave(file.path(OUT_DIR, "figure_5/sankey_clinvar_ExOP_REVEL_GeneSpecific_calibrated.pdf"), sankey_clinvar_REVEL_calibrated$plot, width = sankey_clinvar_REVEL_calibrated$width_mm, height = sankey_clinvar_REVEL_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
 ggsave(file.path(OUT_DIR, "figure_5/sankey_clinvar_ExOP_AM_GeneSpecific_calibrated.pdf"), sankey_clinvar_AM_calibrated$plot, width = sankey_clinvar_AM_calibrated$width_mm, height = sankey_clinvar_AM_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
 ggsave(file.path(OUT_DIR, "figure_5/sankey_clinvar_ExOP_MP2_GeneSpecific_calibrated.pdf"), sankey_clinvar_MP2_calibrated$plot, width = sankey_clinvar_MP2_calibrated$width_mm, height = sankey_clinvar_MP2_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+
+# Calibrated confusion matrices: real print size, 31 x 27mm matrix (the
+# four colored cells only, excluding axes/labels/title), 6pt Arial regular
+# (see lib/confusion_matrix_calibrated.R).
+.cm_lib <- new.env(parent = globalenv())
+source("../../../src/lib/figures/confusion_matrix_calibrated.R", local = .cm_lib)
+make_confusion_matrix_calibrated <- .cm_lib$make_confusion_matrix_calibrated
+
+cm_clinvar_REVEL_calibrated <- make_confusion_matrix_calibrated(
+  TP = cm_clinvar_REVEL_YP_1star$metrics$TP, TN = cm_clinvar_REVEL_YP_1star$metrics$TN,
+  FP = cm_clinvar_REVEL_YP_1star$metrics$FP, FN = cm_clinvar_REVEL_YP_1star$metrics$FN,
+  total_n = cm_clinvar_REVEL_YP_1star$total_n,
+  matrix_width_mm = 31, matrix_height_mm = 27, x_label = "ClinVar classification"
+)
+cm_clinvar_AM_calibrated <- make_confusion_matrix_calibrated(
+  TP = cm_clinvar_AM_YP_1star$metrics$TP, TN = cm_clinvar_AM_YP_1star$metrics$TN,
+  FP = cm_clinvar_AM_YP_1star$metrics$FP, FN = cm_clinvar_AM_YP_1star$metrics$FN,
+  total_n = cm_clinvar_AM_YP_1star$total_n,
+  matrix_width_mm = 31, matrix_height_mm = 27, x_label = "ClinVar classification"
+)
+cm_clinvar_MP2_calibrated <- make_confusion_matrix_calibrated(
+  TP = cm_clinvar_MP2_YP_1star$metrics$TP, TN = cm_clinvar_MP2_YP_1star$metrics$TN,
+  FP = cm_clinvar_MP2_YP_1star$metrics$FP, FN = cm_clinvar_MP2_YP_1star$metrics$FN,
+  total_n = cm_clinvar_MP2_YP_1star$total_n,
+  matrix_width_mm = 31, matrix_height_mm = 27, x_label = "ClinVar classification"
+)
+
+ggsave(file.path(OUT_DIR, "figure_5/cm_clinvar_ExOP_REVEL_GeneSpecific_calibrated.pdf"), cm_clinvar_REVEL_calibrated$plot, width = cm_clinvar_REVEL_calibrated$width_mm, height = cm_clinvar_REVEL_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave(file.path(OUT_DIR, "figure_5/cm_clinvar_ExOP_AM_GeneSpecific_calibrated.pdf"), cm_clinvar_AM_calibrated$plot, width = cm_clinvar_AM_calibrated$width_mm, height = cm_clinvar_AM_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave(file.path(OUT_DIR, "figure_5/cm_clinvar_ExOP_MP2_GeneSpecific_calibrated.pdf"), cm_clinvar_MP2_calibrated$plot, width = cm_clinvar_MP2_calibrated$width_mm, height = cm_clinvar_MP2_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
 
 ```
 
@@ -801,7 +831,7 @@ make_confusion_matrix_clingen <- function(df, points_col, clnsig_col, predictor,
     theme(legend.position = "none")
 
   list(plot = p, metrics = metrics_df, summary = summary_data,FP_stats = FP_stats,
-  FN_stats = FN_stats)
+  FN_stats = FN_stats, total_n = nrow(df))
 }
 
 
@@ -929,6 +959,32 @@ sankey_clingen_MP2_calibrated <- make_sankey_calibrated(
 ggsave(file.path(OUT_DIR, "figure_5/sankey_clingen_ExOP_REVEL_GeneSpecific_calibrated.pdf"), sankey_clingen_REVEL_calibrated$plot, width = sankey_clingen_REVEL_calibrated$width_mm, height = sankey_clingen_REVEL_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
 ggsave(file.path(OUT_DIR, "figure_5/sankey_clingen_ExOP_AM_GeneSpecific_calibrated.pdf"), sankey_clingen_AM_calibrated$plot, width = sankey_clingen_AM_calibrated$width_mm, height = sankey_clingen_AM_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
 ggsave(file.path(OUT_DIR, "figure_5/sankey_clingen_ExOP_MP2_GeneSpecific_calibrated.pdf"), sankey_clingen_MP2_calibrated$plot, width = sankey_clingen_MP2_calibrated$width_mm, height = sankey_clingen_MP2_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+
+# Calibrated confusion matrices: real print size, 31 x 27mm matrix, 6pt
+# Arial regular (see lib/confusion_matrix_calibrated.R and the clinvar
+# panel above, which sources it).
+cm_clingen_REVEL_calibrated <- make_confusion_matrix_calibrated(
+  TP = cm_ClinGen_REVEL_YP$metrics$TP, TN = cm_ClinGen_REVEL_YP$metrics$TN,
+  FP = cm_ClinGen_REVEL_YP$metrics$FP, FN = cm_ClinGen_REVEL_YP$metrics$FN,
+  total_n = cm_ClinGen_REVEL_YP$total_n,
+  matrix_width_mm = 31, matrix_height_mm = 27, x_label = "ClinGen classification"
+)
+cm_clingen_AM_calibrated <- make_confusion_matrix_calibrated(
+  TP = cm_ClinGen_AM_YP$metrics$TP, TN = cm_ClinGen_AM_YP$metrics$TN,
+  FP = cm_ClinGen_AM_YP$metrics$FP, FN = cm_ClinGen_AM_YP$metrics$FN,
+  total_n = cm_ClinGen_AM_YP$total_n,
+  matrix_width_mm = 31, matrix_height_mm = 27, x_label = "ClinGen classification"
+)
+cm_clingen_MP2_calibrated <- make_confusion_matrix_calibrated(
+  TP = cm_ClinGen_MP2_YP$metrics$TP, TN = cm_ClinGen_MP2_YP$metrics$TN,
+  FP = cm_ClinGen_MP2_YP$metrics$FP, FN = cm_ClinGen_MP2_YP$metrics$FN,
+  total_n = cm_ClinGen_MP2_YP$total_n,
+  matrix_width_mm = 31, matrix_height_mm = 27, x_label = "ClinGen classification"
+)
+
+ggsave(file.path(OUT_DIR, "figure_5/cm_clingen_ExOP_REVEL_GeneSpecific_calibrated.pdf"), cm_clingen_REVEL_calibrated$plot, width = cm_clingen_REVEL_calibrated$width_mm, height = cm_clingen_REVEL_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave(file.path(OUT_DIR, "figure_5/cm_clingen_ExOP_AM_GeneSpecific_calibrated.pdf"), cm_clingen_AM_calibrated$plot, width = cm_clingen_AM_calibrated$width_mm, height = cm_clingen_AM_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave(file.path(OUT_DIR, "figure_5/cm_clingen_ExOP_MP2_GeneSpecific_calibrated.pdf"), cm_clingen_MP2_calibrated$plot, width = cm_clingen_MP2_calibrated$width_mm, height = cm_clingen_MP2_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
 
 ```
 
