@@ -178,6 +178,12 @@ above) and are already converted:
   attribute breakdowns; ExCALIBR calibration coverage; reclassification
   agreement) over the integrated dataset. See
   [`docs/mave_dataset_stats.md`](docs/mave_dataset_stats.md).
+- **`src/ablation_variant_reclassification.py`** — optional follow-up
+  analysis on step 5's checkpoint: how much of the reclassification effect
+  comes from functional evidence (ExCALIBR/OddsPath) alone, predictor
+  evidence (REVEL/AlphaMissense/MutPred2) alone, or is genuine added value
+  from combining the two. See
+  [`docs/ablation_variant_reclassification.md`](docs/ablation_variant_reclassification.md).
 
 ### Running it
 
@@ -210,6 +216,9 @@ done
 
 # 5. Build the biobank-analysis reclassification export from that notebook's checkpoint
 poetry run python -m src.build_variant_reclassification_dataset
+
+# Optional: functional-vs-predictor evidence ablation, from the same checkpoint
+poetry run python -m src.ablation_variant_reclassification
 ```
 
 Each `nbconvert --execute` leaves a side-effect `executed_<name>.ipynb` next
