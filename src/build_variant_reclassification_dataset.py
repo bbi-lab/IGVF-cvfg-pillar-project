@@ -21,7 +21,9 @@ checkpoint, are re-applied here:
   out of scope to fix there.
 - Rows tagged `conflicting_fxn_data`, `splice_variant_not_measured`, or
   `start_lost_variant_not_measured` in `VariantNotes`, or `splice_var_amino
-  == 'Yes'`, are dropped.
+  == 'Yes'`, are dropped -- unless `splice_measure == 'Yes'` (the dataset is
+  curated as able to detect splicing effects), in which case the row is kept
+  regardless of its splice flags.
 - Rows with `revel_train_amino == 'Yes'` are dropped -- variants used to
   train the REVEL predictor, matching the notebook's own REVEL-specific
   category sheets (`VUS_REVEL`, `Unobserved_REVEL`, `gnomAD_REVEL`,
@@ -144,7 +146,7 @@ def apply_notebook_exclusions(df: pd.DataFrame, chek2_file: Path) -> pd.DataFram
 
     df = df[
         ~df["VariantNotes"].isin(DISALLOWED_VARIANT_NOTES)
-        & (df["splice_var_amino"] != "Yes")
+        & ((df["splice_var_amino"] != "Yes") | (df["splice_measure"] == "Yes"))
     ]
     df = df[df["Flag"] != "*"]
     df = df[df["revel_train_amino"] != "Yes"]
