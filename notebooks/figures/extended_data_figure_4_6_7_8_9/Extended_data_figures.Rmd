@@ -1537,7 +1537,8 @@ sankey_VUS_REVEL_YP_points_calibrated <- make_sankey_calibrated(
   source_label = "Uncertain significance", wrap_destination_labels = FALSE,
   label_overrides = c("0" = "No evidence"),
   white_text_nodes = c("4", "5", "-8", "-9", "-10"),
-  label_box_height_scale = 1.1
+  label_box_height_scale = 1.1,
+  clamp_label_right_edge = TRUE, show_target_percent = TRUE
 )
 sankey_gnomad_REVEL_YP_points_calibrated <- make_sankey_calibrated(
   gnomad_REVEL_YP, source_col = gnomad, points_col = Conflicting_REVEL,
@@ -1546,7 +1547,8 @@ sankey_gnomad_REVEL_YP_points_calibrated <- make_sankey_calibrated(
   source_label = "gnomAD variant", wrap_destination_labels = FALSE,
   label_overrides = c("0" = "No evidence"),
   white_text_nodes = c("4", "5", "-8", "-9", "-10"),
-  label_box_height_scale = 1.1
+  label_box_height_scale = 1.1,
+  clamp_label_right_edge = TRUE, show_target_percent = TRUE
 )
 sankey_unseen_REVEL_YP_points_calibrated <- make_sankey_calibrated(
   unseen_REVEL_YP, source_col = unseen, points_col = Conflicting_REVEL,
@@ -1555,7 +1557,8 @@ sankey_unseen_REVEL_YP_points_calibrated <- make_sankey_calibrated(
   source_label = "Unobserved variant", wrap_destination_labels = FALSE,
   label_overrides = c("0" = "No evidence"),
   white_text_nodes = c("4", "5", "-8", "-9", "-10"),
-  label_box_height_scale = 1.1
+  label_box_height_scale = 1.1,
+  clamp_label_right_edge = TRUE, show_target_percent = TRUE
 )
 
 ggsave(file.path(dirname(OUT_DIR), "extended_data_figure_9/sankey_VUS_ExOP_REVEL_GeneSpecific_points_calibrated.pdf"), sankey_VUS_REVEL_YP_points_calibrated$plot, width = sankey_VUS_REVEL_YP_points_calibrated$width_mm, height = sankey_VUS_REVEL_YP_points_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)

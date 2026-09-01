@@ -225,7 +225,20 @@ blend_over_white <- function(hex, alpha) {
 # text height plus PAD_MM on top and bottom -- by this factor, leaving the
 # box's width untouched; 1 (the default) reproduces the original unscaled
 # height exactly, since (text_height_mm + 2*PAD_MM)/2*1 ==
-# text_height_mm/2 + PAD_MM.
+# text_height_mm/2 + PAD_MM. clamp_label_right_edge caps every label's own
+# right edge (text and background box together, as a unit -- shifting
+# both left of the node's own center_x by the same amount, never shrinking
+# either one) at its node's own xmax; every node in a ggsankey column
+# shares the same xmax, so once every label in that column is clamped, a
+# single shared x position just past that column edge is guaranteed clear
+# of all of them regardless of any individual label's own width -- when a
+# label already fits within its node's own width, this is a no-op and its
+# default center_x positioning is unchanged. show_target_percent draws
+# each non-source node's own share of
+# the total source-side count (e.g. "12%", black text, same size as the
+# node labels) just to the right of its (clamped) label box -- meant to
+# be used together with clamp_label_right_edge, which is what makes a
+# single shared percent-column position possible in the first place.
 make_sankey_calibrated <- function(df, source_col, points_col, colors_custom, levels_order,
                                     width_mm, height_mm, source_label = NULL,
                                     wrap_destination_labels = FALSE,
@@ -233,7 +246,9 @@ make_sankey_calibrated <- function(df, source_col, points_col, colors_custom, le
                                     center_label_nodes = character(0),
                                     label_overrides = character(0),
                                     white_text_nodes = character(0),
-                                    label_box_height_scale = 1) {
+                                    label_box_height_scale = 1,
+                                    clamp_label_right_edge = FALSE,
+                                    show_target_percent = FALSE) {
   # text_width_mm()/text_height_mm() (via grid::convertWidth/Height on a
   # textGrob) measure against whatever graphics device is currently active --
   # font metrics are device-dependent, and a knitr chunk device active at
@@ -419,11 +434,52 @@ make_sankey_calibrated <- function(df, source_col, points_col, colors_custom, le
   # it's narrower than the full canvas).
   node_geom <- node_geom %>%
     mutate(
-      label_left   = center_x - (label_w_mm / 2 + PAD_MM) / mm_per_x,
-      label_right  = center_x + (label_w_mm / 2 + PAD_MM) / mm_per_x,
+      # box_x is the label's own rendering x-center -- both its background
+      # box (geom_round_box) and its text (geom_text) render at box_x, not
+      # center_x directly, so clamp_label_right_edge (below) can shift the
+      # whole label left as a unit without the text overflowing past its
+      # own (now narrower-reaching) box. Defaults to center_x unchanged
+      # when clamping is off or not needed for a given row.
+      box_x = center_x,
+      label_left   = box_x - (label_w_mm / 2 + PAD_MM) / mm_per_x,
+      label_right  = box_x + (label_w_mm / 2 + PAD_MM) / mm_per_x,
       label_top    = label_y + label_box_half_h_mm / mm_per_y,
       label_bottom = label_y - label_box_half_h_mm / mm_per_y
     )
+  if (clamp_label_right_edge) {
+    node_geom <- node_geom %>%
+      mutate(
+        overflow_mm = pmax(0, label_right - xmax),
+        box_x = box_x - overflow_mm,
+        label_left = label_left - overflow_mm,
+        label_right = label_right - overflow_mm
+      ) %>%
+      select(-overflow_mm)
+  }
+  if (show_target_percent) {
+    # Each non-source node's own share of the total source-side count,
+    # right-aligned to a single shared edge rather than left-aligned
+    # individually right after each node's own (possibly
+    # clamp_label_right_edge-shifted) label -- reproduced: left-aligning
+    # each one right after its own label left a numeric node's percentage
+    # sitting close enough to its thin node's own small ggsankey-drawn
+    # connector-line stub to visually read as overlapping it, even though
+    # a wide label like "Conflicting evidence" (which needs the most
+    # clamping) had plenty of clearance. The shared edge is the widest of
+    # every node's own *natural* left-aligned-with-a-BOX_GAP_MM-gap right
+    # edge -- i.e. wherever the widest label's own percentage would have
+    # landed anyway -- so every other (narrower) node's percentage gets
+    # pushed out to that same generous clearance instead.
+    total_source_freq <- sum(node_geom$freq[is_source])
+    node_geom$pct_label <- ifelse(
+      is_source, NA_character_,
+      sprintf("%.0f%%", node_geom$freq / total_source_freq * 100)
+    )
+    natural_pct_left <- node_geom$label_right + BOX_GAP_MM / mm_per_x
+    pct_w_mm <- rep(0, nrow(node_geom))
+    pct_w_mm[!is_source] <- text_width_mm(node_geom$pct_label[!is_source], pt = label_pt)
+    node_geom$pct_right <- max((natural_pct_left + pct_w_mm / mm_per_x)[!is_source])
+  }
   if (show_count) {
     node_geom <- node_geom %>%
       mutate(
@@ -435,7 +491,8 @@ make_sankey_calibrated <- function(df, source_col, points_col, colors_custom, le
   }
   x_range <- c(
     min(x_min, node_geom$label_left, if (show_count) node_geom$count_left) - CANVAS_MARGIN_MM / mm_per_x,
-    max(x_max, node_geom$label_right, if (show_count) node_geom$count_right) + CANVAS_MARGIN_MM / mm_per_x
+    max(x_max, node_geom$label_right, if (show_count) node_geom$count_right,
+        if (show_target_percent) node_geom$pct_right) + CANVAS_MARGIN_MM / mm_per_x
   )
   y_range <- c(
     min(y_min, node_geom$label_bottom, if (show_count) node_geom$count_bottom) - CANVAS_MARGIN_MM / mm_per_y,
@@ -470,7 +527,7 @@ make_sankey_calibrated <- function(df, source_col, points_col, colors_custom, le
   # per box (name, plus count when show_count), each carrying its own center
   # (data space) and true physical width/height (mm).
   boxes <- node_geom %>%
-    transmute(x = center_x, y = label_y, width_mm = label_w_mm + 2 * PAD_MM,
+    transmute(x = box_x, y = label_y, width_mm = label_w_mm + 2 * PAD_MM,
               height_mm = 2 * label_box_half_h_mm, fill = fill_color)
   if (show_count) {
     boxes <- bind_rows(
@@ -484,7 +541,7 @@ make_sankey_calibrated <- function(df, source_col, points_col, colors_custom, le
     geom_round_box(data = boxes, aes(x = x, y = y, width_mm = width_mm, height_mm = height_mm, fill = fill)) +
     geom_text(
       data = node_geom, inherit.aes = FALSE,
-      aes(x = center_x, y = label_y, label = label, color = text_color),
+      aes(x = box_x, y = label_y, label = label, color = text_color),
       size = label_mm, family = FONT_FAMILY, lineheight = LINEHEIGHT
     )
   if (show_count) {
@@ -493,6 +550,14 @@ make_sankey_calibrated <- function(df, source_col, points_col, colors_custom, le
         data = node_geom, inherit.aes = FALSE,
         aes(x = center_x, y = count_y, label = count_text, color = text_color),
         size = label_mm, family = FONT_FAMILY, lineheight = LINEHEIGHT
+      )
+  }
+  if (show_target_percent) {
+    p <- p +
+      geom_text(
+        data = node_geom[!is_source, ], inherit.aes = FALSE,
+        aes(x = pct_right, y = label_y, label = pct_label),
+        size = label_mm, family = FONT_FAMILY, colour = "black", hjust = 1
       )
   }
 
