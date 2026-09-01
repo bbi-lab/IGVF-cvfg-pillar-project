@@ -1,14 +1,19 @@
-# Preprint splice variant filtering pipeline
+# Splice variant filtering pipeline
 
 How a splice-related variant is annotated, flagged, and -- for datasets not
 curated as able to detect splicing effects -- excluded, from
 `integrated_variant_effect_dataset.tsv.gz` through Supplementary Data 5 and
 6, the reclassification export, and Figures 4, 5, and 6.
 
-**Status: the `splice_measure` exception described below is implemented.**
-Before this fix, every consumer but Figure 4 excluded splice-flagged rows
-unconditionally, regardless of whether the assay could detect splicing;
-Section 7 describes what changed and why.
+**Status: this document covers both the preprint's original splice-variant
+handling and the final (current) handling after the `splice_measure`
+exception was implemented.** Before the fix, every consumer but Figure 4
+excluded splice-flagged rows unconditionally, regardless of whether the
+assay could detect splicing. See [`docs/splice_variant_assay_consistency.md`](splice_variant_assay_consistency.md)
+for the motivation behind the change and its observed impact on each
+output; Section 7 here describes what changed mechanically, and Section 8's
+typology table shows preprint vs. final side by side, per category and per
+output.
 
 ## Field glossary
 
@@ -63,8 +68,8 @@ classification and OddsPath notebooks (Section 3). Unchanged by the fix --
 this step still doesn't know about `splice_measure` at all; the exception is
 applied everywhere this field is later used to exclude a row.
 
-Neither `docs/annotate_simplified_consequence.md` nor
-`docs/variant_annotation_pipeline.md` (the two docs that describe this step)
+Neither [`docs/annotate_simplified_consequence.md`](annotate_simplified_consequence.md) nor
+[`docs/variant_annotation_pipeline.md`](variant_annotation_pipeline.md) (the two docs that describe this step)
 document this threshold/filter logic -- it's documented only in the script's
 own docstring and here.
 
@@ -91,7 +96,7 @@ Input: `integrated_variant_effect_dataset.tsv.gz` + `Supplementary_Data_4.xlsx` 
    OR (splice_var_amino == 'Yes' AND splice_measure != 'Yes')
    ```
    then, separately, drop `Flag == '*'`. Previously `splice_var_amino == 'Yes'` excluded unconditionally; now a row from a `splice_measure == 'Yes'` dataset survives this line regardless of its own `splice_var_amino` value.
-7. **Category split**: `controls` (ClinVar Benign/Pathogenic groups; re-checks `clinvar_conflict` + the same `splice_var_amino`/`splice_measure` condition a second time, redundantly, since `sankey_f` is already filtered), `ClinGen_Repo` (`Updated_Classification_ClinGen_repo` present, not VUS), `VUS`, `gnomAD`, `Unobserved`. Deduplication when the same variant is scored by more than one assay is governed by two independently configurable strategies (`v1` / `abs_max` / `nt_then_abs_max`; see `docs/variant_classification.md`): `CONTROLS_CLINGEN_DEDUP_STRATEGY` for `controls`/`ClinGen_Repo`, `VUS_GNOMAD_UNOBSERVED_DEDUP_STRATEGY` for the other three. In `v1`/`nt_then_abs_max`, nt-resolution evidence is preferred outright over aa-resolution evidence for the same variant.
+7. **Category split**: `controls` (ClinVar Benign/Pathogenic groups; re-checks `clinvar_conflict` + the same `splice_var_amino`/`splice_measure` condition a second time, redundantly, since `sankey_f` is already filtered), `ClinGen_Repo` (`Updated_Classification_ClinGen_repo` present, not VUS), `VUS`, `gnomAD`, `Unobserved`. Deduplication when the same variant is scored by more than one assay is governed by two independently configurable strategies (`v1` / `abs_max` / `nt_then_abs_max`; see [`docs/variant_classification.md`](variant_classification.md)): `CONTROLS_CLINGEN_DEDUP_STRATEGY` for `controls`/`ClinGen_Repo`, `VUS_GNOMAD_UNOBSERVED_DEDUP_STRATEGY` for the other three. In `v1`/`nt_then_abs_max`, nt-resolution evidence is preferred outright over aa-resolution evidence for the same variant.
 8. **Output**: `Supplementary_Data_5.xlsx` -- 15 sheets = 5 categories &times; {REVEL, AM, MP2} (+ a `.with_secondary_variants` sibling file, same rule).
 
 ## 4. Reclassification export -- `src/build_variant_reclassification_dataset.py`
@@ -178,35 +183,44 @@ Across all seven outputs, Data 5, the reclassification export, Data 6,
 Figures 5 & 6, and the Extended Data figures now always agree row-for-row --
 and now agree with Figure 4 too, for every category in the typology below.
 
-## 8. A typology of splice-related variants, by output
+## 8. A typology of splice-related variants, by output -- preprint vs. final
 
 Seven categories, each anchored to a real row in the dataset, run through
-all seven outputs, **as of the `splice_measure` fix**. &#10003; = kept,
-&#10007; = excluded, &#9679; = always present (the checkpoint is pre-filter
-by construction).
+all seven outputs. &#10003; = kept, &#10007; = excluded, &#9679; = always
+present (the checkpoint is pre-filter by construction, in both preprint and
+final versions). A single symbol means preprint and final agree; where they
+differ, the cell reads **preprint &rarr; final**.
 
 | # | Category | Real example | `splice_variant` | Checkpoint | Data 5 | Reclass. | Data 6 | Fig 4 | Fig 5&6 | Ext. Data |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 1 | Canonical splice site, splice-aware assay | `BAP1_Waters_2024` c.37+1G>A, `splice_donor_variant`, DS_DG=0.99, nt | Yes (score + consequence) | &#9679; | **&#10003;** | **&#10003;** | **&#10003;** | **&#10003;** | **&#10003;** | **&#10003;** |
+| 1 | Canonical splice site, splice-aware assay | `BAP1_Waters_2024` c.37+1G>A, `splice_donor_variant`, DS_DG=0.99, nt | Yes (score + consequence) | &#9679; | &#10007;&rarr;**&#10003;** | &#10007;&rarr;**&#10003;** | &#10007;&rarr;**&#10003;** | **&#10003;** | &#10007;&rarr;**&#10003;** | &#10007;&rarr;**&#10003;** |
 | 2 | Canonical splice site, non-splice-aware assay | `ASPA_Grønbæk-Thygesen_2024` c.235_237delinsTAA, `splice_acceptor/donor_variant`, aa | Yes (consequence only) | &#9679; | &#10007; | &#10007; | &#10007; | &#10007; | &#10007; | &#10007; |
-| 3 | Cryptic score hit (missense), splice-aware, aa-res. | `PALB2_Boonen_2026_SGE` c.2998G>A, p.Gly1000Cys, `missense_variant`, DS_AG=0.50, aa | Yes (score only) | &#9679; | **&#10003;** | **&#10003;** | **&#10003;** | **&#10003;** | **&#10003;** | **&#10003;** |
+| 3 | Cryptic score hit (missense), splice-aware, aa-res. | `PALB2_Boonen_2026_SGE` c.2998G>A, p.Gly1000Cys, `missense_variant`, DS_AG=0.50, aa | Yes (score only) | &#9679; | &#10007;&rarr;**&#10003;** | &#10007;&rarr;**&#10003;** | &#10007;&rarr;**&#10003;** | **&#10003;** | &#10007;&rarr;**&#10003;** | &#10007;&rarr;**&#10003;** |
 | 4 | Cryptic score hit (missense), non-splice-aware, nt-res. | `BRCA2_Hu_2024` c.7712A>T, p.Glu2571Val, `missense_variant`, DS_AG=0.95, nt | Yes (score only) | &#9679; | &#10007; | &#10007; | &#10007; | &#10007; | &#10007; | &#10007; |
 | 5 | Low-impact `splicing_variant` label, NaN score | `DDX3X_Radford_2023` c.679+3_679+4delinsTT, `splice_donor_region_variant`, DS=NaN, nt | No (neither leg fires) | &#9679; | **&#10003;** | **&#10003;** | **&#10003;** | **&#10003;** | **&#10003;** | **&#10003;** |
 | 6 | Low-impact `splicing_variant` label, scored but < 0.2 | `BAP1_Waters_2024` c.37+3G>A, `splice_donor_region_variant`, DS_DG=0.04, nt | No (neither leg fires) | &#9679; | **&#10003;** | **&#10003;** | **&#10003;** | **&#10003;** | **&#10003;** | **&#10003;** |
-| 7 | AA "guilt by association" -- sibling realization is Yes, this one isn't | `PALB2_Boonen_2026_SGE` c.2998_2999delinsTC, p.Gly1000Ser, `missense_variant`, DS=NaN (all four), aa | No (own evidence: none) | &#9679; | **&#10003;** | **&#10003;** | **&#10003;** | **&#10003;** | **&#10003;** | **&#10003;** |
+| 7 | AA "guilt by association" -- sibling realization is Yes, this one isn't | `PALB2_Boonen_2026_SGE` c.2998_2999delinsTC, p.Gly1000Ser, `missense_variant`, DS=NaN (all four), aa | No (own evidence: none) | &#9679; | &#10007;&rarr;**&#10003;** | &#10007;&rarr;**&#10003;** | &#10007;&rarr;**&#10003;** | **&#10003;** | &#10007;&rarr;**&#10003;** | &#10007;&rarr;**&#10003;** |
 
-Rows 1, 3, and 7 flip from excluded-everywhere-but-Figure-4 to kept
-everywhere, now that every consumer checks `splice_measure`. Row 7 in
-particular carries zero SpliceAI or consequence evidence of its own -- it's
-kept purely because `splice_var_amino` broadcasts `Yes` across every
-nucleotide realization of `p.Gly1000Ser` once one of them (`c.2998G>A`, row
-3) scores &ge; 0.2, and `PALB2_Boonen_2026_SGE`'s `splice_measure == 'Yes'`
-now spares that whole broadcast group. Rows 2 and 4 (non-splice-aware
-assays) and rows 5 and 6 (the `"splicing_variant"`/NaN-score scope decision
-from Section 1) are unaffected, as intended.
+Only three of the seven categories actually change. Rows 1, 3, and 7 flip
+from excluded-everywhere-but-Figure-4 (preprint) to kept everywhere (final),
+now that every consumer checks `splice_measure`. Row 7 in particular
+carries zero SpliceAI or consequence evidence of its own in either
+version -- it's kept, in the final version, purely because `splice_var_amino`
+broadcasts `Yes` across every nucleotide realization of `p.Gly1000Ser` once
+one of them (`c.2998G>A`, row 3) scores &ge; 0.2, and
+`PALB2_Boonen_2026_SGE`'s `splice_measure == 'Yes'` now spares that whole
+broadcast group -- unchanged from the preprint in Figure 4, which never
+depended on this broadcast to begin with (Section 6).
+
+Rows 2 and 4 (non-splice-aware assays) and rows 5 and 6 (the
+`"splicing_variant"`/NaN-score scope decision from Section 1) are identical
+in preprint and final, as intended -- Figure 4 already agreed with the rest
+of the pipeline on these four categories even before the fix, and still
+does.
 
 ## Related docs
 
-- `docs/annotate_simplified_consequence.md` -- Step 17's consequence mapping (doesn't cover the splice threshold logic; see Section 2 above instead).
-- `docs/variant_annotation_pipeline.md` -- full annotation pipeline architecture (same gap).
-- `docs/variant_classification.md` -- the classification notebook's `VariantNotes` vocabulary and dedup-strategy parameters in full.
+- [`docs/splice_variant_assay_consistency.md`](splice_variant_assay_consistency.md) -- the motivation for the `splice_measure` exception and its observed impact on each output.
+- [`docs/annotate_simplified_consequence.md`](annotate_simplified_consequence.md) -- Step 17's consequence mapping (doesn't cover the splice threshold logic; see Section 2 above instead).
+- [`docs/variant_annotation_pipeline.md`](variant_annotation_pipeline.md) -- full annotation pipeline architecture (same gap).
+- [`docs/variant_classification.md`](variant_classification.md) -- the classification notebook's `VariantNotes` vocabulary and dedup-strategy parameters in full.
