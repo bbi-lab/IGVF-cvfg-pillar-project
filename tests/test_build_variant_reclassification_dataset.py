@@ -101,6 +101,19 @@ def test_splice_var_amino_dropped(chek2_file):
     assert list(out["splice_var_amino"]) == ["No"]
 
 
+def test_splice_var_amino_kept_when_splice_measure_yes(chek2_file):
+    """A dataset curated as able to detect splicing effects
+    (`splice_measure == 'Yes'`) keeps its splice-flagged rows instead of
+    having them dropped unconditionally."""
+    df = _checkpoint_frame([
+        {"mavedb_variant_urn": "urn:mavedb:1", "splice_var_amino": "Yes", "splice_measure": "Yes"},
+        {"mavedb_variant_urn": "urn:mavedb:2", "splice_var_amino": "Yes", "splice_measure": "No"},
+        {"mavedb_variant_urn": "urn:mavedb:3", "splice_var_amino": "Yes", "splice_measure": None},
+    ])
+    out = apply_notebook_exclusions(df, chek2_file)
+    assert list(out["mavedb_variant_urn"]) == ["urn:mavedb:1"]
+
+
 def test_pre_existing_flag_still_removed(chek2_file):
     df = _checkpoint_frame([
         {"Flag": "*"},
