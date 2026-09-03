@@ -106,16 +106,26 @@ independently of Section 3's own filter, and applies its own (fixed):
 
 ```
 exclude rows where
-  VariantNotes in {splice_variant_not_measured, splice_variant_not_measured;conflicting_fxn_data}
+  VariantNotes in {splice_variant_not_measured, splice_variant_not_measured;conflicting_fxn_data,
+                    start_lost_variant_not_measured}
   OR (splice_var_amino == 'Yes' AND splice_measure != 'Yes')
 ```
 
-Narrower disallowed-set than Section 3 -- doesn't independently exclude bare
-`conflicting_fxn_data` or `start_lost_variant_not_measured` rows here (though
-in practice `splice_var_amino`/`splice_measure` alone still catches every
-non-splice-aware splice-flagged row the same way Section 3 does).
+Narrower disallowed-set than Section 3 by default -- doesn't exclude bare
+`conflicting_fxn_data` rows here: each row of this export represents one
+dataset's measurement of a variant, not a single deduplicated per-variant
+record, so more than one dataset disagreeing on a variant's effect is
+expected and kept rather than treated as disqualifying. Passing `--dedup`
+collapses to one row per DNA variant (greatest `abs(Combined_points)` wins,
+tie-broken by `Dataset` name) and, in that mode, also excludes bare
+`conflicting_fxn_data` rows -- otherwise deduplication would silently pick
+one dataset's value as the winner for a variant with genuinely conflicting
+measurements.
 
-Output: `integrated_variant_effect_reclassification.tsv.gz` (the biobank-facing export).
+Output (default, no `--dedup`): `integrated_variant_effect_biobank_input_data.tsv.gz`
+-- every surviving row kept as-is, one per dataset/assay measurement (no
+deduplication to one row per DNA variant, unlike Supplementary Data 5/6);
+the biobank-facing export.
 
 Covered by `tests/test_build_variant_reclassification_dataset.py::test_splice_var_amino_kept_when_splice_measure_yes`.
 

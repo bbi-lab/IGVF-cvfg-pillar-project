@@ -160,11 +160,13 @@ Run in this order:
    [`notebooks/analysis/README_Variant_Classification_analysis.md`](notebooks/analysis/README_Variant_Classification_analysis.md).
 5. **`src/build_variant_reclassification_dataset.py`** — reads that
    notebook's own cell-69 checkpoint, re-applies its downstream exclusions
-   (`SFPQ`, the CHEK2 QC flag, conflicting/unmeasured-splice
-   `VariantNotes` tags), adds four ACMG/AMP points columns, and
-   deduplicates to one row per DNA variant. Produces
-   `data/output/reclassification/integrated_variant_effect_reclassification.tsv.gz`,
-   which collaborators use for downstream biobank analysis.
+   (`SFPQ`, the CHEK2 QC flag, unmeasured-splice/start-lost `VariantNotes`
+   tags -- bare `conflicting_fxn_data` is deliberately kept, since each row
+   is one dataset's measurement rather than a deduplicated per-variant
+   record), and adds four ACMG/AMP points columns. Produces
+   `data/output/reclassification/integrated_variant_effect_biobank_input_data.tsv.gz`,
+   one row per surviving measurement (not deduplicated to one row per DNA
+   variant), which collaborators use for downstream biobank analysis.
 
 Two more `src/` scripts support this stage (beyond `load_oddspath_calibrations.py`
 above) and are already converted:
@@ -228,7 +230,7 @@ need to delete them.
 Outputs land under `data/output/supplementary_data/` (`Supplementary_Data_4.xlsx`,
 `Supplementary_Data_5.xlsx`), `data/output/predictor_calibration/` (the
 per-gene control files also used by Extended Data Figure 5), and
-`data/output/reclassification/integrated_variant_effect_reclassification.tsv.gz`
+`data/output/reclassification/integrated_variant_effect_biobank_input_data.tsv.gz`
 (the biobank-analysis export from step 5 above).
 
 ---

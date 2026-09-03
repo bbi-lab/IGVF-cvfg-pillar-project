@@ -83,10 +83,47 @@ def test_chek2_flagged_row_dropped(chek2_file):
     assert out["hgvs_p"].iloc[0] == "NP_009125.1:p.Val2Ala"
 
 
-def test_conflicting_fxn_data_dropped(chek2_file):
+def test_conflicting_fxn_data_kept_by_default(chek2_file):
+    """Bare `conflicting_fxn_data` is not excluded by default: each row of
+    this export is one dataset's measurement, so more than one dataset
+    disagreeing on a variant's effect is expected and kept, not treated as
+    disqualifying."""
     df = _checkpoint_frame([
-        {"VariantNotes": "conflicting_fxn_data"},
-        {"VariantNotes": "max_fxn_pts"},
+        {"mavedb_variant_urn": "urn:mavedb:1", "VariantNotes": "conflicting_fxn_data"},
+        {"mavedb_variant_urn": "urn:mavedb:2", "VariantNotes": "max_fxn_pts"},
+    ])
+    out = apply_notebook_exclusions(df, chek2_file)
+    assert list(out["VariantNotes"]) == ["conflicting_fxn_data", "max_fxn_pts"]
+
+
+def test_conflicting_fxn_data_dropped_when_dedup_enabled(chek2_file):
+    """With `dedup=True`, deduplication would otherwise silently pick one
+    dataset's value as the winner for a variant with genuinely conflicting
+    measurements, so bare `conflicting_fxn_data` rows are excluded instead."""
+    df = _checkpoint_frame([
+        {"mavedb_variant_urn": "urn:mavedb:1", "VariantNotes": "conflicting_fxn_data"},
+        {"mavedb_variant_urn": "urn:mavedb:2", "VariantNotes": "max_fxn_pts"},
+    ])
+    out = apply_notebook_exclusions(df, chek2_file, dedup=True)
+    assert list(out["VariantNotes"]) == ["max_fxn_pts"]
+
+
+def test_splice_variant_not_measured_dropped(chek2_file):
+    df = _checkpoint_frame([
+        {"mavedb_variant_urn": "urn:mavedb:1", "VariantNotes": "splice_variant_not_measured"},
+        {"mavedb_variant_urn": "urn:mavedb:2", "VariantNotes": "max_fxn_pts"},
+    ])
+    out = apply_notebook_exclusions(df, chek2_file)
+    assert list(out["VariantNotes"]) == ["max_fxn_pts"]
+
+
+def test_splice_variant_not_measured_conflicting_fxn_data_dropped(chek2_file):
+    """The compound tag is still dropped even though bare `conflicting_fxn_data`
+    is not -- it also carries `splice_variant_not_measured`, an assay
+    limitation rather than a cross-dataset conflict."""
+    df = _checkpoint_frame([
+        {"mavedb_variant_urn": "urn:mavedb:1", "VariantNotes": "splice_variant_not_measured;conflicting_fxn_data"},
+        {"mavedb_variant_urn": "urn:mavedb:2", "VariantNotes": "max_fxn_pts"},
     ])
     out = apply_notebook_exclusions(df, chek2_file)
     assert list(out["VariantNotes"]) == ["max_fxn_pts"]
@@ -195,7 +232,10 @@ def test_conflict_revel_gene_specific_is_renamed_from_conflicting_revel_gene_spe
 # --- build_reclassification_dataset (end to end) -------------------------------------------
 
 
-def test_build_reclassification_dataset_dedups_by_dna_variant(tmp_path, chek2_file):
+def test_build_reclassification_dataset_keeps_one_row_per_measurement(tmp_path, chek2_file):
+    """Unlike the pipeline's per-category exports, this one is not
+    deduplicated to one row per DNA variant: more than one dataset scoring
+    the same variant should survive as separate rows."""
     checkpoint = _checkpoint_frame([
         {"Gene": "G1", "hg38_start": 5000, "Dataset": "Dataset_low", "Fxn_points": 2,
          "Points_REVEL_GeneSpecific_GenomeWide": 0},
@@ -206,6 +246,34 @@ def test_build_reclassification_dataset_dedups_by_dna_variant(tmp_path, chek2_fi
     checkpoint.to_csv(checkpoint_path, index=False, compression="gzip")
 
     out = build_reclassification_dataset(checkpoint_path, chek2_file)
+    assert len(out) == 2
+    assert set(out["Dataset"]) == {"Dataset_low", "Dataset_high"}
+    assert list(out.columns) == OUTPUT_COLUMNS
+
+
+def test_build_reclassification_dataset_dedups_by_dna_variant_when_enabled(tmp_path, chek2_file):
+    checkpoint = _checkpoint_frame([
+        {"Gene": "G1", "hg38_start": 5000, "Dataset": "Dataset_low", "Fxn_points": 2,
+         "Points_REVEL_GeneSpecific_GenomeWide": 0},
+        {"Gene": "G1", "hg38_start": 5000, "Dataset": "Dataset_high", "Fxn_points": 9,
+         "Points_REVEL_GeneSpecific_GenomeWide": 0},
+    ])
+    checkpoint_path = tmp_path / "checkpoint.csv.gz"
+    checkpoint.to_csv(checkpoint_path, index=False, compression="gzip")
+
+    out = build_reclassification_dataset(checkpoint_path, chek2_file, dedup=True)
     assert len(out) == 1
     assert out["Dataset"].iloc[0] == "Dataset_high"
     assert list(out.columns) == OUTPUT_COLUMNS
+
+
+def test_build_reclassification_dataset_dedup_excludes_conflicting_fxn_data(tmp_path, chek2_file):
+    checkpoint = _checkpoint_frame([
+        {"mavedb_variant_urn": "urn:mavedb:1", "VariantNotes": "conflicting_fxn_data"},
+        {"mavedb_variant_urn": "urn:mavedb:2", "VariantNotes": "max_fxn_pts"},
+    ])
+    checkpoint_path = tmp_path / "checkpoint.csv.gz"
+    checkpoint.to_csv(checkpoint_path, index=False, compression="gzip")
+
+    out = build_reclassification_dataset(checkpoint_path, chek2_file, dedup=True)
+    assert list(out["mavedb_variant_urn"]) == ["urn:mavedb:2"]

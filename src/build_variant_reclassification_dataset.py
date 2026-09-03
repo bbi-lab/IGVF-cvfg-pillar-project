@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
-"""Build a deduplicated, DNA-level export of every variant that survives
-`Variant_Classification_analysis.ipynb`'s exclusion rules.
+"""Build the biobank-input export: one row per surviving variant-effect
+measurement from `Variant_Classification_analysis.ipynb`'s exclusion rules,
+not deduplicated to one row per DNA variant.
 
 Reads the notebook's own intermediate checkpoint
 (`data/output/reclassification/integrated_variant_effect_dataset_analysis.csv.gz`,
 written at its cell 69, *before* category split), which already has the
 LDLR LA-module-1 exclusion and the F9/TP53 restricted-dataset filter baked
-in. Four further exclusions the notebook applies later, downstream of that
+in. Three further exclusions the notebook applies later, downstream of that
 checkpoint, are re-applied here:
 
 - `SFPQ` is dropped entirely (insufficient ClinVar controls).
@@ -19,11 +20,17 @@ checkpoint, are re-applied here:
   `"p.Ser2Ala"`, no prefix) -- confirmed against real data to never
   actually match, an apparently unintentional no-op in production that's
   out of scope to fix there.
-- Rows tagged `conflicting_fxn_data`, `splice_variant_not_measured`, or
-  `start_lost_variant_not_measured` in `VariantNotes`, or `splice_var_amino
-  == 'Yes'`, are dropped -- unless `splice_measure == 'Yes'` (the dataset is
-  curated as able to detect splicing effects), in which case the row is kept
-  regardless of its splice flags.
+- Rows tagged `splice_variant_not_measured` or `start_lost_variant_not_measured`
+  in `VariantNotes`, or `splice_var_amino == 'Yes'`, are dropped -- unless
+  `splice_measure == 'Yes'` (the dataset is curated as able to detect
+  splicing effects), in which case the row is kept regardless of its splice
+  flags. Rows tagged bare `conflicting_fxn_data` are dropped only when
+  `dedup=True` (see below) -- with no deduplication, each row is one
+  dataset's measurement of a variant rather than a single per-variant
+  record, so more than one dataset disagreeing on a variant's effect is
+  expected and kept, not treated as disqualifying. Deduplicating rows that
+  are known to conflict would instead silently pick one dataset's value as
+  the winner, so `dedup=True` excludes them outright rather than doing that.
 - Rows with `revel_train_amino == 'Yes'` are dropped -- variants used to
   train the REVEL predictor, matching the notebook's own REVEL-specific
   category sheets (`VUS_REVEL`, `Unobserved_REVEL`, `gnomAD_REVEL`,
@@ -49,13 +56,15 @@ Six points columns are added:
 - `Combined_points`: `Functional_points + REVEL_points` -- matches the
   notebook's own `Total_Points_GeneSpecific_REVEL`.
 
-Finally, every surviving row is collapsed to one per DNA variant
-(`src.lib.dedup.dedup_by_max_abs_points`, keyed on `Gene`/`Chrom`/
-`hg38_start`/`ref_allele`/`alt_allele`): the candidate with the greatest
-`abs(Combined_points)` wins, ties broken by `Dataset` name for
-determinism. This also reconciles amino-acid-resolution assay rows onto
-their DNA coordinate, since they share the same genomic key columns as any
-nt-resolution row for the same physical variant.
+By default (`dedup=False`), no deduplication is applied: a variant scored by
+more than one dataset/assay keeps one row per measurement (this is the
+difference from the pipeline's other per-category exports, which collapse to
+one row per DNA variant). Passing `dedup=True` (`--dedup` on the CLI)
+collapses to one row per DNA variant via
+`src.lib.dedup.dedup_by_max_abs_points` (keyed on `Gene`/`Chrom`/
+`hg38_start`/`ref_allele`/`alt_allele`: the candidate with the greatest
+`abs(Combined_points)` wins, ties broken by `Dataset` name), and additionally
+excludes bare `conflicting_fxn_data` rows -- see above.
 
 Output columns are `integrated_variant_effect_dataset.tsv`'s full schema,
 in its column order, with the six new points columns appended at the end.
@@ -70,7 +79,7 @@ from src.lib.dedup import GENOMIC_KEY_COLS, dedup_by_max_abs_points
 
 DEFAULT_CHECKPOINT_FILE = Path("data/output/reclassification/integrated_variant_effect_dataset_analysis.csv.gz")
 DEFAULT_CHEK2_FILE = Path("data/input/maves/CHEK2_Gebbia_2024.xlsx")
-DEFAULT_OUTPUT_FILE = Path("data/output/reclassification/integrated_variant_effect_reclassification.tsv.gz")
+DEFAULT_OUTPUT_FILE = Path("data/output/reclassification/integrated_variant_effect_biobank_input_data.tsv.gz")
 
 # ExC_points vintage override for ExCALIBR_points. Deliberately excludes
 # TP53 -- unlike BRCA1/PTEN/MSH2, TP53's Functional_points come entirely
@@ -79,7 +88,6 @@ DEFAULT_OUTPUT_FILE = Path("data/output/reclassification/integrated_variant_effe
 EXCALIBR_VINTAGE_OVERRIDE_GENES = frozenset({"BRCA1", "PTEN", "MSH2"})
 
 DISALLOWED_VARIANT_NOTES = frozenset({
-    "conflicting_fxn_data",
     "splice_variant_not_measured",
     "splice_variant_not_measured;conflicting_fxn_data",
     "start_lost_variant_not_measured",
@@ -117,11 +125,13 @@ OUTPUT_COLUMNS = [
 ]
 
 
-def apply_notebook_exclusions(df: pd.DataFrame, chek2_file: Path) -> pd.DataFrame:
+def apply_notebook_exclusions(df: pd.DataFrame, chek2_file: Path, dedup: bool = False) -> pd.DataFrame:
     """Re-apply the checkpoint-downstream exclusions from
     `Variant_Classification_analysis.ipynb` cells 71-77 and 95: `SFPQ`, the
-    CHEK2 QC flag, conflicting/unmeasured-splice `VariantNotes` tags, any
-    other `Flag == '*'` row, and REVEL-training variants.
+    CHEK2 QC flag, unmeasured-splice/start-lost `VariantNotes` tags (bare
+    `conflicting_fxn_data` is additionally excluded when `dedup=True` -- see
+    module docstring), any other `Flag == '*'` row, and REVEL-training
+    variants.
 
     The CHEK2 merge key is normalized (`hgvs_p`'s transcript prefix, e.g.
     `"NP_009125.1:"`, stripped before matching against `hgvs_pro`) rather
@@ -144,8 +154,9 @@ def apply_notebook_exclusions(df: pd.DataFrame, chek2_file: Path) -> pd.DataFram
     df["Flag"] = df["Flag"].where(df["Filter_CI"] != 1, "*")
     df = df.drop(columns=["_hgvs_p_no_transcript", "hgvs_pro", "score", "Filter_CI"])
 
+    disallowed_variant_notes = DISALLOWED_VARIANT_NOTES | ({"conflicting_fxn_data"} if dedup else set())
     df = df[
-        ~df["VariantNotes"].isin(DISALLOWED_VARIANT_NOTES)
+        ~df["VariantNotes"].isin(disallowed_variant_notes)
         & ((df["splice_var_amino"] != "Yes") | (df["splice_measure"] == "Yes"))
     ]
     df = df[df["Flag"] != "*"]
@@ -177,11 +188,12 @@ def add_points_columns(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def build_reclassification_dataset(checkpoint_file: Path, chek2_file: Path) -> pd.DataFrame:
+def build_reclassification_dataset(checkpoint_file: Path, chek2_file: Path, dedup: bool = False) -> pd.DataFrame:
     df = pd.read_csv(checkpoint_file)
-    df = apply_notebook_exclusions(df, chek2_file)
+    df = apply_notebook_exclusions(df, chek2_file, dedup=dedup)
     df = add_points_columns(df)
-    df = dedup_by_max_abs_points(df, points_col="Combined_points", genomic_key_cols=GENOMIC_KEY_COLS)
+    if dedup:
+        df = dedup_by_max_abs_points(df, points_col="Combined_points", genomic_key_cols=GENOMIC_KEY_COLS)
     return df[OUTPUT_COLUMNS]
 
 
@@ -204,8 +216,18 @@ def build_reclassification_dataset(checkpoint_file: Path, chek2_file: Path) -> p
     default=DEFAULT_OUTPUT_FILE,
     help=f"Output path (default {DEFAULT_OUTPUT_FILE}), written as gzip-compressed TSV.",
 )
-def main(checkpoint_file: Path, chek2_file: Path, output: Path) -> None:
-    result = build_reclassification_dataset(checkpoint_file, chek2_file)
+@click.option(
+    "--dedup",
+    is_flag=True,
+    default=False,
+    help=(
+        "Collapse to one row per DNA variant (greatest abs(Combined_points) wins) and additionally "
+        "exclude bare conflicting_fxn_data rows. Default is one row per surviving measurement, for "
+        "biobank-input use."
+    ),
+)
+def main(checkpoint_file: Path, chek2_file: Path, output: Path, dedup: bool) -> None:
+    result = build_reclassification_dataset(checkpoint_file, chek2_file, dedup=dedup)
     output.parent.mkdir(parents=True, exist_ok=True)
     result.to_csv(output, sep="\t", index=False, compression="gzip")
     click.echo(f"Wrote {len(result)} rows to {output}")
