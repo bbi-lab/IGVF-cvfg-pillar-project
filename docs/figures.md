@@ -341,3 +341,32 @@ later VUS/gnomAD/donut chunks call `ggsave()` directly with hardcoded
 `../../../data/output/figures/extended_data_figures/` paths. Check both
 `extended_data_figures/` and `extended_data_figure_6/` under
 `data/output/figures/` if a figure you expect isn't where you thought.
+
+### Extended Data Figure 7alt (`src/make_extended_data_figure_7alt.py`)
+
+A candidate replacement for Extended Data Figure 7: a single calibrated
+(exact-print-size) heatmap superseding the classification info spread across
+Figure 6 (VUS/gnomAD/unobserved x REVEL only) and Extended Data Figure 7 (VUS
+x REVEL/AM/MP2 only). Nine rows -- REVEL/AM/MP2 for each of the VUS, gnomAD,
+and unobserved variant sets, with a gap between the three groups -- x five
+classification columns (P/LP/VUS/LB/B, reading each sheet's own
+`Class_{REVEL,AM,MP2}` column), plus a Total column. Each cell shows its count
+and row-wise percentage, colored on a single monochromatic 0-100% scale
+(with a legend) shared across every cell.
+
+Unlike the rest of Extended Data Figs 4-9, this one is a standalone Python
+script (matplotlib) rather than an `Extended_data_figures.Rmd` chunk, and
+reads `Supplementary_Data_5.xlsx` directly -- no R/Docker required:
+
+```bash
+poetry run python -m src.make_extended_data_figure_7alt
+```
+
+Writes `data/output/figures/extended_data_figure_7alt/extended_data_figure_7alt.pdf`
+by default; see `--input`/`--output` (`--help`) to override either path.
+
+`--consequence-filter missense` restricts every sheet to `simplified_consequence
+== "missense_variant"` rows (the same column/idea as `Figure5_6.Rmd`'s own
+`consequence_filter` param) and writes to
+`extended_data_figure_7alt_missense/` instead, so it doesn't overwrite the
+all-consequences run.
