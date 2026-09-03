@@ -620,6 +620,21 @@ ggsave(file.path(FIGURE_5_DIR, "cm_clinvar_ExOP_REVEL_GeneSpecific_calibrated.pd
 ggsave(file.path(FIGURE_5_DIR, "cm_clinvar_ExOP_AM_GeneSpecific_calibrated.pdf"), cm_clinvar_AM_calibrated$plot, width = cm_clinvar_AM_calibrated$width_mm, height = cm_clinvar_AM_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
 ggsave(file.path(FIGURE_5_DIR, "cm_clinvar_ExOP_MP2_GeneSpecific_calibrated.pdf"), cm_clinvar_MP2_calibrated$plot, width = cm_clinvar_MP2_calibrated$width_mm, height = cm_clinvar_MP2_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
 
+# Calibrated metrics bar chart: real print size, 26 x 35mm core plot area
+# (0-1 on x, bottom-of-panel to top on y, including the same bar padding as
+# the current PNG), 5pt Arial regular tick/bar-value labels, 6pt Arial
+# regular axis titles and legend (see lib/metrics_bar_calibrated.R) --
+# reproduces the manually-edited PDF's abbreviated metric labels, axis
+# titles, tick marks, and 2-row legend, none of which plot_clinvar_metrics()
+# itself renders.
+.metrics_bar_lib <- new.env(parent = globalenv())
+source("../../../src/lib/figures/metrics_bar_calibrated.R", local = .metrics_bar_lib)
+make_metrics_bar_calibrated <- .metrics_bar_lib$make_metrics_bar_calibrated
+
+metrics_controls_calibrated <- make_metrics_bar_calibrated(metrics_one_star_YP)
+
+ggsave(file.path(FIGURE_5_DIR, "metrics_controls_GeneSpecific_calibrated.pdf"), metrics_controls_calibrated$plot, width = metrics_controls_calibrated$width_mm, height = metrics_controls_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+
 ```
 
 ```{r}
@@ -1006,6 +1021,13 @@ cm_clingen_MP2_calibrated <- make_confusion_matrix_calibrated(
 ggsave(file.path(FIGURE_5_DIR, "cm_clingen_ExOP_REVEL_GeneSpecific_calibrated.pdf"), cm_clingen_REVEL_calibrated$plot, width = cm_clingen_REVEL_calibrated$width_mm, height = cm_clingen_REVEL_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
 ggsave(file.path(FIGURE_5_DIR, "cm_clingen_ExOP_AM_GeneSpecific_calibrated.pdf"), cm_clingen_AM_calibrated$plot, width = cm_clingen_AM_calibrated$width_mm, height = cm_clingen_AM_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
 ggsave(file.path(FIGURE_5_DIR, "cm_clingen_ExOP_MP2_GeneSpecific_calibrated.pdf"), cm_clingen_MP2_calibrated$plot, width = cm_clingen_MP2_calibrated$width_mm, height = cm_clingen_MP2_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+
+# Calibrated metrics bar chart: real print size, 6pt/5pt Arial regular (see
+# lib/metrics_bar_calibrated.R and the clinvar panel above, which sources
+# it).
+metrics_clingen_calibrated <- make_metrics_bar_calibrated(metrics_clingen_YP)
+
+ggsave(file.path(FIGURE_5_DIR, "metrics_clingen_GeneSpecific_calibrated.pdf"), metrics_clingen_calibrated$plot, width = metrics_clingen_calibrated$width_mm, height = metrics_clingen_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
 
 ```
 
