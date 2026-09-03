@@ -3,6 +3,13 @@ title: "Figure5_6"
 author: "Malvika Tejura"
 date: "2026-02-09"
 output: html_document
+params:
+  # "all" (default) keeps every consequence type and writes to the usual
+  # figure_5/figure_6 folders. "missense" restricts every panel below to
+  # missense_variant rows and writes to figure_5_missense/figure_6_missense
+  # instead, so it doesn't clobber the unfiltered output. Pass via
+  # rmarkdown::render()'s params argument -- see README.md.
+  consequence_filter: "all"
 ---
 
 ```{r}
@@ -92,20 +99,27 @@ colors_custom <- c(
 
 ```{r}
 
-#---- Figure 5 consequence filtering options ----
+#---- Consequence filtering options ----
 
-# Restrict Figure 5 (clinvar + ClinGen panels below) to rows whose
-# simplified_consequence is one of these values. Set to NULL to disable and
-# keep every consequence type.
-FIGURE_5_ALLOWED_CONSEQUENCES <- NULL
-# FIGURE_5_ALLOWED_CONSEQUENCES <- c("missense_variant", "start_lost", "splicing_variant")
+# Restrict every Figure 5 and Figure 6 panel below to rows whose
+# simplified_consequence is one of these values. Set directly to NULL to
+# disable and keep every consequence type; driven by the consequence_filter
+# render param (see params: in the YAML header) so an alternate
+# missense-only version of every chart can be produced without hand-editing
+# this file -- see README.md for the render command.
+ALLOWED_CONSEQUENCES <- switch(
+  params$consequence_filter,
+  "all" = NULL,
+  "missense" = c("missense_variant"),
+  stop("Unknown consequence_filter param: ", params$consequence_filter)
+)
 
 # When TRUE, additionally drop splicing_variant rows whose hgvs_c shows the
 # actual base change falls outside the coding sequence -- i.e. an intronic
 # offset (e.g. "c.122-13A>T") or a 5'/3' UTR position (e.g. "c.-45G>A",
 # "c.*12A>G") -- rather than a base within the CDS itself. Has no effect on
 # other consequence types.
-FIGURE_5_EXCLUDE_NONCODING_SPLICE_VARIANTS <- FALSE
+EXCLUDE_NONCODING_SPLICE_VARIANTS <- FALSE
 
 # TRUE for an hgvs_c whose coding-DNA position is intronic (digits then a
 # +/- offset) or UTR (leading "-" or "*"), rather than a plain CDS position.
@@ -114,9 +128,9 @@ is_noncoding_hgvs_c <- function(hgvs_c) {
   grepl("^[*-]", coding_pos) | grepl("^[0-9]+[+-]", coding_pos)
 }
 
-filter_figure_5_consequences <- function(df,
-                                          allowed = FIGURE_5_ALLOWED_CONSEQUENCES,
-                                          exclude_noncoding_splice = FIGURE_5_EXCLUDE_NONCODING_SPLICE_VARIANTS) {
+filter_by_consequence <- function(df,
+                                   allowed = ALLOWED_CONSEQUENCES,
+                                   exclude_noncoding_splice = EXCLUDE_NONCODING_SPLICE_VARIANTS) {
   if (!is.null(allowed)) {
     df <- df[df$simplified_consequence %in% allowed, ]
   }
@@ -126,6 +140,13 @@ filter_figure_5_consequences <- function(df,
   }
   df
 }
+
+# Output folders: the usual figure_5/figure_6, or figure_5_missense/
+# figure_6_missense (etc.) when consequence_filter narrows the data, so a
+# filtered run's output never overwrites the unfiltered run's.
+output_suffix <- if (is.null(ALLOWED_CONSEQUENCES)) "" else paste0("_", params$consequence_filter)
+FIGURE_5_DIR <- file.path(OUT_DIR, paste0("figure_5", output_suffix))
+FIGURE_6_DIR <- file.path(OUT_DIR, paste0("figure_6", output_suffix))
 
 ```
 
@@ -138,9 +159,9 @@ clinvar_REVEL_YP  = read_excel(file.path(DATA_DIR, "supplementary_data/Supplemen
 clinvar_AM_YP  = read_excel(file.path(DATA_DIR, "supplementary_data/Supplementary_Data_5.xlsx"), sheet = "controls_AM_GeneSpecific")
 clinvar_MP2_YP  = read_excel(file.path(DATA_DIR, "supplementary_data/Supplementary_Data_5.xlsx"), sheet = "controls_MP2_GeneSpecific")
 
-clinvar_REVEL_YP <- filter_figure_5_consequences(clinvar_REVEL_YP)
-clinvar_AM_YP <- filter_figure_5_consequences(clinvar_AM_YP)
-clinvar_MP2_YP <- filter_figure_5_consequences(clinvar_MP2_YP)
+clinvar_REVEL_YP <- filter_by_consequence(clinvar_REVEL_YP)
+clinvar_AM_YP <- filter_by_consequence(clinvar_AM_YP)
+clinvar_MP2_YP <- filter_by_consequence(clinvar_MP2_YP)
 
 
 ##------------Controls Sankey plot --------------------
@@ -498,7 +519,7 @@ for (nm in names(clinvar_1star_YP)) {
   save_my_plot(
     plot = clinvar_1star_YP[[nm]],
     filename = nm,
-    folder = file.path(OUT_DIR, "figure_5"),
+    folder = FIGURE_5_DIR,
     width = w,
     height = h
   )
@@ -565,9 +586,9 @@ sankey_clinvar_MP2_calibrated <- make_sankey_calibrated(
   wrap_destination_labels = TRUE
 )
 
-ggsave(file.path(OUT_DIR, "figure_5/sankey_clinvar_ExOP_REVEL_GeneSpecific_calibrated.pdf"), sankey_clinvar_REVEL_calibrated$plot, width = sankey_clinvar_REVEL_calibrated$width_mm, height = sankey_clinvar_REVEL_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
-ggsave(file.path(OUT_DIR, "figure_5/sankey_clinvar_ExOP_AM_GeneSpecific_calibrated.pdf"), sankey_clinvar_AM_calibrated$plot, width = sankey_clinvar_AM_calibrated$width_mm, height = sankey_clinvar_AM_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
-ggsave(file.path(OUT_DIR, "figure_5/sankey_clinvar_ExOP_MP2_GeneSpecific_calibrated.pdf"), sankey_clinvar_MP2_calibrated$plot, width = sankey_clinvar_MP2_calibrated$width_mm, height = sankey_clinvar_MP2_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave(file.path(FIGURE_5_DIR, "sankey_clinvar_ExOP_REVEL_GeneSpecific_calibrated.pdf"), sankey_clinvar_REVEL_calibrated$plot, width = sankey_clinvar_REVEL_calibrated$width_mm, height = sankey_clinvar_REVEL_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave(file.path(FIGURE_5_DIR, "sankey_clinvar_ExOP_AM_GeneSpecific_calibrated.pdf"), sankey_clinvar_AM_calibrated$plot, width = sankey_clinvar_AM_calibrated$width_mm, height = sankey_clinvar_AM_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave(file.path(FIGURE_5_DIR, "sankey_clinvar_ExOP_MP2_GeneSpecific_calibrated.pdf"), sankey_clinvar_MP2_calibrated$plot, width = sankey_clinvar_MP2_calibrated$width_mm, height = sankey_clinvar_MP2_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
 
 # Calibrated confusion matrices: real print size, 31 x 27mm matrix (the
 # four colored cells only, excluding axes/labels/title), 6pt Arial regular
@@ -595,9 +616,9 @@ cm_clinvar_MP2_calibrated <- make_confusion_matrix_calibrated(
   matrix_width_mm = 31, matrix_height_mm = 27, x_label = "ClinVar classification"
 )
 
-ggsave(file.path(OUT_DIR, "figure_5/cm_clinvar_ExOP_REVEL_GeneSpecific_calibrated.pdf"), cm_clinvar_REVEL_calibrated$plot, width = cm_clinvar_REVEL_calibrated$width_mm, height = cm_clinvar_REVEL_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
-ggsave(file.path(OUT_DIR, "figure_5/cm_clinvar_ExOP_AM_GeneSpecific_calibrated.pdf"), cm_clinvar_AM_calibrated$plot, width = cm_clinvar_AM_calibrated$width_mm, height = cm_clinvar_AM_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
-ggsave(file.path(OUT_DIR, "figure_5/cm_clinvar_ExOP_MP2_GeneSpecific_calibrated.pdf"), cm_clinvar_MP2_calibrated$plot, width = cm_clinvar_MP2_calibrated$width_mm, height = cm_clinvar_MP2_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave(file.path(FIGURE_5_DIR, "cm_clinvar_ExOP_REVEL_GeneSpecific_calibrated.pdf"), cm_clinvar_REVEL_calibrated$plot, width = cm_clinvar_REVEL_calibrated$width_mm, height = cm_clinvar_REVEL_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave(file.path(FIGURE_5_DIR, "cm_clinvar_ExOP_AM_GeneSpecific_calibrated.pdf"), cm_clinvar_AM_calibrated$plot, width = cm_clinvar_AM_calibrated$width_mm, height = cm_clinvar_AM_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave(file.path(FIGURE_5_DIR, "cm_clinvar_ExOP_MP2_GeneSpecific_calibrated.pdf"), cm_clinvar_MP2_calibrated$plot, width = cm_clinvar_MP2_calibrated$width_mm, height = cm_clinvar_MP2_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
 
 ```
 
@@ -609,9 +630,9 @@ ClinGen_REVEL_YP  =  read_excel(file.path(DATA_DIR, "supplementary_data/Suppleme
 ClinGen_AM_YP  = read_excel(file.path(DATA_DIR, "supplementary_data/Supplementary_Data_5.xlsx"), sheet = "ClinGen_Repo_AM_GeneSpecific")
 ClinGen_MP2_YP  = read_excel(file.path(DATA_DIR, "supplementary_data/Supplementary_Data_5.xlsx"), sheet = "ClinGen_Repo_MP2_GeneSpecific")
 
-ClinGen_REVEL_YP <- filter_figure_5_consequences(ClinGen_REVEL_YP)
-ClinGen_AM_YP <- filter_figure_5_consequences(ClinGen_AM_YP)
-ClinGen_MP2_YP <- filter_figure_5_consequences(ClinGen_MP2_YP)
+ClinGen_REVEL_YP <- filter_by_consequence(ClinGen_REVEL_YP)
+ClinGen_AM_YP <- filter_by_consequence(ClinGen_AM_YP)
+ClinGen_MP2_YP <- filter_by_consequence(ClinGen_MP2_YP)
 
 
 # ------ Sankey function for ClinGen ------
@@ -912,7 +933,7 @@ for (nm in names(clingen_YP_pejaver)) {
   save_my_plot(
     plot = clingen_YP_pejaver[[nm]],
     filename = nm,
-    folder = file.path(OUT_DIR, "figure_5"),
+    folder = FIGURE_5_DIR,
     width = w,
     height = h
   )
@@ -956,9 +977,9 @@ sankey_clingen_MP2_calibrated <- make_sankey_calibrated(
   wrap_destination_labels = TRUE
 )
 
-ggsave(file.path(OUT_DIR, "figure_5/sankey_clingen_ExOP_REVEL_GeneSpecific_calibrated.pdf"), sankey_clingen_REVEL_calibrated$plot, width = sankey_clingen_REVEL_calibrated$width_mm, height = sankey_clingen_REVEL_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
-ggsave(file.path(OUT_DIR, "figure_5/sankey_clingen_ExOP_AM_GeneSpecific_calibrated.pdf"), sankey_clingen_AM_calibrated$plot, width = sankey_clingen_AM_calibrated$width_mm, height = sankey_clingen_AM_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
-ggsave(file.path(OUT_DIR, "figure_5/sankey_clingen_ExOP_MP2_GeneSpecific_calibrated.pdf"), sankey_clingen_MP2_calibrated$plot, width = sankey_clingen_MP2_calibrated$width_mm, height = sankey_clingen_MP2_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave(file.path(FIGURE_5_DIR, "sankey_clingen_ExOP_REVEL_GeneSpecific_calibrated.pdf"), sankey_clingen_REVEL_calibrated$plot, width = sankey_clingen_REVEL_calibrated$width_mm, height = sankey_clingen_REVEL_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave(file.path(FIGURE_5_DIR, "sankey_clingen_ExOP_AM_GeneSpecific_calibrated.pdf"), sankey_clingen_AM_calibrated$plot, width = sankey_clingen_AM_calibrated$width_mm, height = sankey_clingen_AM_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave(file.path(FIGURE_5_DIR, "sankey_clingen_ExOP_MP2_GeneSpecific_calibrated.pdf"), sankey_clingen_MP2_calibrated$plot, width = sankey_clingen_MP2_calibrated$width_mm, height = sankey_clingen_MP2_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
 
 # Calibrated confusion matrices: real print size, 31 x 27mm matrix, 6pt
 # Arial regular (see lib/confusion_matrix_calibrated.R and the clinvar
@@ -982,9 +1003,9 @@ cm_clingen_MP2_calibrated <- make_confusion_matrix_calibrated(
   matrix_width_mm = 31, matrix_height_mm = 27, x_label = "ClinGen classification"
 )
 
-ggsave(file.path(OUT_DIR, "figure_5/cm_clingen_ExOP_REVEL_GeneSpecific_calibrated.pdf"), cm_clingen_REVEL_calibrated$plot, width = cm_clingen_REVEL_calibrated$width_mm, height = cm_clingen_REVEL_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
-ggsave(file.path(OUT_DIR, "figure_5/cm_clingen_ExOP_AM_GeneSpecific_calibrated.pdf"), cm_clingen_AM_calibrated$plot, width = cm_clingen_AM_calibrated$width_mm, height = cm_clingen_AM_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
-ggsave(file.path(OUT_DIR, "figure_5/cm_clingen_ExOP_MP2_GeneSpecific_calibrated.pdf"), cm_clingen_MP2_calibrated$plot, width = cm_clingen_MP2_calibrated$width_mm, height = cm_clingen_MP2_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave(file.path(FIGURE_5_DIR, "cm_clingen_ExOP_REVEL_GeneSpecific_calibrated.pdf"), cm_clingen_REVEL_calibrated$plot, width = cm_clingen_REVEL_calibrated$width_mm, height = cm_clingen_REVEL_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave(file.path(FIGURE_5_DIR, "cm_clingen_ExOP_AM_GeneSpecific_calibrated.pdf"), cm_clingen_AM_calibrated$plot, width = cm_clingen_AM_calibrated$width_mm, height = cm_clingen_AM_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave(file.path(FIGURE_5_DIR, "cm_clingen_ExOP_MP2_GeneSpecific_calibrated.pdf"), cm_clingen_MP2_calibrated$plot, width = cm_clingen_MP2_calibrated$width_mm, height = cm_clingen_MP2_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
 
 ```
 
@@ -993,6 +1014,7 @@ ggsave(file.path(OUT_DIR, "figure_5/cm_clingen_ExOP_MP2_GeneSpecific_calibrated.
 #Figure 6a
 
 VUS_REVEL_YP = read_excel(file.path(DATA_DIR, "supplementary_data/Supplementary_Data_5.xlsx"), sheet = "VUS_REVEL")
+VUS_REVEL_YP <- filter_by_consequence(VUS_REVEL_YP)
 
 
 make_sankey_VUS <- function(df, points_col, colors_custom) {
@@ -1101,9 +1123,9 @@ make_uncertain_confusion <- function(df, points_col, xlabel) {
 cm_REVEL_VUS_YP <- make_uncertain_confusion(VUS_REVEL_YP, Class_REVEL, "REVEL_GeneSpecific")
 
 
-ggsave(file.path(OUT_DIR, "figure_6/sankey_VUS_ExOP_REVEL_GeneSpecific.png"), sankey_VUS_REVEL_YP, dpi = 300, device = 'png', bg = 'transparent', create.dir = TRUE)
+ggsave(file.path(FIGURE_6_DIR, "sankey_VUS_ExOP_REVEL_GeneSpecific.png"), sankey_VUS_REVEL_YP, dpi = 300, device = 'png', bg = 'transparent', create.dir = TRUE)
 
-ggsave(file.path(OUT_DIR, "figure_6/cm_VUS_REVEL_GeneSpecific.png"), cm_REVEL_VUS_YP, dpi = 300, device = 'png', bg = 'transparent', create.dir = TRUE)
+ggsave(file.path(FIGURE_6_DIR, "cm_VUS_REVEL_GeneSpecific.png"), cm_REVEL_VUS_YP, dpi = 300, device = 'png', bg = 'transparent', create.dir = TRUE)
 
 # Calibrated version: real print size, baked-in labels (see lib/sankey_calibrated.R,
 # shared with the gnomAD/Unobserved sankeys further down).
@@ -1128,7 +1150,7 @@ sankey_VUS_calibrated <- make_sankey_calibrated(
   width_mm = 48.5, height_mm = 94.5, source_label = "Uncertain significance"
 )
 
-ggsave(file.path(OUT_DIR, "figure_6/sankey_VUS_ExOP_REVEL_GeneSpecific_calibrated.pdf"), sankey_VUS_calibrated$plot, width = sankey_VUS_calibrated$width_mm, height = sankey_VUS_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave(file.path(FIGURE_6_DIR, "sankey_VUS_ExOP_REVEL_GeneSpecific_calibrated.pdf"), sankey_VUS_calibrated$plot, width = sankey_VUS_calibrated$width_mm, height = sankey_VUS_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
   
 
 ```
@@ -1255,22 +1277,22 @@ path_plot
 unc_plot
 ben_plot
 
-ggsave(file.path(OUT_DIR, 'figure_6/pie_path_REVEL_GeneSpecific_lab.png'), path_plot, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7, create.dir = TRUE)
-ggsave(file.path(OUT_DIR, 'figure_6/pie_ben_REVEL_GeneSpecific_lab.png'), ben_plot, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7, create.dir = TRUE)
-ggsave(file.path(OUT_DIR, 'figure_6/pie_unc_REVEL_GeneSpecific_lab.png'), unc_plot, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7, create.dir = TRUE)
+ggsave(file.path(FIGURE_6_DIR, 'pie_path_REVEL_GeneSpecific_lab.png'), path_plot, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7, create.dir = TRUE)
+ggsave(file.path(FIGURE_6_DIR, 'pie_ben_REVEL_GeneSpecific_lab.png'), ben_plot, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7, create.dir = TRUE)
+ggsave(file.path(FIGURE_6_DIR, 'pie_unc_REVEL_GeneSpecific_lab.png'), unc_plot, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7, create.dir = TRUE)
 
-ggsave(file.path(OUT_DIR, 'figure_6/pie_path_REVEL_GeneSpecific_nolab.png'), path_plot_no_lab, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7, create.dir = TRUE)
-ggsave(file.path(OUT_DIR, 'figure_6/pie_ben_REVEL_GeneSpecific_nolab.png'), ben_plot_no_lab, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7, create.dir = TRUE)
-ggsave(file.path(OUT_DIR, 'figure_6/pie_unc_REVEL_GeneSpecific_nolab.png'), unc_plot_no_lab, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7, create.dir = TRUE)
+ggsave(file.path(FIGURE_6_DIR, 'pie_path_REVEL_GeneSpecific_nolab.png'), path_plot_no_lab, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7, create.dir = TRUE)
+ggsave(file.path(FIGURE_6_DIR, 'pie_ben_REVEL_GeneSpecific_nolab.png'), ben_plot_no_lab, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7, create.dir = TRUE)
+ggsave(file.path(FIGURE_6_DIR, 'pie_unc_REVEL_GeneSpecific_nolab.png'), unc_plot_no_lab, dpi = 300, device = 'png', bg = 'transparent', width = 7, height = 7, create.dir = TRUE)
 
 # Calibrated versions: real print size, baked-in labels (see lib/three_ring_donut.R)
 path_calibrated <- make_three_ring_plot_calibrated(pathogenic)
 unc_calibrated  <- make_three_ring_plot_calibrated(uncertain)
 ben_calibrated  <- make_three_ring_plot_calibrated(benign)
 
-ggsave(file.path(OUT_DIR, 'figure_6/pie_path_REVEL_GeneSpecific_calibrated.pdf'), path_calibrated$plot, width = path_calibrated$width_mm, height = path_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
-ggsave(file.path(OUT_DIR, 'figure_6/pie_unc_REVEL_GeneSpecific_calibrated.pdf'), unc_calibrated$plot, width = unc_calibrated$width_mm, height = unc_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
-ggsave(file.path(OUT_DIR, 'figure_6/pie_ben_REVEL_GeneSpecific_calibrated.pdf'), ben_calibrated$plot, width = ben_calibrated$width_mm, height = ben_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave(file.path(FIGURE_6_DIR, 'pie_path_REVEL_GeneSpecific_calibrated.pdf'), path_calibrated$plot, width = path_calibrated$width_mm, height = path_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave(file.path(FIGURE_6_DIR, 'pie_unc_REVEL_GeneSpecific_calibrated.pdf'), unc_calibrated$plot, width = unc_calibrated$width_mm, height = unc_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave(file.path(FIGURE_6_DIR, 'pie_ben_REVEL_GeneSpecific_calibrated.pdf'), ben_calibrated$plot, width = ben_calibrated$width_mm, height = ben_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
 
 
 
@@ -1281,6 +1303,7 @@ ggsave(file.path(OUT_DIR, 'figure_6/pie_ben_REVEL_GeneSpecific_calibrated.pdf'),
 #Figure 6d
 
 gnomad_REVEL_YP = read_excel(file.path(DATA_DIR, "supplementary_data/Supplementary_Data_5.xlsx"), sheet = "gnomAD_REVEL")
+gnomad_REVEL_YP <- filter_by_consequence(gnomad_REVEL_YP)
 
 make_sankey_gnomad <- function(df, points_col, colors_custom) {
   
@@ -1390,9 +1413,9 @@ make_gnomad_confusion <- function(df, points_col, xlabel) {
 cm_REVEL_gnomad_YP <- make_gnomad_confusion(gnomad_REVEL_YP, Class_REVEL, "REVEL_GeneSpecific")
 
 
-ggsave(file.path(OUT_DIR, 'figure_6/sankey_gnomAD_ExOP_REVEL_GeneSpecific.png'), sankey_gnomad_REVEL_YP, dpi = 300, device = 'png', bg = 'transparent', create.dir = TRUE)
+ggsave(file.path(FIGURE_6_DIR, 'sankey_gnomAD_ExOP_REVEL_GeneSpecific.png'), sankey_gnomad_REVEL_YP, dpi = 300, device = 'png', bg = 'transparent', create.dir = TRUE)
 
-ggsave(file.path(OUT_DIR, 'figure_6/cm_REVEL_gnomad_YP.png'), cm_REVEL_gnomad_YP, dpi = 300, device = 'png', bg = 'transparent', height = 4, width = 6, create.dir = TRUE)
+ggsave(file.path(FIGURE_6_DIR, 'cm_REVEL_gnomad_YP.png'), cm_REVEL_gnomad_YP, dpi = 300, device = 'png', bg = 'transparent', height = 4, width = 6, create.dir = TRUE)
 
 # Calibrated version: real print size, baked-in labels (see lib/sankey_calibrated.R).
 # make_sankey_gnomad() only sets $gnomad on its own local copy of the data, so
@@ -1412,7 +1435,7 @@ sankey_gnomad_calibrated <- make_sankey_calibrated(
   wrap_destination_labels = TRUE
 )
 
-ggsave(file.path(OUT_DIR, 'figure_6/sankey_gnomAD_ExOP_REVEL_GeneSpecific_calibrated.pdf'), sankey_gnomad_calibrated$plot, width = sankey_gnomad_calibrated$width_mm, height = sankey_gnomad_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave(file.path(FIGURE_6_DIR, 'sankey_gnomAD_ExOP_REVEL_GeneSpecific_calibrated.pdf'), sankey_gnomad_calibrated$plot, width = sankey_gnomad_calibrated$width_mm, height = sankey_gnomad_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
 
 ```
 
@@ -1420,6 +1443,7 @@ ggsave(file.path(OUT_DIR, 'figure_6/sankey_gnomAD_ExOP_REVEL_GeneSpecific_calibr
 #Figure 6e
 
 preclass_REVEL_YP = read_excel(file.path(DATA_DIR, "supplementary_data/Supplementary_Data_5.xlsx"), sheet = "Unobserved_REVEL")
+preclass_REVEL_YP <- filter_by_consequence(preclass_REVEL_YP)
 
 
 make_sankey_preclass <- function(df, points_col, colors_custom) {
@@ -1495,9 +1519,9 @@ library(dplyr)
 cm_REVEL_preclass_YP <- make_uncertain_confusion(preclass_REVEL_YP, Class_REVEL, "REVEL_dan_YP")
 
 
-ggsave(file.path(OUT_DIR, 'figure_6/sankey_unseen_ExOP_REVEL_GeneSpecific.png'), preclass_REVEL_YP_sankey, dpi = 300, device = 'png', bg = 'transparent', create.dir = TRUE)
+ggsave(file.path(FIGURE_6_DIR, 'sankey_unseen_ExOP_REVEL_GeneSpecific.png'), preclass_REVEL_YP_sankey, dpi = 300, device = 'png', bg = 'transparent', create.dir = TRUE)
 
-ggsave(file.path(OUT_DIR, 'figure_6/cm_REVEL_unseen_GeneSpecific.png'), cm_REVEL_preclass_YP, dpi = 300, device = 'png', bg = 'transparent', height = 4, width = 6, create.dir = TRUE)
+ggsave(file.path(FIGURE_6_DIR, 'cm_REVEL_unseen_GeneSpecific.png'), cm_REVEL_preclass_YP, dpi = 300, device = 'png', bg = 'transparent', height = 4, width = 6, create.dir = TRUE)
 
 # Calibrated version: real print size, baked-in labels (see lib/sankey_calibrated.R).
 # make_sankey_preclass() only sets $preclass on its own local copy of the data,
@@ -1517,7 +1541,7 @@ sankey_preclass_calibrated <- make_sankey_calibrated(
   wrap_destination_labels = TRUE
 )
 
-ggsave(file.path(OUT_DIR, 'figure_6/sankey_unseen_ExOP_REVEL_GeneSpecific_calibrated.pdf'), sankey_preclass_calibrated$plot, width = sankey_preclass_calibrated$width_mm, height = sankey_preclass_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave(file.path(FIGURE_6_DIR, 'sankey_unseen_ExOP_REVEL_GeneSpecific_calibrated.pdf'), sankey_preclass_calibrated$plot, width = sankey_preclass_calibrated$width_mm, height = sankey_preclass_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
 
 
 ```

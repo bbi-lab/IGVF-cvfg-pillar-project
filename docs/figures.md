@@ -208,6 +208,15 @@ sankeys/confusion matrices) save via direct `ggsave()` calls to
 `data/output/figures/figure_6/`, the same directory `Figure_6b.R` (above)
 writes `figure_6b.pdf`/`figure_6b.svg` to.
 
+Every panel `Figure5_6.Rmd` itself builds (i.e. everything except
+`Figure_6b.R`'s own output) can be restricted to missense-only variants via
+the `consequence_filter` render param -- see [`README.md`](../README.md#figure-56)
+for the command. This writes to `figure_5_missense/`/`figure_6_missense/`
+instead of `figure_5/`/`figure_6/`, so it doesn't overwrite the default,
+all-consequences run; `figure_6_missense/` will not include
+`figure_6b.pdf`/`figure_6b.svg`, since those come from the separate,
+non-parameterized `Figure_6b.R` script above.
+
 The published Fig 5a/d and Fig 6a/c/d/e panels have counts hand-overlaid on
 top of these raw plots in the assembled `PP_Final_Figure3_5_6.ai`. The
 sankeys' node counts match the totals already printed on their companion

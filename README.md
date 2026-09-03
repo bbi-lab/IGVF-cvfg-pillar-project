@@ -327,6 +327,12 @@ docker compose run --rm -w /usr/src/app/notebooks/figures/figure_5_6 \
 # Figure5_6.Rmd: writes executed_Figure5_6.html next to the .Rmd (gitignored)
 docker compose run --rm -w /usr/src/app/notebooks/figures/figure_5_6 \
   r-figures -e 'rmarkdown::render("Figure5_6.Rmd", output_file = "executed_Figure5_6.html")'
+
+# Optional: same Figure5_6.Rmd, restricted to missense_variant rows only.
+# Writes to figure_5_missense/ and figure_6_missense/ instead of
+# figure_5/figure_6, so it doesn't overwrite the default run above.
+docker compose run --rm -w /usr/src/app/notebooks/figures/figure_5_6 \
+  r-figures -e 'rmarkdown::render("Figure5_6.Rmd", output_file = "executed_Figure5_6_missense.html", params = list(consequence_filter = "missense"))'
 ```
 
 #### Extended Data Figure 2
