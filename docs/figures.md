@@ -342,6 +342,36 @@ later VUS/gnomAD/donut chunks call `ggsave()` directly with hardcoded
 `extended_data_figures/` and `extended_data_figure_6/` under
 `data/output/figures/` if a figure you expect isn't where you thought.
 
+### Extended Data Figure 6alt
+
+An alternate version of Extended Data Figure 6 (REVEL/AlphaMissense/MutPred2
+x ClinVar controls/ClinGen Evidence Repository, all via OddsPath/"Universal"
+calibration), built as a new, isolated chunk right after the existing Ext.
+Data Fig 6 block in `Extended_data_figures.Rmd` -- doesn't touch or reuse any
+of that block's own objects. Adds a missense-only variant of every panel
+(`simplified_consequence == "missense_variant"`, same column/idea as
+`Figure5_6.Rmd`'s own `consequence_filter` param), doubling the current 12
+sankeys+confusion-matrices to 24 -- meant to sit as an All-variants block and
+a Missense-only block side by side. Every chart is shrunk 50% linearly from
+Ext. Data Fig 6's own calibrated core dimensions (sankey 37x64mm ->
+18.5x32mm, confusion matrix 26x23mm -> 13x11.5mm) with unchanged font sizes,
+so each chart's own *returned* width/height (label/title overflow included,
+same as every other calibrated chart here) ends up noticeably larger than
+that core size -- the same-size text no longer shrinks with the box. Sankey
+node labels are abbreviated to P/LP/VUS/LB/B (`label_overrides`), including
+ClinGen's own "No Classification" bucket, mapped to "VUS" like "Uncertain".
+
+Writes 24 PDFs to `data/output/figures/extended_data_figure_6alt/`, named
+like `sankey_clinvar_OP_REVEL_Universal_missense_calibrated.pdf` /
+`cm_clingen_OP_MP2_Universal_all_calibrated.pdf`. This also fixed a real bug
+in `confusion_matrix_calibrated.R`: its canvas width previously assumed the
+title/x-axis-label text would always be narrower than the matrix box itself
+(true at the original 26x23/31x27mm sizes) -- at 13x11.5mm with the same
+unchanged font size that stopped holding, clipping the title against the PDF
+page edge. Fixed by widening `x_range` to also cover the title's/x-label's
+own text width when it exceeds the matrix's; a no-op for every existing
+(larger) calibrated confusion matrix in this project.
+
 ### Extended Data Figure 7alt (`src/make_extended_data_figure_7alt.py`)
 
 A candidate replacement for Extended Data Figure 7: a single calibrated

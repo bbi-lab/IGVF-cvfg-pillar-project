@@ -111,18 +111,34 @@ make_confusion_matrix_calibrated <- function(TP, TN, FP, FN, total_n,
   # its left, in a column to the left of the matrix; x-axis label and x
   # tick labels below the matrix, same idea but unrotated.
   title_h_mm <- text_height_mm(title_text, pt = label_pt)
-  y_label_w_mm <- text_height_mm(y_label, pt = label_pt)
+  # y_label = NULL omits both the text and the gap/column of space it would
+  # otherwise reserve to the left of the y tick labels -- the formulas below
+  # collapse to the correct tightened layout when both are 0.
+  y_label_w_mm <- if (is.null(y_label)) 0 else text_height_mm(y_label, pt = label_pt)
+  y_label_gap_mm <- if (is.null(y_label)) 0 else GAP_MM
   y_tick_w_mm <- max(text_width_mm(y_tick_labels, pt = label_pt))
   x_label_h_mm <- text_height_mm(x_label, pt = label_pt)
   x_tick_h_mm <- max(text_height_mm(x_tick_labels, pt = label_pt))
+  # Both centered over the matrix's own width -- at matrix_width_mm large
+  # relative to label_pt this is always narrower than the matrix itself, so
+  # it was previously left out of x_range entirely; a small matrix_width_mm
+  # (e.g. a 50%-scaled chart, same unchanged font size) can flip that,
+  # letting the title/x_label overflow past the matrix's own left/right
+  # edges -- accounted for explicitly below rather than assumed away.
+  title_w_mm <- max(text_width_mm(strsplit(title_text, "\n")[[1]], pt = label_pt))
+  x_label_w_mm <- text_width_mm(x_label, pt = label_pt)
 
   y_tick_x <- 0 - AXIS_GAP_MM - GAP_MM - y_tick_w_mm / 2
-  y_label_x <- 0 - AXIS_GAP_MM - GAP_MM - y_tick_w_mm - GAP_MM - y_label_w_mm / 2
+  y_label_x <- 0 - AXIS_GAP_MM - GAP_MM - y_tick_w_mm - y_label_gap_mm - y_label_w_mm / 2
   x_tick_y <- 0 - AXIS_GAP_MM - GAP_MM - x_tick_h_mm / 2
   x_label_y <- 0 - AXIS_GAP_MM - GAP_MM - x_tick_h_mm - GAP_MM - x_label_h_mm / 2
   title_y <- matrix_height_mm + GAP_MM + title_h_mm / 2
+  matrix_center_x <- matrix_width_mm / 2
 
-  x_range <- c(y_label_x - y_label_w_mm / 2, matrix_width_mm) + c(-GAP_MM, GAP_MM)
+  x_range <- c(
+    min(y_label_x - y_label_w_mm / 2, matrix_center_x - title_w_mm / 2, matrix_center_x - x_label_w_mm / 2),
+    max(matrix_width_mm, matrix_center_x + title_w_mm / 2, matrix_center_x + x_label_w_mm / 2)
+  ) + c(-GAP_MM, GAP_MM)
   y_range <- c(x_label_y - x_label_h_mm / 2, title_y + title_h_mm / 2) + c(-GAP_MM, GAP_MM)
 
   p <- ggplot() +
@@ -151,8 +167,6 @@ make_confusion_matrix_calibrated <- function(TP, TN, FP, FN, total_n,
               size = label_mm, family = FONT_FAMILY, colour = "black", lineheight = 1) +
     annotate("text", x = matrix_width_mm / 2, y = x_label_y, label = x_label,
               size = label_mm, family = FONT_FAMILY, colour = "black") +
-    annotate("text", x = y_label_x, y = matrix_height_mm / 2, label = y_label,
-              size = label_mm, family = FONT_FAMILY, colour = "black", angle = 90) +
     annotate("text", x = matrix_width_mm / 4, y = x_tick_y, label = x_tick_labels[1],
               size = label_mm, family = FONT_FAMILY, colour = "black") +
     annotate("text", x = matrix_width_mm * 3 / 4, y = x_tick_y, label = x_tick_labels[2],
@@ -164,6 +178,11 @@ make_confusion_matrix_calibrated <- function(TP, TN, FP, FN, total_n,
     coord_cartesian(xlim = x_range, ylim = y_range, expand = FALSE, clip = "off") +
     theme_void() +
     theme(legend.position = "none", plot.margin = margin(0, 0, 0, 0))
+
+  if (!is.null(y_label)) {
+    p <- p + annotate("text", x = y_label_x, y = matrix_height_mm / 2, label = y_label,
+                       size = label_mm, family = FONT_FAMILY, colour = "black", angle = 90)
+  }
 
   list(plot = p, width_mm = diff(x_range), height_mm = diff(y_range))
 }
