@@ -215,6 +215,19 @@ total discordant-variant count, each broken down by direction of discordance
 (ClinVar P/LP reclassified B/LB, vs. ClinVar B/LB reclassified P/LP). See
 `compute_gene_discordance_stats`.
 
+A "Simplified consequence x SpliceAI score breakdown" section reports, for
+each of the five Supplementary Data 5 variant categories (from the same
+REVEL sheets as the Supplementary Data 5 variant classification section --
+`controls_REVEL_GeneSpecific`, `ClinGen_Repo_REVEL_GeneSpecific`,
+`VUS_REVEL`, `gnomAD_REVEL`, and `Unobserved_REVEL`, each deduplicated to
+one row per distinct DNA variant the same way), a table with one row per
+`simplified_consequence` value and one column per category, each cell
+showing that consequence/category combination's distinct DNA variant count
+split two ways: those with every SpliceAI delta score (`spliceAI_DS_AG`,
+`spliceAI_DS_AL`, `spliceAI_DS_DG`, `spliceAI_DS_DL`) null or below 0.2, and
+those with at least one of those four scores at or above 0.2. See
+`compute_consequence_splice_breakdown`.
+
 Both file arguments are optional and default to the paths above. Output is
 written as plain text (to stdout, and optionally to `--output` as well).
 
@@ -388,6 +401,16 @@ TOTAL_POINTS_REVEL_COL = "Total_Points_REVEL"
 CLASS_PATHOGENIC_VALUES = frozenset({"Pathogenic", "Likely Pathogenic"})
 CLASS_BENIGN_VALUES = frozenset({"Benign", "Likely Benign"})
 CLASS_PATHOGENIC_OR_BENIGN_VALUES = CLASS_PATHOGENIC_VALUES | CLASS_BENIGN_VALUES
+
+SIMPLIFIED_CONSEQUENCE_COL = "simplified_consequence"
+NO_CONSEQUENCE_LABEL = "(no consequence)"
+SPLICEAI_SCORE_COLS = ["spliceAI_DS_AG", "spliceAI_DS_AL", "spliceAI_DS_DG", "spliceAI_DS_DL"]
+SPLICEAI_SCORE_THRESHOLD = 0.2
+SPLICEAI_LOW_LABEL = f"<{SPLICEAI_SCORE_THRESHOLD} or missing"
+SPLICEAI_HIGH_LABEL = f">={SPLICEAI_SCORE_THRESHOLD}"
+CONSEQUENCE_SPLICE_BREAKDOWN_TITLE = (
+    "=== Simplified consequence x SpliceAI score breakdown (Supplementary Data 5 REVEL sheets) ==="
+)
 
 # Per-predictor sheet-name suffix and Class_*/Total_Points_* column names for
 # `compute_variant_classification_stats`'s REVEL/AlphaMissense/MutPred2 table
@@ -2293,6 +2316,78 @@ def format_gene_discordance_summary(by_gene, total_discordant, total_controls, t
     return "\n".join(lines)
 
 
+def has_high_spliceai_score(df, splice_score_cols=SPLICEAI_SCORE_COLS, threshold=SPLICEAI_SCORE_THRESHOLD):
+    """True where any of `splice_score_cols` is >= `threshold`; a row with all
+    four scores null (a complex delins near a splice junction can score `NaN`
+    on all four, per `docs/splice_variant_filtering_pipeline.md`) is False,
+    not unknown -- matches that doc's own `splice_variant` derivation.
+    """
+    return (df[splice_score_cols] >= threshold).any(axis=1)
+
+
+def compute_consequence_splice_breakdown(workbook, category_sheets=VARIANT_CLASSIFICATION_CATEGORY_SHEETS):
+    """For each of the five Supplementary Data 5 variant categories
+    (`category_sheets`, default the REVEL sheets in
+    `VARIANT_CLASSIFICATION_CATEGORY_SHEETS`), read that category's sheet from
+    `workbook` (an open `pd.ExcelFile` over the controls file), deduplicate to
+    one row per distinct DNA variant (`distinct_dna_variants`), and count
+    those variants by `simplified_consequence` (null values grouped under
+    `NO_CONSEQUENCE_LABEL`), split into those with every SpliceAI delta score
+    null or below `SPLICEAI_SCORE_THRESHOLD` ("low") and those with at least
+    one at or above it ("high") -- see `has_high_spliceai_score`.
+
+    Returns `{category: DataFrame}`, each DataFrame indexed by
+    `simplified_consequence` value with `low`/`high` integer columns. See
+    `format_consequence_splice_breakdown_table`.
+    """
+    breakdown = {}
+    for category, sheet_name in category_sheets.items():
+        df = distinct_dna_variants(workbook.parse(sheet_name))
+        consequence = df[SIMPLIFIED_CONSEQUENCE_COL].fillna(NO_CONSEQUENCE_LABEL)
+        high = has_high_spliceai_score(df)
+        counts = high.groupby(consequence).agg(["sum", "count"])
+        counts["low"] = counts["count"] - counts["sum"]
+        breakdown[category] = counts.rename(columns={"sum": "high"})[["low", "high"]].astype(int)
+    return breakdown
+
+
+def format_consequence_splice_breakdown_table(breakdown, title=CONSEQUENCE_SPLICE_BREAKDOWN_TITLE):
+    """Table form of `compute_consequence_splice_breakdown`'s output: one row
+    per `simplified_consequence` value (in `NO_CONSEQUENCE_LABEL`-last order),
+    one column per category, each cell "{low} / {high}" -- distinct DNA
+    variants with every SpliceAI score null or below `SPLICEAI_SCORE_
+    THRESHOLD`, vs. with at least one at or above it. A trailing "Total" row
+    sums each category's column.
+    """
+    categories = list(breakdown)
+    consequences = sorted(
+        set().union(*(set(table.index) for table in breakdown.values())),
+        key=lambda consequence: (consequence == NO_CONSEQUENCE_LABEL, consequence),
+    )
+
+    def _cell(table, consequence):
+        if consequence not in table.index:
+            return "0 / 0"
+        row = table.loc[consequence]
+        return f"{row['low']} / {row['high']}"
+
+    result = pd.DataFrame(
+        {category: [_cell(breakdown[category], consequence) for consequence in consequences] for category in categories},
+        index=consequences,
+    )
+    result.loc["Total"] = {
+        category: f"{breakdown[category]['low'].sum()} / {breakdown[category]['high'].sum()}"
+        for category in categories
+    }
+    lines = [
+        title,
+        f"Each cell: distinct DNA variants with every SpliceAI score ({', '.join(SPLICEAI_SCORE_COLS)}) "
+        f"{SPLICEAI_LOW_LABEL} / with at least one SpliceAI score {SPLICEAI_HIGH_LABEL}.",
+        result.to_string(),
+    ]
+    return "\n".join(lines)
+
+
 def points_are_pathogenic_or_benign(points):
     """True where combined evidence points fall outside the Uncertain range
     (0-5) -- i.e. Likely Pathogenic/Pathogenic (>=6) or Likely Benign/Benign
@@ -2433,6 +2528,7 @@ def build_report_text(
     variant_classification_chi_squared_summary,
     reclassification_file_variant_classification_summary,
     gene_discordance_summary,
+    consequence_splice_breakdown_summary,
     allow_clinvar_conflicts=False,
 ):
     conflict_note = (
@@ -2463,6 +2559,7 @@ def build_report_text(
         variant_classification_chi_squared_summary,
         reclassification_file_variant_classification_summary,
         gene_discordance_summary,
+        consequence_splice_breakdown_summary,
     ]
     return "\n\n".join(parts)
 
@@ -2621,6 +2718,9 @@ def main(
     )
 
     gene_discordance_summary = format_gene_discordance_summary(*compute_gene_discordance_stats(controls_workbook))
+    consequence_splice_breakdown_summary = format_consequence_splice_breakdown_table(
+        compute_consequence_splice_breakdown(controls_workbook)
+    )
 
     # Deliberately not dtype=str: the CHEK2 merge below matches
     # auth_reported_score/score by exact numeric equality, which only lines
@@ -2653,6 +2753,7 @@ def main(
         variant_classification_chi_squared_summary,
         reclassification_file_variant_classification_summary,
         gene_discordance_summary,
+        consequence_splice_breakdown_summary,
         allow_clinvar_conflicts=allow_clinvar_conflicts,
     )
     click.echo(report)
