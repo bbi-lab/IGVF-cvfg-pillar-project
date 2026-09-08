@@ -150,10 +150,13 @@ Supplementary_Data_5.xlsx) respectively:
   ExCALIBR/OddsPath + REVEL/AlphaMissense/MutPred2 gene-specific evidence
   (`Class_REVEL`/`Class_AM`/`Class_MP2`, each from that predictor's own
   sheet), rendered as one table per control source with a row per evidence
-  source so all four can be compared at a glance. ClinVar's control label is
-  `clnsig_group_18_25`; ClinGen's is `Updated_Classification_ClinGen_repo`
-  (its own assertion, since `clnsig_group_18_25` isn't a clean ClinVar label
-  for ClinGen-only controls). See `compute_control_concordance`.
+  source so all four can be compared at a glance. Discordant is further
+  broken out by direction: control Pathogenic/Likely Pathogenic reclassified
+  Benign/Likely Benign by the evidence source, vs. the reverse -- the two sum
+  to the Discordant count. ClinVar's control label is `clnsig_group_18_25`;
+  ClinGen's is `Updated_Classification_ClinGen_repo` (its own assertion,
+  since `clnsig_group_18_25` isn't a clean ClinVar label for ClinGen-only
+  controls). See `compute_control_concordance`.
 
 - **Variant classification**: how many distinct DNA variants have a
   classification, how many of those are pathogenic or benign, and how many
@@ -467,7 +470,19 @@ ASSERTION_CLINGEN_REPO_COL = "Assertion_ClinGen_repo"
 CONCORDANT_LABEL = "Concordant"
 DISCORDANT_LABEL = "Discordant"
 CONTROL_VUS_LABEL = "VUS"
-CONTROL_CONCORDANCE_LABELS_ORDER = [CONCORDANT_LABEL, DISCORDANT_LABEL, CONTROL_VUS_LABEL]
+# Directional breakdown of DISCORDANT_LABEL -- mutually exclusive and exhaustive
+# over the discordant rows, since a row's control classification is either
+# pathogenic- or benign-leaning (never both), and it disagrees with the
+# evidence source's assignment in exactly one of these two directions.
+DISCORDANT_CONTROL_PLP_TO_EVIDENCE_BLB_LABEL = "  ...control PLP, evidence BLB"
+DISCORDANT_CONTROL_BLB_TO_EVIDENCE_PLP_LABEL = "  ...control BLB, evidence PLP"
+CONTROL_CONCORDANCE_LABELS_ORDER = [
+    CONCORDANT_LABEL,
+    DISCORDANT_LABEL,
+    DISCORDANT_CONTROL_PLP_TO_EVIDENCE_BLB_LABEL,
+    DISCORDANT_CONTROL_BLB_TO_EVIDENCE_PLP_LABEL,
+    CONTROL_VUS_LABEL,
+]
 CONTROL_CONCORDANCE_EVIDENCE_LABEL = "OddsPath calibration"
 COMBINED_EVIDENCE_LABEL_BY_PREDICTOR = {
     predictor: f"ExCALIBR/OddsPath + {predictor} gene-specific" for predictor in VARIANT_CLASSIFICATION_PREDICTORS
@@ -1583,7 +1598,10 @@ def control_concordance_flags(control_group, pathogenic_values, benign_values, a
     Series already derived from whichever evidence source is being compared
     (e.g. `OP_points > 0`/`< 0` for OddsPath alone, or `Class_REVEL` category
     membership for the combined-with-REVEL evidence) -- a row with neither
-    set counts as VUS. Returns (flags, in_scope), both boolean Series/
+    set counts as VUS. `DISCORDANT_LABEL` also carries two mutually-exclusive
+    sub-flags (`DISCORDANT_CONTROL_PLP_TO_EVIDENCE_BLB_LABEL`/
+    `DISCORDANT_CONTROL_BLB_TO_EVIDENCE_PLP_LABEL`) breaking discordant rows
+    out by direction. Returns (flags, in_scope), both boolean Series/
     DataFrame aligned to `control_group`'s index.
     """
     is_pathogenic = control_group.isin(pathogenic_values)
@@ -1591,10 +1609,20 @@ def control_concordance_flags(control_group, pathogenic_values, benign_values, a
     in_scope = is_pathogenic | is_benign
 
     concordant = (is_pathogenic & assigned_pathogenic) | (is_benign & assigned_benign)
-    discordant = (is_pathogenic & assigned_benign) | (is_benign & assigned_pathogenic)
+    discordant_plp_to_blb = is_pathogenic & assigned_benign
+    discordant_blb_to_plp = is_benign & assigned_pathogenic
+    discordant = discordant_plp_to_blb | discordant_blb_to_plp
     vus = ~assigned_pathogenic & ~assigned_benign
 
-    flags = pd.DataFrame({CONCORDANT_LABEL: concordant, DISCORDANT_LABEL: discordant, CONTROL_VUS_LABEL: vus})
+    flags = pd.DataFrame(
+        {
+            CONCORDANT_LABEL: concordant,
+            DISCORDANT_LABEL: discordant,
+            DISCORDANT_CONTROL_PLP_TO_EVIDENCE_BLB_LABEL: discordant_plp_to_blb,
+            DISCORDANT_CONTROL_BLB_TO_EVIDENCE_PLP_LABEL: discordant_blb_to_plp,
+            CONTROL_VUS_LABEL: vus,
+        }
+    )
     return flags, in_scope
 
 
@@ -1604,7 +1632,10 @@ def compute_control_concordance(workbook):
     calibration evidence alone, plus the combined ExCALIBR/OddsPath +
     <predictor> gene-specific evidence for each of REVEL/AlphaMissense/
     MutPred2 -- see the module-level comment above `CLINGEN_CLASSIFICATION_COL`
-    for exactly what each evidence source is.
+    for exactly what each evidence source is. `Discordant` is further split
+    into its two directions (control Pathogenic/Likely Pathogenic reclassified
+    Benign/Likely Benign by the evidence source, or vice versa) -- see
+    `control_concordance_flags`.
 
     Returns {(control_source_label, evidence_label): (total, table)}, where
     `table` is the `summarize_flags` output over the in-scope rows.
@@ -1643,7 +1674,11 @@ def format_control_concordance_report(concordance):
     control source (ClinVar, ClinGen), with one row per evidence source
     (OddsPath alone, then combined with each of REVEL/AlphaMissense/MutPred2)
     so all four evidence sources can be compared at a glance instead of
-    spreading them across separate subsections.
+    spreading them across separate subsections. Each row's two directional
+    discordance columns (`DISCORDANT_CONTROL_PLP_TO_EVIDENCE_BLB_LABEL`/
+    `DISCORDANT_CONTROL_BLB_TO_EVIDENCE_PLP_LABEL`) are reported as a percent
+    of that row's own total, same as `Concordant`/`Discordant`/`VUS` --
+    together they sum to `Discordant`.
     """
     evidence_labels = [CONTROL_CONCORDANCE_EVIDENCE_LABEL] + [
         COMBINED_EVIDENCE_LABEL_BY_PREDICTOR[predictor] for predictor in VARIANT_CLASSIFICATION_PREDICTORS

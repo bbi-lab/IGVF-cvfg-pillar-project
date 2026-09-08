@@ -20,6 +20,8 @@ from src.mave_dataset_stats import (
     CONTROL_VUS_LABEL,
     DISAGREE_LABEL,
     DISCORDANT_BENIGN_TO_PATHOGENIC_LABEL,
+    DISCORDANT_CONTROL_BLB_TO_EVIDENCE_PLP_LABEL,
+    DISCORDANT_CONTROL_PLP_TO_EVIDENCE_BLB_LABEL,
     DISCORDANT_LABEL,
     DISCORDANT_PATHOGENIC_TO_BENIGN_LABEL,
     FUNCTIONAL_POINTS_COL,
@@ -2142,6 +2144,10 @@ def test_control_concordance_flags_concordant_discordant_vus():
     assert list(flags[CONCORDANT_LABEL]) == [True, True, False, False, False]
     assert list(flags[DISCORDANT_LABEL]) == [False, False, True, False, False]
     assert list(flags[CONTROL_VUS_LABEL]) == [False, False, False, True, True]
+    # row 3 (control Pathogenic, assigned benign) is the sole discordant row, in the
+    # PLP-to-BLB direction; no row is discordant in the opposite direction.
+    assert list(flags[DISCORDANT_CONTROL_PLP_TO_EVIDENCE_BLB_LABEL]) == [False, False, True, False, False]
+    assert list(flags[DISCORDANT_CONTROL_BLB_TO_EVIDENCE_PLP_LABEL]) == [False, False, False, False, False]
 
 
 def _write_control_concordance_workbook(path):
@@ -2261,6 +2267,10 @@ def test_compute_control_concordance_clinvar_and_clingen(tmp_path):
     assert clinvar_mp2_table.loc[CONCORDANT_LABEL, "count"] == 2
     assert clinvar_mp2_table.loc[DISCORDANT_LABEL, "count"] == 2
     assert clinvar_mp2_table.loc[CONTROL_VUS_LABEL, "count"] == 1
+    # Row ("Benign", "Pathogenic") is the sole BLB-to-PLP discordance; row
+    # ("Likely pathogenic", "Benign") is the sole PLP-to-BLB discordance.
+    assert clinvar_mp2_table.loc[DISCORDANT_CONTROL_PLP_TO_EVIDENCE_BLB_LABEL, "count"] == 1
+    assert clinvar_mp2_table.loc[DISCORDANT_CONTROL_BLB_TO_EVIDENCE_PLP_LABEL, "count"] == 1
 
     clingen_mp2_total, clingen_mp2_table = concordance[("ClinGen", mp2_label)]
     assert clingen_mp2_total == 3
@@ -2290,6 +2300,10 @@ def test_format_control_concordance_report(tmp_path):
     assert "2 of 5 (40.0%)" in text
     # ClinGen/AlphaMissense row: 2 concordant of 3 total.
     assert "2 of 3 (66.7%)" in text
+    assert DISCORDANT_CONTROL_PLP_TO_EVIDENCE_BLB_LABEL.strip() in text
+    assert DISCORDANT_CONTROL_BLB_TO_EVIDENCE_PLP_LABEL.strip() in text
+    # ClinVar/MutPred2 row: 1 PLP-to-BLB and 1 BLB-to-PLP discordance, each of 5 total.
+    assert text.count("1 of 5 (20.0%)") >= 2
 
 
 def test_reclassification_flags_agree_disagree_and_no_evidence():
