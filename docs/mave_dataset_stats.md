@@ -105,21 +105,33 @@ It also reports two further sections, sourced from separate input files:
   with the row's ClinVar pathogenic-or-benign control label
   (`clnsig_group_18_25`).
 - **Control concordance** (ClinVar vs. ClinGen; OddsPath alone vs. combined
-  with REVEL): for the ClinVar (`controls_REVEL_GeneSpecific`) and ClinGen
-  Evidence Repository (`ClinGen_Repo_REVEL_GeneSpecific`) control sets
-  separately, how many variants (and what percent) are **concordant**
-  (evidence and the control classification agree on pathogenic vs. benign),
-  **discordant** (evidence and the control classification disagree), or
-  classified **VUS** (no determinate call from that evidence source) --
-  reported once for OddsPath calibration evidence alone (`OP_points` sign)
-  and once for the combined ExCALIBR/OddsPath + REVEL gene-specific evidence
-  (the sheets' precomputed `Class_REVEL` column), so the two can be compared
-  directly. ClinVar's control label is `clnsig_group_18_25`; ClinGen's is
+  with each of REVEL/AlphaMissense/MutPred2): for the ClinVar
+  (`controls_*_GeneSpecific`) and ClinGen Evidence Repository
+  (`ClinGen_Repo_*_GeneSpecific`) control sets separately, how many variants
+  (and what percent) are **concordant** (evidence and the control
+  classification agree on pathogenic vs. benign), **discordant** (evidence
+  and the control classification disagree), or classified **VUS** (no
+  determinate call from that evidence source) -- reported once for OddsPath
+  calibration evidence alone (`OP_points` sign, read from the REVEL sheet)
+  and once each for the combined ExCALIBR/OddsPath + REVEL/AlphaMissense/
+  MutPred2 gene-specific evidence (each predictor's own precomputed
+  `Class_REVEL`/`Class_AM`/`Class_MP2` column), rendered as one table per
+  control source with a row per evidence source so all four can be compared
+  at a glance. **Discordant** is further split into its two directions --
+  control Pathogenic/Likely Pathogenic reclassified Benign/Likely Benign by
+  the evidence source, and the reverse -- which sum back to the Discordant
+  count. ClinVar's control label is `clnsig_group_18_25`; ClinGen's is
   `Updated_Classification_ClinGen_repo` (its own P/LP/B/LB assertion --
   `clnsig_group_18_25` isn't a clean ClinVar label for these rows, since a
   ClinGen Evidence Repository control need not have an unambiguous ClinVar
   entry of its own). See `compute_control_concordance`'s docstring in the
   script.
+
+  Immediately after that table, a second, missense-only table repeats the
+  same breakdown for ClinVar controls alone (ClinGen isn't included), with
+  every sheet first restricted to `simplified_consequence == "missense_variant"`
+  rows before scoring. See `MISSENSE_CONTROL_CONCORDANCE_SOURCES`/
+  `MISSENSE_CONSEQUENCE_VALUE` in the script.
 - **Variant classification**: how many distinct DNA variants have a
   classification, how many of those are pathogenic or benign, and how many
   ClinVar VUS / unobserved variants are "resolved" -- reclassified/classified

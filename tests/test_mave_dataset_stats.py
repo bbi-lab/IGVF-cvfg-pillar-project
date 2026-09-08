@@ -28,12 +28,16 @@ from src.mave_dataset_stats import (
     GENE_DISCORDANCE_TITLE,
     GNOMAD_LABEL,
     IGVF_DATASET_MEASUREMENT_COUNTS_TITLE,
+    MISSENSE_CONSEQUENCE_VALUE,
+    MISSENSE_CONTROL_CONCORDANCE_SOURCES,
+    MISSENSE_CONTROL_CONCORDANCE_TITLE,
     MUTPRED2_TRAINING_STEP_LABEL,
     NO_ANNOTATION_LABEL,
     NO_EVIDENCE_LABEL,
     PATHOGENIC_OR_BENIGN_LABEL,
     PATHOGENIC_VALUES,
     REVEL_TRAINING_STEP_LABEL,
+    SIMPLIFIED_CONSEQUENCE_COL,
     SNV_ACCESSIBLE_LABEL,
     SNV_LABEL,
     VARIANT_CLASSIFICATION_CATEGORY_SHEETS_BY_PREDICTOR,
@@ -2304,6 +2308,79 @@ def test_format_control_concordance_report(tmp_path):
     assert DISCORDANT_CONTROL_BLB_TO_EVIDENCE_PLP_LABEL.strip() in text
     # ClinVar/MutPred2 row: 1 PLP-to-BLB and 1 BLB-to-PLP discordance, each of 5 total.
     assert text.count("1 of 5 (20.0%)") >= 2
+
+
+def _write_missense_control_concordance_workbook(path):
+    """One ClinVar `controls_<suffix>_GeneSpecific` sheet per predictor, each
+    with the same 4 rows: 3 missense_variant (2 concordant, 1 discordant --
+    control Pathogenic reclassified Benign) plus 1 stop_gained row that
+    should be excluded entirely once `compute_control_concordance` is called
+    with `consequence_filter=MISSENSE_CONSEQUENCE_VALUE`.
+    """
+    # (clnsig_group_18_25, OP_points, Class_<predictor>, simplified_consequence)
+    rows = [
+        ("Pathogenic", 5, "Pathogenic", MISSENSE_CONSEQUENCE_VALUE),  # missense, concordant
+        ("Benign", -1, "Likely Benign", MISSENSE_CONSEQUENCE_VALUE),  # missense, concordant
+        ("Pathogenic", -2, "Benign", MISSENSE_CONSEQUENCE_VALUE),  # missense, discordant: PLP -> BLB
+        ("Pathogenic", 5, "Pathogenic", "stop_gained"),  # not missense -- excluded by the filter
+    ]
+    with pd.ExcelWriter(path) as writer:
+        for suffix in ("REVEL", "AM", "MP2"):
+            columns = ["clnsig_group_18_25", "OP_points", f"Class_{suffix}", SIMPLIFIED_CONSEQUENCE_COL]
+            pd.DataFrame(rows, columns=columns).to_excel(
+                writer, sheet_name=f"controls_{suffix}_GeneSpecific", index=False
+            )
+
+
+def test_compute_control_concordance_missense_only(tmp_path):
+    path = tmp_path / "controls.xlsx"
+    _write_missense_control_concordance_workbook(path)
+
+    concordance = compute_control_concordance(
+        pd.ExcelFile(path),
+        control_sources=MISSENSE_CONTROL_CONCORDANCE_SOURCES,
+        consequence_filter=MISSENSE_CONSEQUENCE_VALUE,
+    )
+
+    # The stop_gained row is filtered out entirely, leaving 3 in-scope rows for
+    # every evidence source (OddsPath alone, reusing the REVEL sheet, and each
+    # predictor's own combined evidence, since all three sheets share the same rows).
+    oddspath_total, oddspath_table = concordance[("ClinVar", CONTROL_CONCORDANCE_EVIDENCE_LABEL)]
+    assert oddspath_total == 3
+    assert oddspath_table.loc[CONCORDANT_LABEL, "count"] == 2
+    assert oddspath_table.loc[DISCORDANT_LABEL, "count"] == 1
+    assert oddspath_table.loc[DISCORDANT_CONTROL_PLP_TO_EVIDENCE_BLB_LABEL, "count"] == 1
+    assert oddspath_table.loc[DISCORDANT_CONTROL_BLB_TO_EVIDENCE_PLP_LABEL, "count"] == 0
+
+    for predictor in VARIANT_CLASSIFICATION_PREDICTORS:
+        total, table = concordance[("ClinVar", COMBINED_EVIDENCE_LABEL_BY_PREDICTOR[predictor])]
+        assert total == 3
+        assert table.loc[CONCORDANT_LABEL, "count"] == 2
+        assert table.loc[DISCORDANT_LABEL, "count"] == 1
+
+    # ClinGen isn't part of the missense-only breakdown.
+    assert ("ClinGen", CONTROL_CONCORDANCE_EVIDENCE_LABEL) not in concordance
+
+
+def test_format_control_concordance_report_missense_only(tmp_path):
+    path = tmp_path / "controls.xlsx"
+    _write_missense_control_concordance_workbook(path)
+    concordance = compute_control_concordance(
+        pd.ExcelFile(path),
+        control_sources=MISSENSE_CONTROL_CONCORDANCE_SOURCES,
+        consequence_filter=MISSENSE_CONSEQUENCE_VALUE,
+    )
+
+    text = format_control_concordance_report(
+        concordance, control_sources=MISSENSE_CONTROL_CONCORDANCE_SOURCES, title=MISSENSE_CONTROL_CONCORDANCE_TITLE
+    )
+
+    assert text.startswith(MISSENSE_CONTROL_CONCORDANCE_TITLE)
+    assert "ClinVar controls (controls_*_GeneSpecific sheets):" in text
+    assert "ClinGen controls" not in text
+    # 2 concordant, 1 discordant (all PLP-to-BLB), of 3 total, for every evidence source.
+    assert text.count("2 of 3 (66.7%)") == 4
+    assert text.count("1 of 3 (33.3%)") == 4 * 2  # Discordant + its PLP-to-BLB sub-column
 
 
 def test_reclassification_flags_agree_disagree_and_no_evidence():

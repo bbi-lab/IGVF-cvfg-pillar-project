@@ -158,6 +158,11 @@ Supplementary_Data_5.xlsx) respectively:
   since `clnsig_group_18_25` isn't a clean ClinVar label for ClinGen-only
   controls). See `compute_control_concordance`.
 
+  Immediately after that table, a second, missense-only table repeats the
+  same breakdown for ClinVar controls alone, restricted to
+  `simplified_consequence == "missense_variant"` rows before scoring --
+  see `MISSENSE_CONTROL_CONCORDANCE_SOURCES`/`MISSENSE_CONSEQUENCE_VALUE`.
+
 - **Variant classification**: how many distinct DNA variants have a
   classification, how many of those are pathogenic or benign, and how many
   ClinVar VUS / unobserved variants are "resolved" -- reclassified/classified
@@ -393,6 +398,7 @@ CLASS_PATHOGENIC_OR_BENIGN_VALUES = CLASS_PATHOGENIC_VALUES | CLASS_BENIGN_VALUE
 
 SIMPLIFIED_CONSEQUENCE_COL = "simplified_consequence"
 NO_CONSEQUENCE_LABEL = "(no consequence)"
+MISSENSE_CONSEQUENCE_VALUE = "missense_variant"
 SPLICEAI_SCORE_COLS = ["spliceAI_DS_AG", "spliceAI_DS_AL", "spliceAI_DS_DG", "spliceAI_DS_DL"]
 SPLICEAI_SCORE_THRESHOLD = 0.2
 SPLICEAI_LOW_LABEL = f"<{SPLICEAI_SCORE_THRESHOLD} or missing"
@@ -494,6 +500,19 @@ CONTROL_CONCORDANCE_SOURCES = {
     "ClinVar": ("controls", CONTROLS_CLINVAR_GROUP_COL, PATHOGENIC_VALUES, BENIGN_VALUES),
     "ClinGen": ("ClinGen_Repo", CLINGEN_CLASSIFICATION_COL, CLASS_PATHOGENIC_VALUES, CLASS_BENIGN_VALUES),
 }
+CONTROL_CONCORDANCE_TITLE = (
+    "=== Control concordance (ClinVar vs. ClinGen; OddsPath alone vs. combined with "
+    "REVEL/AlphaMissense/MutPred2) ==="
+)
+# Missense-only companion to the table above -- ClinVar only, since that's the
+# control source with enough missense representation for this breakdown to be
+# meaningful; restricts every sheet to `MISSENSE_CONSEQUENCE_VALUE` rows
+# before scoring concordance, same evidence sources and columns otherwise.
+MISSENSE_CONTROL_CONCORDANCE_SOURCES = {"ClinVar": CONTROL_CONCORDANCE_SOURCES["ClinVar"]}
+MISSENSE_CONTROL_CONCORDANCE_TITLE = (
+    "=== Control concordance, missense-only (ClinVar; OddsPath alone vs. combined with "
+    "REVEL/AlphaMissense/MutPred2) ==="
+)
 
 VARIANT_CLASSIFICATION_TITLE = (
     "=== Variant classification (Supplementary Data 5; "
@@ -1626,24 +1645,36 @@ def control_concordance_flags(control_group, pathogenic_values, benign_values, a
     return flags, in_scope
 
 
-def compute_control_concordance(workbook):
-    """For each control source in `CONTROL_CONCORDANCE_SOURCES` (ClinVar,
-    ClinGen), the concordant/discordant/VUS breakdown against OddsPath
-    calibration evidence alone, plus the combined ExCALIBR/OddsPath +
-    <predictor> gene-specific evidence for each of REVEL/AlphaMissense/
-    MutPred2 -- see the module-level comment above `CLINGEN_CLASSIFICATION_COL`
-    for exactly what each evidence source is. `Discordant` is further split
-    into its two directions (control Pathogenic/Likely Pathogenic reclassified
-    Benign/Likely Benign by the evidence source, or vice versa) -- see
-    `control_concordance_flags`.
+def compute_control_concordance(workbook, control_sources=CONTROL_CONCORDANCE_SOURCES, consequence_filter=None):
+    """For each control source in `control_sources` (default
+    `CONTROL_CONCORDANCE_SOURCES`: ClinVar, ClinGen), the concordant/
+    discordant/VUS breakdown against OddsPath calibration evidence alone,
+    plus the combined ExCALIBR/OddsPath + <predictor> gene-specific evidence
+    for each of REVEL/AlphaMissense/MutPred2 -- see the module-level comment
+    above `CLINGEN_CLASSIFICATION_COL` for exactly what each evidence source
+    is. `Discordant` is further split into its two directions (control
+    Pathogenic/Likely Pathogenic reclassified Benign/Likely Benign by the
+    evidence source, or vice versa) -- see `control_concordance_flags`.
+
+    `consequence_filter`, if given (e.g. `MISSENSE_CONSEQUENCE_VALUE`),
+    restricts every sheet to rows whose `SIMPLIFIED_CONSEQUENCE_COL` equals
+    that value before scoring -- used for the missense-only companion table
+    (`MISSENSE_CONTROL_CONCORDANCE_SOURCES`).
 
     Returns {(control_source_label, evidence_label): (total, table)}, where
     `table` is the `summarize_flags` output over the in-scope rows.
     """
+
+    def _filtered(sheet_name):
+        df = workbook.parse(sheet_name)
+        if consequence_filter is not None:
+            df = df[df[SIMPLIFIED_CONSEQUENCE_COL] == consequence_filter]
+        return df
+
     results = {}
-    for control_label, (category, control_col, pathogenic_values, benign_values) in CONTROL_CONCORDANCE_SOURCES.items():
+    for control_label, (category, control_col, pathogenic_values, benign_values) in control_sources.items():
         revel_sheets = VARIANT_CLASSIFICATION_CATEGORY_SHEETS_BY_PREDICTOR["REVEL"]
-        revel_df = workbook.parse(revel_sheets[category])
+        revel_df = _filtered(revel_sheets[category])
         op_points = revel_df[FUNCTIONAL_CLASS_POINTS_COL]
         oddspath_flags, oddspath_in_scope = control_concordance_flags(
             revel_df[control_col], pathogenic_values, benign_values, op_points > 0, op_points < 0
@@ -1655,7 +1686,7 @@ def compute_control_concordance(workbook):
         for predictor in VARIANT_CLASSIFICATION_PREDICTORS:
             sheets = VARIANT_CLASSIFICATION_CATEGORY_SHEETS_BY_PREDICTOR[predictor]
             class_col = VARIANT_CLASSIFICATION_CLASS_COL_BY_PREDICTOR[predictor]
-            df = workbook.parse(sheets[category])
+            df = _filtered(sheets[category])
             combined_flags, combined_in_scope = control_concordance_flags(
                 df[control_col],
                 pathogenic_values,
@@ -1669,25 +1700,27 @@ def compute_control_concordance(workbook):
     return results
 
 
-def format_control_concordance_report(concordance):
+def format_control_concordance_report(concordance, control_sources=CONTROL_CONCORDANCE_SOURCES, title=CONTROL_CONCORDANCE_TITLE):
     """Render `compute_control_concordance`'s output as one combined table per
-    control source (ClinVar, ClinGen), with one row per evidence source
-    (OddsPath alone, then combined with each of REVEL/AlphaMissense/MutPred2)
-    so all four evidence sources can be compared at a glance instead of
-    spreading them across separate subsections. Each row's two directional
-    discordance columns (`DISCORDANT_CONTROL_PLP_TO_EVIDENCE_BLB_LABEL`/
+    control source in `control_sources` (default `CONTROL_CONCORDANCE_SOURCES`:
+    ClinVar, ClinGen), with one row per evidence source (OddsPath alone, then
+    combined with each of REVEL/AlphaMissense/MutPred2) so all four evidence
+    sources can be compared at a glance instead of spreading them across
+    separate subsections. Each row's two directional discordance columns
+    (`DISCORDANT_CONTROL_PLP_TO_EVIDENCE_BLB_LABEL`/
     `DISCORDANT_CONTROL_BLB_TO_EVIDENCE_PLP_LABEL`) are reported as a percent
     of that row's own total, same as `Concordant`/`Discordant`/`VUS` --
     together they sum to `Discordant`.
+
+    `control_sources`/`title` are overridden together for the missense-only
+    companion table -- see `MISSENSE_CONTROL_CONCORDANCE_SOURCES`/
+    `MISSENSE_CONTROL_CONCORDANCE_TITLE`.
     """
     evidence_labels = [CONTROL_CONCORDANCE_EVIDENCE_LABEL] + [
         COMBINED_EVIDENCE_LABEL_BY_PREDICTOR[predictor] for predictor in VARIANT_CLASSIFICATION_PREDICTORS
     ]
-    sections = [
-        "=== Control concordance (ClinVar vs. ClinGen; OddsPath alone vs. combined with "
-        "REVEL/AlphaMissense/MutPred2) ==="
-    ]
-    for control_label, (category, *_rest) in CONTROL_CONCORDANCE_SOURCES.items():
+    sections = [title]
+    for control_label, (category, *_rest) in control_sources.items():
         sheet_pattern = VARIANT_CLASSIFICATION_CATEGORY_SHEETS_BY_PREDICTOR["REVEL"][category].replace("REVEL", "*")
         rows = {}
         for evidence_label in evidence_labels:
@@ -2343,6 +2376,7 @@ def build_report_text(
     clingen_evidence_repository_summary,
     reclassification_sections,
     control_concordance_summary,
+    missense_control_concordance_summary,
     variant_classification_summary,
     variant_classification_chi_squared_summary,
     gene_discordance_summary,
@@ -2373,6 +2407,7 @@ def build_report_text(
         "=== Reclassification agreement (Figure 4c) ===",
         *reclassification_sections,
         control_concordance_summary,
+        missense_control_concordance_summary,
         variant_classification_summary,
         variant_classification_chi_squared_summary,
         gene_discordance_summary,
@@ -2511,6 +2546,15 @@ def main(
     controls_workbook = pd.ExcelFile(controls_file)
     reclassification_sections = build_reclassification_report(controls_workbook)
     control_concordance_summary = format_control_concordance_report(compute_control_concordance(controls_workbook))
+    missense_control_concordance_summary = format_control_concordance_report(
+        compute_control_concordance(
+            controls_workbook,
+            control_sources=MISSENSE_CONTROL_CONCORDANCE_SOURCES,
+            consequence_filter=MISSENSE_CONSEQUENCE_VALUE,
+        ),
+        control_sources=MISSENSE_CONTROL_CONCORDANCE_SOURCES,
+        title=MISSENSE_CONTROL_CONCORDANCE_TITLE,
+    )
     variant_classification_stats_by_predictor = compute_variant_classification_stats(controls_workbook)
     variant_classification_summary = format_variant_classification_table(variant_classification_stats_by_predictor)
     variant_classification_chi_squared_summary = format_variant_classification_chi_squared_tests(
@@ -2549,6 +2593,7 @@ def main(
         clingen_evidence_repository_summary,
         reclassification_sections,
         control_concordance_summary,
+        missense_control_concordance_summary,
         variant_classification_summary,
         variant_classification_chi_squared_summary,
         gene_discordance_summary,
