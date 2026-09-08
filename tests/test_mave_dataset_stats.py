@@ -31,9 +31,7 @@ from src.mave_dataset_stats import (
     NO_EVIDENCE_LABEL,
     PATHOGENIC_OR_BENIGN_LABEL,
     PATHOGENIC_VALUES,
-    RECLASSIFICATION_USECOLS,
     REVEL_TRAINING_STEP_LABEL,
-    RECLASSIFICATION_VARIANT_CLASSIFICATION_TITLE,
     SNV_ACCESSIBLE_LABEL,
     SNV_LABEL,
     VARIANT_CLASSIFICATION_CATEGORY_SHEETS_BY_PREDICTOR,
@@ -60,7 +58,6 @@ from src.mave_dataset_stats import (
     compute_reclassification_filter_funnel,
     compute_variant_classification_chi_squared_tests,
     compute_variant_classification_stats,
-    compute_variant_classification_stats_from_reclassification_file,
     control_concordance_flags,
     distinct_dna_variants,
     distinct_variant_flags,
@@ -76,7 +73,6 @@ from src.mave_dataset_stats import (
     format_reclassification_filter_funnel,
     format_reclassification_table,
     format_variant_classification_chi_squared_tests,
-    format_variant_classification_summary,
     format_variant_classification_table,
     funnel_distinct_dna_variants,
     has_any_value,
@@ -85,7 +81,6 @@ from src.mave_dataset_stats import (
     main,
     matches_any_value,
     mixed_year_clinvar_series,
-    points_are_pathogenic_or_benign,
     reclassification_flags,
     split_genes,
     stats_to_dataframe,
@@ -280,31 +275,6 @@ def _write_gene_discordance_sheet(path, rows, mode="w"):
     columns = ["Gene", "Chrom", "hg38_start", "ref_allele", "alt_allele", "clnsig_group_18_25", "Class_REVEL"]
     with pd.ExcelWriter(path, mode=mode, engine="openpyxl") as writer:
         pd.DataFrame(rows, columns=columns).to_excel(writer, sheet_name="controls_REVEL_GeneSpecific", index=False)
-
-
-def _write_reclassification_file(path, rows):
-    """`rows` is a list of (clinvar_sig_2025, gnomad_MAF, ref_allele,
-    alt_allele, Combined_points, Functional_points, REVEL_points) tuples --
-    the columns `compute_variant_classification_stats_from_reclassification_
-    file` reads. `Conflict_REVEL_GeneSpecific` is derived from
-    `Functional_points`/`REVEL_points` the same way
-    `_write_variant_classification_sheets_by_predictor` derives
-    `Conflicting_*`: `"Conflicting evidence"` when the two sides are
-    strictly opposite in sign, otherwise the row's own `Combined_points`.
-    """
-    columns = [
-        "clinvar_sig_2025",
-        "gnomad_MAF",
-        "ref_allele",
-        "alt_allele",
-        "Combined_points",
-        "Functional_points",
-        "REVEL_points",
-    ]
-    df = pd.DataFrame(rows, columns=columns)
-    opposite_signs = (df["Functional_points"] * df["REVEL_points"]) < 0
-    df["Conflict_REVEL_GeneSpecific"] = df["Combined_points"].where(~opposite_signs, CONFLICTING_EVIDENCE_VALUE)
-    df.to_csv(path, sep="\t", index=False)
 
 
 @pytest.fixture
@@ -672,28 +642,6 @@ def full_dataset_files(tmp_path):
         mode="a",
     )
 
-    # 7 rows total. Pathogenic-or-benign (points >= 6 or <= -1): rows 1, 3, 5,
-    # 6, 7 (5 of 7). VUS (clinvar_sig_2025 == "Uncertain significance"): rows
-    # 1-2, of which row 1 (points 8) resolves (1 of 2). Unobserved (both
-    # clinvar_sig_2025 and gnomad_MAF null, SNV only): rows 3-4 (row 7 is
-    # excluded -- its ref/alt aren't single-base; row 5/6 have a
-    # clinvar_sig_2025/gnomad_MAF value), of which row 3 (points -1, exactly
-    # at the Benign/Likely Benign threshold, single source: Functional_points
-    # 0/REVEL_points -1) resolves (1 of 2).
-    reclassification_path = tmp_path / "reclassification.tsv"
-    _write_reclassification_file(
-        reclassification_path,
-        [
-            ("Uncertain significance", None, "A", "G", 8, 8, 0),  # VUS, resolved
-            ("Uncertain significance", None, "A", "G", 2, 2, 0),  # VUS, not resolved
-            (None, None, "A", "G", -1, 0, -1),  # Unobserved SNV, resolved at the -1-point threshold
-            (None, None, "A", "G", 1, 1, 0),  # Unobserved SNV, not resolved
-            ("Pathogenic", None, "A", "G", 11, 11, 0),  # controls-like, not VUS/Unobserved
-            (None, 0.01, "A", "G", -3, -3, 0),  # gnomAD-like, not Unobserved (gnomad_MAF set)
-            (None, None, "AC", "G", 8, 8, 0),  # not a SNV, excluded from Unobserved
-        ],
-    )
-
     # Mirrors the expanded_path rows above (same mavedb_variant_urn/genomic
     # coordinates) at the "post pre-checkpoint-filter" stage -- nothing here
     # is flagged/tagged for exclusion, so all 4 distinct DNA variants survive
@@ -737,7 +685,6 @@ def full_dataset_files(tmp_path):
         expanded_path,
         excalibr_path,
         controls_path,
-        reclassification_path,
         checkpoint_path,
         chek2_path,
     )
@@ -1236,7 +1183,6 @@ def test_cli_prints_table_and_writes_output(full_dataset_files, tmp_path):
         expanded_path,
         excalibr_path,
         controls_path,
-        reclassification_path,
         checkpoint_path,
         chek2_path,
     ) = full_dataset_files
@@ -1252,8 +1198,6 @@ def test_cli_prints_table_and_writes_output(full_dataset_files, tmp_path):
             str(excalibr_path),
             "--controls-file",
             str(controls_path),
-            "--reclassification-file",
-            str(reclassification_path),
             "--checkpoint-file",
             str(checkpoint_path),
             "--chek2-file",
@@ -1364,7 +1308,7 @@ def test_cli_prints_table_and_writes_output(full_dataset_files, tmp_path):
     # is small enough that Yates' continuity correction zeroes it out (chi2=0, p=1)
     # regardless of predictor, since all three predictors' sheets carry the same rows.
     chi_squared_section = result.output.split(VARIANT_CLASSIFICATION_CHI_SQUARED_TITLE)[1].split(
-        RECLASSIFICATION_VARIANT_CLASSIFICATION_TITLE
+        GENE_DISCORDANCE_TITLE
     )[0]
     for predictor in VARIANT_CLASSIFICATION_PREDICTORS:
         assert f"-- {predictor} --" in chi_squared_section
@@ -1376,61 +1320,6 @@ def test_cli_prints_table_and_writes_output(full_dataset_files, tmp_path):
     assert chi_squared_section.count("gnomAD: 1 of 1 (100.0%)") == 2 * len(VARIANT_CLASSIFICATION_PREDICTORS)
     assert chi_squared_section.count("ClinVar VUS: 1 of 3 (33.3%)") == 3 * len(VARIANT_CLASSIFICATION_PREDICTORS)
     assert chi_squared_section.count("Unobserved: 1 of 2 (50.0%)") == 2 * len(VARIANT_CLASSIFICATION_PREDICTORS)
-
-    # See full_dataset_files' reclassification_path rows for the expected counts.
-    reclassification_file_section = result.output.split(RECLASSIFICATION_VARIANT_CLASSIFICATION_TITLE)[1]
-    assert "Distinct DNA variants classified: 7" in reclassification_file_section
-    assert "Pathogenic or benign: 5 of 7 (71.4%)" in reclassification_file_section
-    assert "ClinVar VUS resolved (reclassified pathogenic or benign): 1 of 2 (50.0%)" in reclassification_file_section
-    assert (
-        "Unobserved variants resolved (classified pathogenic or benign): 1 of 2 (50.0%)"
-        in reclassification_file_section
-    )
-    # VUS row (points 8, of 2 VUS) resolves pathogenic; Unobserved row (points -1, at the
-    # -1-point threshold, of 2 Unobserved) resolves benign.
-    assert "Pathogenic or likely pathogenic: 1 of 2 (50.0%)" in reclassification_file_section
-    assert "Benign or likely benign: 0 of 2 (0.0%)" in reclassification_file_section
-    assert "Benign or likely benign from only -1 point: 0 of 2 (0.0%)" in reclassification_file_section
-    assert "Pathogenic or likely pathogenic: 0 of 2 (0.0%)" in reclassification_file_section
-    assert "Benign or likely benign: 1 of 2 (50.0%)" in reclassification_file_section
-    assert "Benign or likely benign from only -1 point: 1 of 2 (50.0%)" in reclassification_file_section
-    # VUS's P/LP row (fxn 8/revel 0) is experimental-only; Unobserved's B/LB row (fxn 0/revel -1)
-    # is predictive-only and single-source at the -1-point threshold. Neither side has a resolved
-    # variant on its *other* side (VUS B/LB, Unobserved P/LP), so those splits are nan%.
-    assert reclassification_file_section.count("Experimental evidence only: 1 of 1 (100.0%)") == 4
-    assert reclassification_file_section.count("Predictive evidence only: 1 of 1 (100.0%)") == 1
-    assert reclassification_file_section.count("Both: 0 of 1 (0.0%)") == 3
-    assert reclassification_file_section.count("Experimental evidence only: 0 of 0 (nan%)") == 4
-    assert reclassification_file_section.count("Predictive evidence only: 0 of 0 (nan%)") == 4
-    assert reclassification_file_section.count("Both: 0 of 0 (nan%)") == 3
-    assert reclassification_file_section.count("Evidence from only one source: 0 of 0 (nan%)") == 2
-    assert reclassification_file_section.count("Conflicting functional and predictive data: 0 of 0 (nan%)") == 2
-    assert "Evidence from only one source: 1 of 1 (100.0%)" in reclassification_file_section
-    assert "Conflicting functional and predictive data: 0 of 1 (0.0%)" in reclassification_file_section
-    # VUS row 2 (points 2, of 2 VUS) is the sole unresolved VUS, experimental-only; Unobserved row
-    # 4 (points 1, of 2 Unobserved) is the sole unresolved Unobserved, also experimental-only; the
-    # sole gnomAD row (points -3, of 1 gnomAD) resolves benign, experimental-only, leaving gnomAD
-    # with no unresolved rows at all (0 of 1, and its own splits are nan% since 0 of 0).
-    assert "ClinVar VUS unresolved: 1 of 2 (50.0%)" in reclassification_file_section
-    assert "gnomAD variants resolved (classified pathogenic or benign): 1 of 1 (100.0%)" in reclassification_file_section
-    assert "gnomAD variants unresolved: 0 of 1 (0.0%)" in reclassification_file_section
-    assert "Unobserved variants unresolved: 1 of 2 (50.0%)" in reclassification_file_section
-    assert reclassification_file_section.count("Concordant (both sources, same direction): 0 of 1 (0.0%)") == 2
-    assert reclassification_file_section.count("Discordant (both sources, opposite direction): 0 of 1 (0.0%)") == 2
-    assert reclassification_file_section.count("Concordant (both sources, same direction): 0 of 0 (nan%)") == 1
-    assert reclassification_file_section.count("Discordant (both sources, opposite direction): 0 of 0 (nan%)") == 1
-    assert reclassification_file_section.count("Predictive evidence only: 0 of 1 (0.0%)") == 4  # VUS P/LP too
-    assert reclassification_file_section.count("Neither: 0 of 1 (0.0%)") == 2
-    assert reclassification_file_section.count("Neither: 0 of 0 (nan%)") == 1
-    assert reclassification_file_section.count("0 or 1 source (total): 1 of 1 (100.0%)") == 2
-    assert reclassification_file_section.count("0 or 1 source (total): 0 of 0 (nan%)") == 1
-    # Neither unresolved row (VUS points 2, Unobserved points 1) qualifies as near-pathogenic.
-    assert (
-        reclassification_file_section.count("+4 or +5 points (overlaps categories above): 0 of 1 (0.0%)") == 2
-    )
-    assert (
-        reclassification_file_section.count("+4 or +5 points (overlaps categories above): 0 of 0 (nan%)") == 1
-    )
 
     # Assayed level: all 4 distinct variants (and all 5 measurement rows) are SNV-accessible.
     assert "Total: 4 (4 SNV-accessible)" in result.output
@@ -1538,8 +1427,6 @@ def test_cli_allow_clinvar_conflicts_flag_toggles_conflict_handling(tmp_path):
         },
         mode="a",
     )
-    reclassification_path = tmp_path / "reclassification.tsv"
-    _write_reclassification_file(reclassification_path, [("Pathogenic", None, "A", "G", 11, 11, 0)])
     checkpoint_path = tmp_path / "checkpoint.csv"
     _write_checkpoint_file(
         checkpoint_path,
@@ -1552,8 +1439,6 @@ def test_cli_allow_clinvar_conflicts_flag_toggles_conflict_handling(tmp_path):
         str(excalibr_path),
         "--controls-file",
         str(controls_path),
-        "--reclassification-file",
-        str(reclassification_path),
         "--checkpoint-file",
         str(checkpoint_path),
         "--chek2-file",
@@ -1586,7 +1471,6 @@ def test_cli_reports_missing_metadata_as_click_error(full_dataset_files):
         expanded_path,
         _excalibr_path,
         _controls_path,
-        _reclassification_path,
         _checkpoint_path,
         _chek2_path,
     ) = full_dataset_files
@@ -2122,11 +2006,10 @@ def test_format_reclassification_filter_funnel_summary_lines():
     condensed = _condensed_funnel_fixture()
     steps = compute_reclassification_filter_funnel(expanded, checkpoint, chek2, condensed)
 
-    text = format_reclassification_filter_funnel(steps, reclassification_total=1)
+    text = format_reclassification_filter_funnel(steps)
     assert "=== Filtering effects on the reclassification dataset ===" in text
     assert "Distinct DNA variants reclassified: 1 of 4 (25.0%)" in text
     assert "Distinct assayed variants reclassified: 1 of 5 (20.0%)" in text
-    assert "Note:" not in text  # final count (1) matches reclassification_total (1)
     # rows/variant_effect_measurements each get their own *_removed column, same as the
     # pre-existing distinct_dna_variants/distinct_assayed_variants columns.
     assert "rows_removed" in text
@@ -2136,9 +2019,6 @@ def test_format_reclassification_filter_funnel_summary_lines():
     # removed column, then variant_effect_measurements immediately followed by its own.
     assert text.index("rows") < text.index("rows_removed") < text.index("variant_effect_measurements")
     assert text.index("variant_effect_measurements") < text.index("measurements_removed")
-
-    mismatched_text = format_reclassification_filter_funnel(steps, reclassification_total=2)
-    assert "Note: funnel's final distinct-DNA-variant count (1) differs from" in mismatched_text
 
 
 def test_compute_clingen_evidence_repository_stats(tmp_path):
@@ -2635,289 +2515,6 @@ def test_compute_variant_classification_stats(tmp_path):
         assert stats_by_predictor[predictor] == expected
 
 
-def test_format_variant_classification_summary():
-    stats = {
-        "total_classified": 8,
-        "total_pathogenic_or_benign": 6,
-        "vus_total": 3,
-        "vus_resolved": 2,
-        "vus_resolved_pathogenic": 1,
-        "vus_resolved_pathogenic_only_experimental": 1,
-        "vus_resolved_pathogenic_only_predictive": 0,
-        "vus_resolved_pathogenic_both_evidence": 0,
-        "vus_resolved_benign": 1,
-        "vus_resolved_benign_only_experimental": 0,
-        "vus_resolved_benign_only_predictive": 1,
-        "vus_resolved_benign_both_evidence": 0,
-        "vus_resolved_benign_at_threshold": 1,
-        "vus_resolved_benign_at_threshold_single_source": 1,
-        "vus_resolved_benign_at_threshold_conflicting": 0,
-        # Covers all five evidence-source buckets: 1 each of concordant/discordant/
-        # experimental-only/predictive-only/neither (1+1+1=3 for the "zero or 1 source" total).
-        "vus_unresolved": 5,
-        "vus_unresolved_concordant": 1,
-        "vus_unresolved_discordant": 1,
-        "vus_unresolved_only_experimental": 1,
-        "vus_unresolved_only_predictive": 1,
-        "vus_unresolved_neither": 1,
-        "vus_unresolved_zero_or_one_source": 3,
-        # Overlaps the categories above rather than partitioning the unresolved count.
-        "vus_unresolved_near_pathogenic": 2,
-        "gnomad_total": 4,
-        "gnomad_resolved": 2,
-        "gnomad_resolved_pathogenic": 1,
-        "gnomad_resolved_pathogenic_only_experimental": 0,
-        "gnomad_resolved_pathogenic_only_predictive": 1,
-        "gnomad_resolved_pathogenic_both_evidence": 0,
-        "gnomad_resolved_benign": 1,
-        "gnomad_resolved_benign_only_experimental": 1,
-        "gnomad_resolved_benign_only_predictive": 0,
-        "gnomad_resolved_benign_both_evidence": 0,
-        "gnomad_resolved_benign_at_threshold": 1,
-        "gnomad_resolved_benign_at_threshold_single_source": 1,
-        "gnomad_resolved_benign_at_threshold_conflicting": 0,
-        "gnomad_unresolved": 2,
-        "gnomad_unresolved_concordant": 0,
-        "gnomad_unresolved_discordant": 0,
-        "gnomad_unresolved_only_experimental": 1,
-        "gnomad_unresolved_only_predictive": 0,
-        "gnomad_unresolved_neither": 1,
-        "gnomad_unresolved_zero_or_one_source": 2,
-        "gnomad_unresolved_near_pathogenic": 0,
-        "unobserved_total": 2,
-        "unobserved_resolved": 1,
-        "unobserved_resolved_pathogenic": 1,
-        "unobserved_resolved_pathogenic_only_experimental": 0,
-        "unobserved_resolved_pathogenic_only_predictive": 0,
-        "unobserved_resolved_pathogenic_both_evidence": 1,
-        "unobserved_resolved_benign": 0,
-        "unobserved_resolved_benign_only_experimental": 0,
-        "unobserved_resolved_benign_only_predictive": 0,
-        "unobserved_resolved_benign_both_evidence": 0,
-        "unobserved_resolved_benign_at_threshold": 0,
-        "unobserved_resolved_benign_at_threshold_single_source": 0,
-        "unobserved_resolved_benign_at_threshold_conflicting": 0,
-        # No concordant/neither this time -- 1 discordant, 1 experimental-only, 1 predictive-only.
-        "unobserved_unresolved": 3,
-        "unobserved_unresolved_concordant": 0,
-        "unobserved_unresolved_discordant": 1,
-        "unobserved_unresolved_only_experimental": 1,
-        "unobserved_unresolved_only_predictive": 1,
-        "unobserved_unresolved_neither": 0,
-        "unobserved_unresolved_zero_or_one_source": 2,
-        "unobserved_unresolved_near_pathogenic": 1,
-    }
-
-    text = format_variant_classification_summary(stats)
-
-    assert text.startswith(VARIANT_CLASSIFICATION_TITLE)
-    assert "Distinct DNA variants classified: 8" in text
-    assert "Pathogenic or benign: 6 of 8 (75.0%)" in text
-    assert "ClinVar VUS resolved (reclassified pathogenic or benign): 2 of 3 (66.7%)" in text
-    assert "Unobserved variants resolved (classified pathogenic or benign): 1 of 2 (50.0%)" in text
-    # VUS breakdown, as a fraction of vus_total (3).
-    assert "Pathogenic or likely pathogenic: 1 of 3 (33.3%)" in text
-    assert "Benign or likely benign: 1 of 3 (33.3%)" in text
-    # VUS P/LP (1) is experimental-only; VUS B/LB (1) is predictive-only -- each split as a
-    # fraction of its own parent count (1).
-    assert "Experimental evidence only: 1 of 1 (100.0%)" in text
-    assert "Predictive evidence only: 1 of 1 (100.0%)" in text
-    assert text.count("Both: 0 of 1 (0.0%)") == 4  # VUS and gnomAD P/LP and B/LB both-evidence counts
-    assert "Benign or likely benign from only -1 point: 1 of 3 (33.3%)" in text
-    # -1-point single-source/conflicting split, as a fraction of the -1-point count (1).
-    assert "Evidence from only one source: 1 of 1 (100.0%)" in text
-    assert "Conflicting functional and predictive data: 0 of 1 (0.0%)" in text
-    # Unobserved breakdown, as a fraction of unobserved_total (2).
-    assert "Pathogenic or likely pathogenic: 1 of 2 (50.0%)" in text
-    assert "Benign or likely benign: 0 of 2 (0.0%)" in text
-    # Unobserved P/LP (1) is both-evidence; Unobserved B/LB count is 0, so its split is nan%.
-    assert "Both: 1 of 1 (100.0%)" in text
-    assert text.count("0 of 0 (nan%)") >= 3  # Unobserved B/LB's experimental/predictive/both split
-    assert "Benign or likely benign from only -1 point: 0 of 2 (0.0%)" in text
-    # Unobserved's -1-point count is 0, so its single-source/conflicting fraction is nan%.
-    assert "Evidence from only one source: 0 of 0 (nan%)" in text
-    assert "Conflicting functional and predictive data: 0 of 0 (nan%)" in text
-    # VUS unresolved (5, an intentionally-unrealistic count exceeding vus_total (3) -- this is a
-    # pure formatting test, not a consistency check): 1 each of concordant/discordant/
-    # experimental-only/predictive-only/neither, as a fraction of the unresolved count (5); "0 or 1
-    # source" totals the other three (3 of 5).
-    assert "ClinVar VUS unresolved: 5 of 3 (166.7%)" in text
-    assert "Concordant (both sources, same direction): 1 of 5 (20.0%)" in text
-    assert "Discordant (both sources, opposite direction): 1 of 5 (20.0%)" in text
-    assert text.count("1 of 5 (20.0%)") == 5  # concordant, discordant, experimental-only, predictive-only, neither
-    assert "0 or 1 source (total): 3 of 5 (60.0%)" in text
-    assert "+4 or +5 points (overlaps categories above): 2 of 5 (40.0%)" in text
-    # gnomAD resolved (2 of 4): P/LP (1) is predictive-only; B/LB (1) is experimental-only.
-    assert "gnomAD variants resolved (classified pathogenic or benign): 2 of 4 (50.0%)" in text
-    assert "Pathogenic or likely pathogenic: 1 of 4 (25.0%)" in text
-    assert "Benign or likely benign: 1 of 4 (25.0%)" in text
-    assert "Benign or likely benign from only -1 point: 1 of 4 (25.0%)" in text
-    # gnomAD unresolved (2 of 4): 1 experimental-only, 1 neither, 0 concordant/discordant/predictive-only.
-    assert "gnomAD variants unresolved: 2 of 4 (50.0%)" in text
-    # "1 of 2 (50.0%)" appears 4x total: Unobserved's title + P/LP lines, plus gnomAD unresolved's
-    # experimental-only and neither lines.
-    assert text.count("1 of 2 (50.0%)") == 4
-    assert "0 or 1 source (total): 2 of 2 (100.0%)" in text
-    assert "+4 or +5 points (overlaps categories above): 0 of 2 (0.0%)" in text
-    # Unobserved unresolved (3): 1 discordant, 1 experimental-only, 1 predictive-only, 0 concordant/neither.
-    assert "Unobserved variants unresolved: 3 of 2 (150.0%)" in text
-    assert "Discordant (both sources, opposite direction): 1 of 3 (33.3%)" in text
-    assert "+4 or +5 points (overlaps categories above): 1 of 3 (33.3%)" in text
-    # "1 of 3 (33.3%)" also appears above from VUS resolved's P/LP, B/LB, -1-point lines (3x),
-    # plus Unobserved unresolved's discordant/experimental-only/predictive-only (3x).
-    assert text.count("1 of 3 (33.3%)") == 7
-    assert "0 or 1 source (total): 2 of 3 (66.7%)" in text
-
-
-def test_format_variant_classification_summary_uses_given_title():
-    stats = {
-        "total_classified": 1,
-        "total_pathogenic_or_benign": 1,
-        "vus_total": 0,
-        "vus_resolved": 0,
-        "vus_resolved_pathogenic": 0,
-        "vus_resolved_pathogenic_only_experimental": 0,
-        "vus_resolved_pathogenic_only_predictive": 0,
-        "vus_resolved_pathogenic_both_evidence": 0,
-        "vus_resolved_benign": 0,
-        "vus_resolved_benign_only_experimental": 0,
-        "vus_resolved_benign_only_predictive": 0,
-        "vus_resolved_benign_both_evidence": 0,
-        "vus_resolved_benign_at_threshold": 0,
-        "vus_resolved_benign_at_threshold_single_source": 0,
-        "vus_resolved_benign_at_threshold_conflicting": 0,
-        "vus_unresolved": 0,
-        "vus_unresolved_concordant": 0,
-        "vus_unresolved_discordant": 0,
-        "vus_unresolved_only_experimental": 0,
-        "vus_unresolved_only_predictive": 0,
-        "vus_unresolved_neither": 0,
-        "vus_unresolved_zero_or_one_source": 0,
-        "vus_unresolved_near_pathogenic": 0,
-        "gnomad_total": 0,
-        "gnomad_resolved": 0,
-        "gnomad_resolved_pathogenic": 0,
-        "gnomad_resolved_pathogenic_only_experimental": 0,
-        "gnomad_resolved_pathogenic_only_predictive": 0,
-        "gnomad_resolved_pathogenic_both_evidence": 0,
-        "gnomad_resolved_benign": 0,
-        "gnomad_resolved_benign_only_experimental": 0,
-        "gnomad_resolved_benign_only_predictive": 0,
-        "gnomad_resolved_benign_both_evidence": 0,
-        "gnomad_resolved_benign_at_threshold": 0,
-        "gnomad_resolved_benign_at_threshold_single_source": 0,
-        "gnomad_resolved_benign_at_threshold_conflicting": 0,
-        "gnomad_unresolved": 0,
-        "gnomad_unresolved_concordant": 0,
-        "gnomad_unresolved_discordant": 0,
-        "gnomad_unresolved_only_experimental": 0,
-        "gnomad_unresolved_only_predictive": 0,
-        "gnomad_unresolved_neither": 0,
-        "gnomad_unresolved_zero_or_one_source": 0,
-        "gnomad_unresolved_near_pathogenic": 0,
-        "unobserved_total": 0,
-        "unobserved_resolved": 0,
-        "unobserved_resolved_pathogenic": 0,
-        "unobserved_resolved_pathogenic_only_experimental": 0,
-        "unobserved_resolved_pathogenic_only_predictive": 0,
-        "unobserved_resolved_pathogenic_both_evidence": 0,
-        "unobserved_resolved_benign": 0,
-        "unobserved_resolved_benign_only_experimental": 0,
-        "unobserved_resolved_benign_only_predictive": 0,
-        "unobserved_resolved_benign_both_evidence": 0,
-        "unobserved_resolved_benign_at_threshold": 0,
-        "unobserved_resolved_benign_at_threshold_single_source": 0,
-        "unobserved_resolved_benign_at_threshold_conflicting": 0,
-        "unobserved_unresolved": 0,
-        "unobserved_unresolved_concordant": 0,
-        "unobserved_unresolved_discordant": 0,
-        "unobserved_unresolved_only_experimental": 0,
-        "unobserved_unresolved_only_predictive": 0,
-        "unobserved_unresolved_neither": 0,
-        "unobserved_unresolved_zero_or_one_source": 0,
-        "unobserved_unresolved_near_pathogenic": 0,
-    }
-
-    text = format_variant_classification_summary(stats, title=RECLASSIFICATION_VARIANT_CLASSIFICATION_TITLE)
-
-    assert text.startswith(RECLASSIFICATION_VARIANT_CLASSIFICATION_TITLE)
-
-
-def test_format_variant_classification_summary_handles_zero_totals():
-    stats = {
-        "total_classified": 0,
-        "total_pathogenic_or_benign": 0,
-        "vus_total": 0,
-        "vus_resolved": 0,
-        "vus_resolved_pathogenic": 0,
-        "vus_resolved_pathogenic_only_experimental": 0,
-        "vus_resolved_pathogenic_only_predictive": 0,
-        "vus_resolved_pathogenic_both_evidence": 0,
-        "vus_resolved_benign": 0,
-        "vus_resolved_benign_only_experimental": 0,
-        "vus_resolved_benign_only_predictive": 0,
-        "vus_resolved_benign_both_evidence": 0,
-        "vus_resolved_benign_at_threshold": 0,
-        "vus_resolved_benign_at_threshold_single_source": 0,
-        "vus_resolved_benign_at_threshold_conflicting": 0,
-        "vus_unresolved": 0,
-        "vus_unresolved_concordant": 0,
-        "vus_unresolved_discordant": 0,
-        "vus_unresolved_only_experimental": 0,
-        "vus_unresolved_only_predictive": 0,
-        "vus_unresolved_neither": 0,
-        "vus_unresolved_zero_or_one_source": 0,
-        "vus_unresolved_near_pathogenic": 0,
-        "gnomad_total": 0,
-        "gnomad_resolved": 0,
-        "gnomad_resolved_pathogenic": 0,
-        "gnomad_resolved_pathogenic_only_experimental": 0,
-        "gnomad_resolved_pathogenic_only_predictive": 0,
-        "gnomad_resolved_pathogenic_both_evidence": 0,
-        "gnomad_resolved_benign": 0,
-        "gnomad_resolved_benign_only_experimental": 0,
-        "gnomad_resolved_benign_only_predictive": 0,
-        "gnomad_resolved_benign_both_evidence": 0,
-        "gnomad_resolved_benign_at_threshold": 0,
-        "gnomad_resolved_benign_at_threshold_single_source": 0,
-        "gnomad_resolved_benign_at_threshold_conflicting": 0,
-        "gnomad_unresolved": 0,
-        "gnomad_unresolved_concordant": 0,
-        "gnomad_unresolved_discordant": 0,
-        "gnomad_unresolved_only_experimental": 0,
-        "gnomad_unresolved_only_predictive": 0,
-        "gnomad_unresolved_neither": 0,
-        "gnomad_unresolved_zero_or_one_source": 0,
-        "gnomad_unresolved_near_pathogenic": 0,
-        "unobserved_total": 0,
-        "unobserved_resolved": 0,
-        "unobserved_resolved_pathogenic": 0,
-        "unobserved_resolved_pathogenic_only_experimental": 0,
-        "unobserved_resolved_pathogenic_only_predictive": 0,
-        "unobserved_resolved_pathogenic_both_evidence": 0,
-        "unobserved_resolved_benign": 0,
-        "unobserved_resolved_benign_only_experimental": 0,
-        "unobserved_resolved_benign_only_predictive": 0,
-        "unobserved_resolved_benign_both_evidence": 0,
-        "unobserved_resolved_benign_at_threshold": 0,
-        "unobserved_resolved_benign_at_threshold_single_source": 0,
-        "unobserved_resolved_benign_at_threshold_conflicting": 0,
-        "unobserved_unresolved": 0,
-        "unobserved_unresolved_concordant": 0,
-        "unobserved_unresolved_discordant": 0,
-        "unobserved_unresolved_only_experimental": 0,
-        "unobserved_unresolved_only_predictive": 0,
-        "unobserved_unresolved_neither": 0,
-        "unobserved_unresolved_zero_or_one_source": 0,
-        "unobserved_unresolved_near_pathogenic": 0,
-    }
-
-    text = format_variant_classification_summary(stats)
-
-    assert "Distinct DNA variants classified: 0" in text
-    assert "(nan%)" in text
-
-
 def _variant_classification_stats_by_predictor(stats):
     return {predictor: stats for predictor in VARIANT_CLASSIFICATION_PREDICTORS}
 
@@ -3241,117 +2838,3 @@ def test_format_gene_discordance_summary():
     assert "GENEB" in text
     assert "GENEC" not in text  # truncated by top_n
 
-
-def test_points_are_pathogenic_or_benign():
-    points = pd.Series([12, 6, 5, 0, -1, -6, -7, -12])
-
-    result = points_are_pathogenic_or_benign(points)
-
-    # >=6 (Pathogenic/Likely Pathogenic) or <=-1 (Likely Benign/Benign) is True;
-    # 0-5 (Uncertain) is False.
-    assert list(result) == [True, True, False, False, True, True, True, True]
-
-
-def test_compute_variant_classification_stats_from_reclassification_file(tmp_path):
-    reclassification_path = tmp_path / "reclassification.tsv"
-    # Row 3 is single-source (Functional_points 0, REVEL_points -1); row 8 is
-    # conflicting (Functional_points +2, REVEL_points -3, opposite signs,
-    # still summing to the -1-point threshold) -- together they cover both
-    # halves of the mutually-exclusive-and-exhaustive -1-point split, one in
-    # each of VUS/Unobserved.
-    _write_reclassification_file(
-        reclassification_path,
-        [
-            ("Uncertain significance", None, "A", "G", 8, 8, 0),  # VUS, resolved
-            ("Uncertain significance", None, "A", "G", 2, 2, 0),  # VUS, not resolved
-            (None, None, "A", "G", -1, 0, -1),  # Unobserved SNV, -1-point threshold, single source
-            (None, None, "A", "G", 1, 1, 0),  # Unobserved SNV, not resolved
-            ("Pathogenic", None, "A", "G", 11, 11, 0),  # controls-like, not VUS/Unobserved
-            (None, 0.01, "A", "G", -3, -3, 0),  # gnomAD-like, not Unobserved (gnomad_MAF set)
-            (None, None, "AC", "G", 8, 8, 0),  # not a SNV, excluded from Unobserved
-            ("Uncertain significance", None, "A", "G", -1, 2, -3),  # VUS, -1-point threshold, conflicting
-            ("Uncertain significance", None, "A", "G", 5, 2, 3),  # VUS, unresolved, both sources, concordant
-            ("Uncertain significance", None, "A", "G", 3, 8, -5),  # VUS, unresolved, both sources, discordant
-        ],
-    )
-    df = pd.read_csv(reclassification_path, sep="\t", usecols=RECLASSIFICATION_USECOLS)
-
-    stats = compute_variant_classification_stats_from_reclassification_file(df)
-
-    assert stats == {
-        "total_classified": 10,
-        "total_pathogenic_or_benign": 6,
-        "vus_total": 5,
-        "vus_resolved": 2,
-        # row 1 (fxn 8, revel 0) is the sole resolved-pathogenic VUS: experimental only.
-        "vus_resolved_pathogenic": 1,
-        "vus_resolved_pathogenic_only_experimental": 1,
-        "vus_resolved_pathogenic_only_predictive": 0,
-        "vus_resolved_pathogenic_both_evidence": 0,
-        # row 8 (fxn 2, revel -3) is the sole resolved-benign VUS: both sources contributed.
-        "vus_resolved_benign": 1,
-        "vus_resolved_benign_only_experimental": 0,
-        "vus_resolved_benign_only_predictive": 0,
-        "vus_resolved_benign_both_evidence": 1,
-        "vus_resolved_benign_at_threshold": 1,
-        "vus_resolved_benign_at_threshold_single_source": 0,
-        "vus_resolved_benign_at_threshold_conflicting": 1,
-        # row 2 (fxn 2, revel 0): experimental only. New row (fxn 2, revel 3, same sign):
-        # concordant. New row (fxn 8, revel -5, opposite signs): discordant.
-        "vus_unresolved": 3,
-        "vus_unresolved_concordant": 1,
-        "vus_unresolved_discordant": 1,
-        "vus_unresolved_only_experimental": 1,
-        "vus_unresolved_only_predictive": 0,
-        "vus_unresolved_neither": 0,
-        "vus_unresolved_zero_or_one_source": 1,
-        # the concordant new row (points 5) is the sole VUS near-pathogenic row (the discordant
-        # new row's points, 3, don't qualify).
-        "vus_unresolved_near_pathogenic": 1,
-        # row 6 (gnomad_MAF 0.01, fxn -3, revel 0) is the sole gnomAD row: resolved benign,
-        # experimental only.
-        "gnomad_total": 1,
-        "gnomad_resolved": 1,
-        "gnomad_resolved_pathogenic": 0,
-        "gnomad_resolved_pathogenic_only_experimental": 0,
-        "gnomad_resolved_pathogenic_only_predictive": 0,
-        "gnomad_resolved_pathogenic_both_evidence": 0,
-        "gnomad_resolved_benign": 1,
-        "gnomad_resolved_benign_only_experimental": 1,
-        "gnomad_resolved_benign_only_predictive": 0,
-        "gnomad_resolved_benign_both_evidence": 0,
-        "gnomad_resolved_benign_at_threshold": 0,
-        "gnomad_resolved_benign_at_threshold_single_source": 0,
-        "gnomad_resolved_benign_at_threshold_conflicting": 0,
-        "gnomad_unresolved": 0,
-        "gnomad_unresolved_concordant": 0,
-        "gnomad_unresolved_discordant": 0,
-        "gnomad_unresolved_only_experimental": 0,
-        "gnomad_unresolved_only_predictive": 0,
-        "gnomad_unresolved_neither": 0,
-        "gnomad_unresolved_zero_or_one_source": 0,
-        "gnomad_unresolved_near_pathogenic": 0,
-        "unobserved_total": 2,
-        "unobserved_resolved": 1,
-        "unobserved_resolved_pathogenic": 0,
-        "unobserved_resolved_pathogenic_only_experimental": 0,
-        "unobserved_resolved_pathogenic_only_predictive": 0,
-        "unobserved_resolved_pathogenic_both_evidence": 0,
-        # row 3 (fxn 0, revel -1) is the sole resolved-benign Unobserved: predictive only.
-        "unobserved_resolved_benign": 1,
-        "unobserved_resolved_benign_only_experimental": 0,
-        "unobserved_resolved_benign_only_predictive": 1,
-        "unobserved_resolved_benign_both_evidence": 0,
-        "unobserved_resolved_benign_at_threshold": 1,
-        "unobserved_resolved_benign_at_threshold_single_source": 1,
-        "unobserved_resolved_benign_at_threshold_conflicting": 0,
-        # row 4 (fxn 1, revel 0) is the sole unresolved Unobserved: experimental only.
-        "unobserved_unresolved": 1,
-        "unobserved_unresolved_concordant": 0,
-        "unobserved_unresolved_discordant": 0,
-        "unobserved_unresolved_only_experimental": 1,
-        "unobserved_unresolved_only_predictive": 0,
-        "unobserved_unresolved_neither": 0,
-        "unobserved_unresolved_zero_or_one_source": 1,
-        "unobserved_unresolved_near_pathogenic": 0,
-    }

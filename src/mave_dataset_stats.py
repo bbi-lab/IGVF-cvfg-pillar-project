@@ -155,40 +155,26 @@ Supplementary_Data_5.xlsx) respectively:
   (its own assertion, since `clnsig_group_18_25` isn't a clean ClinVar label
   for ClinGen-only controls). See `compute_control_concordance`.
 
-- **Variant classification** (two versions, same three questions -- how many
-  distinct DNA variants have a classification, how many of those are
-  pathogenic or benign, and how many ClinVar VUS / unobserved variants are
-  "resolved" -- reclassified/classified pathogenic or benign -- and what
-  percent of that category that is, further split into how many (and what
-  percent of the category) are Pathogenic/Likely Pathogenic vs. Benign/Likely
-  Benign, and, of the Benign/Likely Benign side, how many (and what percent)
-  have only the minimum possible evidence, -1 point): (re)classification of
-  DNA variants
+- **Variant classification**: how many distinct DNA variants have a
+  classification, how many of those are pathogenic or benign, and how many
+  ClinVar VUS / unobserved variants are "resolved" -- reclassified/classified
+  pathogenic or benign -- and what percent of that category that is, further
+  split into how many (and what percent of the category) are
+  Pathogenic/Likely Pathogenic vs. Benign/Likely Benign, and, of the
+  Benign/Likely Benign side, how many (and what percent) have only the
+  minimum possible evidence, -1 point: (re)classification of DNA variants
   using functional evidence points (ExCALIBR for most genes, OddsPath for
   F9/TP53 -- see `docs/variant_classification.md`) plus REVEL predictor
-  evidence, gene-specific calibration falling back to genome-wide.
+  evidence, gene-specific calibration falling back to genome-wide, from the
+  controls file's `controls_REVEL_GeneSpecific`, `ClinGen_Repo_REVEL_GeneSpecific`,
+  `VUS_REVEL`, `gnomAD_REVEL`, and `Unobserved_REVEL` sheets' precomputed
+  `Class_REVEL` column, deduplicated to one row per distinct DNA variant
+  (`VARIANT_CLASSIFICATION_COORD_COLS`) -- restricted to variants falling
+  into one of those five categories, and (for `controls`/`ClinGen_Repo`)
+  deduplicated by that category's own DNA-resolution-preferred rule (see
+  `docs/variant_classification.md#decided-approach`).
 
-  - **Supplementary Data 5 version**: from the controls file's
-    `controls_REVEL_GeneSpecific`, `ClinGen_Repo_REVEL_GeneSpecific`,
-    `VUS_REVEL`, `gnomAD_REVEL`, and `Unobserved_REVEL` sheets' precomputed
-    `Class_REVEL` column, deduplicated to one row per distinct DNA variant
-    (`VARIANT_CLASSIFICATION_COORD_COLS`) -- restricted to variants falling
-    into one of those five categories, and (for `controls`/`ClinGen_Repo`)
-    deduplicated by that category's own DNA-resolution-preferred rule (see
-    `docs/variant_classification.md#decided-approach`).
-  - **Reclassification-export version** (`--reclassification-file`, default
-    `data/output/reclassification/integrated_variant_effect_reclassification.tsv.gz`,
-    `src/build_variant_reclassification_dataset.py`'s output): every variant
-    surviving the notebook's exclusion rules, with no category restriction,
-    deduplicated by a single `abs(Combined_points)`-max rule applied
-    uniformly to every variant regardless of category. Pathogenic-or-benign
-    is derived from `Combined_points` (`points_are_pathogenic_or_benign`,
-    since this file has no precomputed `Class_REVEL`); VUS/Unobserved
-    membership is derived from `clinvar_sig_2025`/`gnomad_MAF` the same way
-    Supplementary Data 5's category split is.
-
-Immediately after the Supplementary Data 5 version of that section, a
-"Chi-squared tests" section reports, for each predictor, whether the
+Immediately after that section, a "Chi-squared tests" section reports, for each predictor, whether the
 Pathogenic/Likely Pathogenic and Benign/Likely Benign rates cited in the
 manuscript's Fig. 6d/e paragraphs actually differ between gnomAD, ClinVar
 VUS, and Unobserved variants: gnomAD vs. ClinVar VUS (Pathogenic/Likely
@@ -236,9 +222,9 @@ after the ExCALIBR calibration coverage section, shows a sequential funnel:
 starting from every DNA-level measurement row in the expanded file, it applies
 -- in the pipeline's actual order -- every exclusion
 `Variant_Classification_analysis.ipynb` and `src/build_variant_reclassification_dataset.py`
-apply before a variant reaches the reclassification export
-(`--reclassification-file`), reporting each step's effect two ways: distinct
-DNA variants (the reclassification pipeline's own dedup key, `Gene`/`Chrom`/
+apply before a variant reaches the reclassification export, reporting each
+step's effect two ways: distinct DNA variants (the reclassification
+pipeline's own dedup key, `Gene`/`Chrom`/
 `hg38_start`/`ref_allele`/`alt_allele`) and distinct assayed variants (each
 row's `mavedb_variant_urn` mapped back to its parent condensed-file row's
 `(hgvs_c, hgvs_p)` pair -- the same key `distinct_variants_assayed` uses, so
@@ -536,28 +522,6 @@ VARIANT_CLASSIFICATION_CHI_SQUARED_COMPARISONS = [
     },
 ]
 
-DEFAULT_RECLASSIFICATION_FILE = Path("data/output/reclassification/integrated_variant_effect_reclassification.tsv.gz")
-RECLASSIFICATION_COMBINED_POINTS_COL = "Combined_points"
-RECLASSIFICATION_CLINVAR_COL = "clinvar_sig_2025"
-RECLASSIFICATION_GNOMAD_COL = "gnomad_MAF"
-RECLASSIFICATION_REF_COL = "ref_allele"
-RECLASSIFICATION_ALT_COL = "alt_allele"
-# Combined_points == Functional_points + REVEL_points; Conflict_REVEL_GeneSpecific
-# mirrors Supplementary_Data_5's Conflicting_REVEL (see
-# VARIANT_CLASSIFICATION_CONFLICTING_COL_BY_PREDICTOR above).
-RECLASSIFICATION_FUNCTIONAL_POINTS_COL = "Functional_points"
-RECLASSIFICATION_PREDICTOR_POINTS_COL = "REVEL_points"
-RECLASSIFICATION_CONFLICT_COL = "Conflict_REVEL_GeneSpecific"
-RECLASSIFICATION_USECOLS = [
-    RECLASSIFICATION_CLINVAR_COL,
-    RECLASSIFICATION_GNOMAD_COL,
-    RECLASSIFICATION_REF_COL,
-    RECLASSIFICATION_ALT_COL,
-    RECLASSIFICATION_COMBINED_POINTS_COL,
-    RECLASSIFICATION_FUNCTIONAL_POINTS_COL,
-    RECLASSIFICATION_PREDICTOR_POINTS_COL,
-    RECLASSIFICATION_CONFLICT_COL,
-]
 LIKELY_PATHOGENIC_POINTS_THRESHOLD = 6
 LIKELY_BENIGN_POINTS_THRESHOLD = -1
 # Just short of LIKELY_PATHOGENIC_POINTS_THRESHOLD -- the strongest possible Uncertain
@@ -566,11 +530,24 @@ LIKELY_BENIGN_POINTS_THRESHOLD = -1
 # row can be concordant, discordant, experimental-only, or predictive-only), not a sixth
 # mutually-exclusive bucket.
 NEAR_PATHOGENIC_POINTS_VALUES = frozenset({4, 5})
-RECLASSIFICATION_VARIANT_CLASSIFICATION_TITLE = (
-    "=== Variant classification (reclassification export; "
-    "ExCALIBR/OddsPath + REVEL, gene-specific + genome-wide fallback; "
-    "single dedup, no category restriction) ==="
-)
+
+# Column names shared with the reclassification export
+# (`data/output/reclassification/integrated_variant_effect_reclassification.tsv.gz`,
+# `src/build_variant_reclassification_dataset.py`'s output) -- reused by
+# `src/ablation_variant_reclassification.py`, which reads that file directly.
+RECLASSIFICATION_CLINVAR_COL = "clinvar_sig_2025"
+RECLASSIFICATION_GNOMAD_COL = "gnomad_MAF"
+RECLASSIFICATION_REF_COL = "ref_allele"
+RECLASSIFICATION_ALT_COL = "alt_allele"
+
+
+def points_are_pathogenic_or_benign(points):
+    """True where combined evidence points fall outside the Uncertain range
+    (0-5) -- i.e. Likely Pathogenic/Pathogenic (>=6) or Likely Benign/Benign
+    (<=-1) -- per the point-to-class cutoffs documented in
+    `docs/variant_classification.md` and `Variant_Classification_analysis.ipynb`.
+    """
+    return (points >= LIKELY_PATHOGENIC_POINTS_THRESHOLD) | (points <= LIKELY_BENIGN_POINTS_THRESHOLD)
 
 
 def split_genes(gene_value):
@@ -1476,12 +1453,10 @@ def _reclassification_funnel_table_row(step):
     }
 
 
-def format_reclassification_filter_funnel(steps, reclassification_total):
+def format_reclassification_filter_funnel(steps):
     """Render `compute_reclassification_filter_funnel`'s steps as a table,
     plus a two-line "reclassified out of original" summary at each
-    resolution. `reclassification_total` is the actual reclassification
-    export's row count (one row per distinct DNA variant), used as a
-    cross-check against the funnel's own final count.
+    resolution.
 
     Each of `rows`/`variant_effect_measurements`/`distinct_dna_variants`/
     `distinct_assayed_variants` is paired with its own `*_removed` column
@@ -1493,7 +1468,7 @@ def format_reclassification_filter_funnel(steps, reclassification_total):
     as their own table below a divider, since they're alternative endpoints
     of the funnel rather than the next step after the rest -- see
     `compute_reclassification_filter_funnel`. The summary lines below still
-    describe the REVEL branch specifically, matching `reclassification_total`.
+    describe the REVEL branch specifically.
     """
     by_label = {step["label"]: step for step in steps}
     alternative_labels = {REVEL_TRAINING_STEP_LABEL, MUTPRED2_TRAINING_STEP_LABEL}
@@ -1523,11 +1498,6 @@ def format_reclassification_filter_funnel(steps, reclassification_total):
             f"of {starting_assayed} ({assayed_pct:.1f}%)"
         ),
     ]
-    if final["distinct_dna_variants"] != reclassification_total:
-        lines.append(
-            f"Note: funnel's final distinct-DNA-variant count ({final['distinct_dna_variants']}) differs from "
-            f"the reclassification export's own row count ({reclassification_total}) -- inputs may be out of sync."
-        )
     return "\n".join(lines)
 
 
@@ -1995,75 +1965,11 @@ def _format_count_and_pct(count, total):
     return f"{count} of {total} ({pct:.1f}%)"
 
 
-def format_variant_classification_summary(stats, title=VARIANT_CLASSIFICATION_TITLE):
-    def _side_lines(label, count_key, total_key):
-        count = stats[count_key]
-        return [
-            f"  {label}: " + _format_count_and_pct(count, stats[total_key]),
-            "    Experimental evidence only: "
-            + _format_count_and_pct(stats[f"{count_key}_only_experimental"], count),
-            "    Predictive evidence only: " + _format_count_and_pct(stats[f"{count_key}_only_predictive"], count),
-            "    Both: " + _format_count_and_pct(stats[f"{count_key}_both_evidence"], count),
-        ]
-
-    def _unresolved_lines(label, prefix, total_key):
-        count = stats[f"{prefix}_unresolved"]
-        return [
-            f"{label}: " + _format_count_and_pct(count, stats[total_key]),
-            "  Concordant (both sources, same direction): "
-            + _format_count_and_pct(stats[f"{prefix}_unresolved_concordant"], count),
-            "  Discordant (both sources, opposite direction): "
-            + _format_count_and_pct(stats[f"{prefix}_unresolved_discordant"], count),
-            "  Experimental evidence only: "
-            + _format_count_and_pct(stats[f"{prefix}_unresolved_only_experimental"], count),
-            "  Predictive evidence only: "
-            + _format_count_and_pct(stats[f"{prefix}_unresolved_only_predictive"], count),
-            "  Neither: " + _format_count_and_pct(stats[f"{prefix}_unresolved_neither"], count),
-            "  0 or 1 source (total): "
-            + _format_count_and_pct(stats[f"{prefix}_unresolved_zero_or_one_source"], count),
-            "  +4 or +5 points (overlaps categories above): "
-            + _format_count_and_pct(stats[f"{prefix}_unresolved_near_pathogenic"], count),
-        ]
-
-    def _resolved_lines(label, prefix, total_key):
-        at_threshold_key = f"{prefix}_resolved_benign_at_threshold"
-        return [
-            f"{label}: " + _format_count_and_pct(stats[f"{prefix}_resolved"], stats[total_key]),
-            *_side_lines("Pathogenic or likely pathogenic", f"{prefix}_resolved_pathogenic", total_key),
-            *_side_lines("Benign or likely benign", f"{prefix}_resolved_benign", total_key),
-            "  Benign or likely benign from only -1 point: "
-            + _format_count_and_pct(stats[at_threshold_key], stats[total_key]),
-            "    Evidence from only one source: "
-            + _format_count_and_pct(stats[f"{at_threshold_key}_single_source"], stats[at_threshold_key]),
-            "    Conflicting functional and predictive data: "
-            + _format_count_and_pct(stats[f"{at_threshold_key}_conflicting"], stats[at_threshold_key]),
-        ]
-
-    return "\n".join(
-        [
-            title,
-            f"Distinct DNA variants classified: {stats['total_classified']}",
-            "Pathogenic or benign: "
-            + _format_count_and_pct(stats["total_pathogenic_or_benign"], stats["total_classified"]),
-            "",
-            *_resolved_lines("ClinVar VUS resolved (reclassified pathogenic or benign)", "vus", "vus_total"),
-            *_unresolved_lines("ClinVar VUS unresolved", "vus", "vus_total"),
-            *_resolved_lines("gnomAD variants resolved (classified pathogenic or benign)", "gnomad", "gnomad_total"),
-            *_unresolved_lines("gnomAD variants unresolved", "gnomad", "gnomad_total"),
-            *_resolved_lines(
-                "Unobserved variants resolved (classified pathogenic or benign)", "unobserved", "unobserved_total"
-            ),
-            *_unresolved_lines("Unobserved variants unresolved", "unobserved", "unobserved_total"),
-        ]
-    )
-
-
 def format_variant_classification_table(stats_by_predictor, title=VARIANT_CLASSIFICATION_TITLE):
-    """Table form of `format_variant_classification_summary`: one row per
-    predictor in `stats_by_predictor` (see `compute_variant_classification_
-    stats`) per section, instead of one predictor's stats as flat text lines
-    -- follows this file's established `<DataFrame>.to_string()` convention
-    (see `format_count_table`/`format_gene_discordance_summary`).
+    """One row per predictor in `stats_by_predictor` (see
+    `compute_variant_classification_stats`) per section -- follows this
+    file's established `<DataFrame>.to_string()` convention (see
+    `format_count_table`/`format_gene_discordance_summary`).
     """
     predictors = list(stats_by_predictor)
 
@@ -2388,128 +2294,6 @@ def format_consequence_splice_breakdown_table(breakdown, title=CONSEQUENCE_SPLIC
     return "\n".join(lines)
 
 
-def points_are_pathogenic_or_benign(points):
-    """True where combined evidence points fall outside the Uncertain range
-    (0-5) -- i.e. Likely Pathogenic/Pathogenic (>=6) or Likely Benign/Benign
-    (<=-1) -- per the point-to-class cutoffs documented in
-    `docs/variant_classification.md` and `Variant_Classification_analysis.ipynb`.
-    """
-    return (points >= LIKELY_PATHOGENIC_POINTS_THRESHOLD) | (points <= LIKELY_BENIGN_POINTS_THRESHOLD)
-
-
-def compute_variant_classification_stats_from_reclassification_file(df):
-    """Like `compute_variant_classification_stats`, but sourced from the
-    reclassification export (`--reclassification-file`, default
-    `data/output/reclassification/integrated_variant_effect_reclassification.tsv.gz`)
-    instead of the Supplementary_Data_5 controls file.
-
-    That file (`src/build_variant_reclassification_dataset.py`'s output) is
-    every variant surviving `Variant_Classification_analysis.ipynb`'s
-    exclusion rules, deduplicated to one row per distinct DNA variant by a
-    single `abs(Combined_points)`-max rule applied uniformly to every variant
-    -- unlike Supplementary_Data_5, which (for `controls`/`ClinGen_Repo`)
-    instead prefers a DNA-resolution assay's record over a protein-resolution
-    one regardless of magnitude (see
-    `docs/variant_classification.md#decided-approach`), and which restricts
-    to variants falling into one of its five defined categories. This
-    function instead covers every surviving row: pathogenic-or-benign is
-    `points_are_pathogenic_or_benign(Combined_points)` (this file has no
-    precomputed `Class_REVEL` column) split into its Pathogenic/Likely
-    Pathogenic (`Combined_points >= LIKELY_PATHOGENIC_POINTS_THRESHOLD`) and
-    Benign/Likely Benign (`Combined_points <= LIKELY_BENIGN_POINTS_THRESHOLD`)
-    halves. Each half is further split by which evidence source(s)
-    contributed a nonzero value (`Functional_points` for experimental,
-    `REVEL_points` for predictive): only experimental, only predictive, or
-    both -- mutually exclusive and exhaustive for any resolved row, same
-    reasoning as `compute_variant_classification_stats`. Separately, the
-    Benign/Likely Benign half reports the minimum-evidence subset
-    (`Combined_points == LIKELY_BENIGN_POINTS_THRESHOLD`, i.e. -1 point, the
-    weakest possible Benign/Likely Benign call), further split into how many
-    got there from only one evidence source (`Functional_points == 0` or
-    `REVEL_points == 0`) vs. from conflicting functional-vs-predictor
-    evidence (`Conflict_REVEL_GeneSpecific == CONFLICTING_EVIDENCE_VALUE`) --
-    mutually exclusive and exhaustive at exactly -1 point, same reasoning as
-    `compute_variant_classification_stats` -- and VUS/gnomAD/Unobserved
-    membership is determined the same way Supplementary_Data_5's category
-    split is (`clinvar_sig_2025`/`gnomad_MAF`, restricted to SNVs for
-    Unobserved; gnomAD is `gnomad_MAF` not null, which can overlap `VUS`).
-
-    Each of VUS/gnomAD/Unobserved also reports its "unresolved" (still-
-    Uncertain, i.e. not pathogenic-or-benign) count/percent, split the same
-    concordant/discordant/experimental-only/predictive-only/neither way as
-    `compute_variant_classification_stats`, plus the combined "zero or one
-    source" total and the overlapping near-pathogenic
-    (`Combined_points in NEAR_PATHOGENIC_POINTS_VALUES`) count.
-
-    Returns a dict; see `format_variant_classification_summary`.
-    """
-    combined_points = df[RECLASSIFICATION_COMBINED_POINTS_COL]
-    pathogenic = combined_points >= LIKELY_PATHOGENIC_POINTS_THRESHOLD
-    benign = combined_points <= LIKELY_BENIGN_POINTS_THRESHOLD
-    benign_at_threshold = combined_points == LIKELY_BENIGN_POINTS_THRESHOLD
-    single_source = (df[RECLASSIFICATION_FUNCTIONAL_POINTS_COL] == 0) | (
-        df[RECLASSIFICATION_PREDICTOR_POINTS_COL] == 0
-    )
-    conflicting = df[RECLASSIFICATION_CONFLICT_COL] == CONFLICTING_EVIDENCE_VALUE
-    near_pathogenic = combined_points.isin(NEAR_PATHOGENIC_POINTS_VALUES)
-    has_experimental = df[RECLASSIFICATION_FUNCTIONAL_POINTS_COL] != 0
-    has_predictive = df[RECLASSIFICATION_PREDICTOR_POINTS_COL] != 0
-    only_experimental = has_experimental & ~has_predictive
-    only_predictive = ~has_experimental & has_predictive
-    both_evidence = has_experimental & has_predictive
-    pathogenic_or_benign = pathogenic | benign
-    vus = df[RECLASSIFICATION_CLINVAR_COL].isin(VUS_VALUES)
-    gnomad = df[RECLASSIFICATION_GNOMAD_COL].notna()
-    is_snv = (df[RECLASSIFICATION_REF_COL].str.len() == 1) & (df[RECLASSIFICATION_ALT_COL].str.len() == 1)
-    unobserved = df[RECLASSIFICATION_CLINVAR_COL].isna() & df[RECLASSIFICATION_GNOMAD_COL].isna() & is_snv
-
-    def resolved_counts(mask):
-        is_pathogenic = mask & pathogenic
-        is_benign = mask & benign
-        is_unresolved = mask & ~pathogenic_or_benign
-        at_threshold = mask & benign_at_threshold
-        return {
-            "resolved": int((mask & pathogenic_or_benign).sum()),
-            "resolved_pathogenic": int(is_pathogenic.sum()),
-            "resolved_pathogenic_only_experimental": int((is_pathogenic & only_experimental).sum()),
-            "resolved_pathogenic_only_predictive": int((is_pathogenic & only_predictive).sum()),
-            "resolved_pathogenic_both_evidence": int((is_pathogenic & both_evidence).sum()),
-            "resolved_benign": int(is_benign.sum()),
-            "resolved_benign_only_experimental": int((is_benign & only_experimental).sum()),
-            "resolved_benign_only_predictive": int((is_benign & only_predictive).sum()),
-            "resolved_benign_both_evidence": int((is_benign & both_evidence).sum()),
-            "resolved_benign_at_threshold": int(at_threshold.sum()),
-            "resolved_benign_at_threshold_single_source": int((at_threshold & single_source).sum()),
-            "resolved_benign_at_threshold_conflicting": int((at_threshold & conflicting).sum()),
-            "unresolved": int(is_unresolved.sum()),
-            "unresolved_concordant": int((is_unresolved & both_evidence & ~conflicting).sum()),
-            "unresolved_discordant": int((is_unresolved & both_evidence & conflicting).sum()),
-            "unresolved_only_experimental": int((is_unresolved & only_experimental).sum()),
-            "unresolved_only_predictive": int((is_unresolved & only_predictive).sum()),
-            "unresolved_neither": int((is_unresolved & ~has_experimental & ~has_predictive).sum()),
-            "unresolved_zero_or_one_source": int((is_unresolved & ~both_evidence).sum()),
-            "unresolved_near_pathogenic": int((is_unresolved & near_pathogenic).sum()),
-        }
-
-    vus_counts = resolved_counts(vus)
-    gnomad_counts = resolved_counts(gnomad)
-    unobserved_counts = resolved_counts(unobserved)
-
-    def _prefixed(counts, prefix):
-        return {f"{prefix}_{key}": value for key, value in counts.items()}
-
-    return {
-        "total_classified": len(df),
-        "total_pathogenic_or_benign": int(pathogenic_or_benign.sum()),
-        "vus_total": int(vus.sum()),
-        **_prefixed(vus_counts, "vus"),
-        "gnomad_total": int(gnomad.sum()),
-        **_prefixed(gnomad_counts, "gnomad"),
-        "unobserved_total": int(unobserved.sum()),
-        **_prefixed(unobserved_counts, "unobserved"),
-    }
-
-
 def build_report_text(
     table,
     gene_breakdown,
@@ -2526,7 +2310,6 @@ def build_report_text(
     control_concordance_summary,
     variant_classification_summary,
     variant_classification_chi_squared_summary,
-    reclassification_file_variant_classification_summary,
     gene_discordance_summary,
     consequence_splice_breakdown_summary,
     allow_clinvar_conflicts=False,
@@ -2557,7 +2340,6 @@ def build_report_text(
         control_concordance_summary,
         variant_classification_summary,
         variant_classification_chi_squared_summary,
-        reclassification_file_variant_classification_summary,
         gene_discordance_summary,
         consequence_splice_breakdown_summary,
     ]
@@ -2599,16 +2381,6 @@ def build_report_text(
     help=(
         f"Path to the controls workbook (default {DEFAULT_CONTROLS_FILE}), read from every sheet "
         f"whose name starts with '{CONTROLS_SHEET_PREFIX}', for the reclassification-agreement section."
-    ),
-)
-@click.option(
-    "--reclassification-file",
-    type=click.Path(exists=True, dir_okay=False, path_type=Path),
-    default=DEFAULT_RECLASSIFICATION_FILE,
-    help=(
-        f"Path to the reclassification export (default {DEFAULT_RECLASSIFICATION_FILE}), "
-        "for the second, un-category-restricted variant classification section that uses "
-        "this file's single, uniform dedup instead of Supplementary_Data_5's category-specific one."
     ),
 )
 @click.option(
@@ -2664,7 +2436,6 @@ def main(
     expanded_file,
     excalibr_calibrations_file,
     controls_file,
-    reclassification_file,
     checkpoint_file,
     chek2_file,
     output,
@@ -2711,12 +2482,6 @@ def main(
         compute_variant_classification_chi_squared_tests(variant_classification_stats_by_predictor)
     )
 
-    reclassification_df = pd.read_csv(reclassification_file, sep="\t", usecols=RECLASSIFICATION_USECOLS)
-    reclassification_file_variant_classification_summary = format_variant_classification_summary(
-        compute_variant_classification_stats_from_reclassification_file(reclassification_df),
-        title=RECLASSIFICATION_VARIANT_CLASSIFICATION_TITLE,
-    )
-
     gene_discordance_summary = format_gene_discordance_summary(*compute_gene_discordance_stats(controls_workbook))
     consequence_splice_breakdown_summary = format_consequence_splice_breakdown_table(
         compute_consequence_splice_breakdown(controls_workbook)
@@ -2729,7 +2494,7 @@ def main(
     checkpoint = pd.read_csv(checkpoint_file, low_memory=False)
     chek2 = pd.read_excel(chek2_file, header=0)
     funnel_steps = compute_reclassification_filter_funnel(expanded, checkpoint, chek2, condensed)
-    filter_funnel_summary = format_reclassification_filter_funnel(funnel_steps, len(reclassification_df))
+    filter_funnel_summary = format_reclassification_filter_funnel(funnel_steps)
 
     clingen_evidence_repository_summary = format_clingen_evidence_repository_summary(
         compute_clingen_evidence_repository_stats(checkpoint, chek2, controls_workbook)
@@ -2751,7 +2516,6 @@ def main(
         control_concordance_summary,
         variant_classification_summary,
         variant_classification_chi_squared_summary,
-        reclassification_file_variant_classification_summary,
         gene_discordance_summary,
         consequence_splice_breakdown_summary,
         allow_clinvar_conflicts=allow_clinvar_conflicts,

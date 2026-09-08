@@ -72,9 +72,8 @@ It also reports two further sections, sourced from separate input files:
   calibration (see `docs/variant_classification.md`).
 - **Filtering effects on the reclassification dataset**: a sequential funnel
   from every DNA-level measurement row in the expanded file down to the
-  reclassification export (`--reclassification-file`), applying -- in the
-  pipeline's actual order -- every exclusion
-  `Variant_Classification_analysis.ipynb` and
+  reclassification export, applying -- in the pipeline's actual order --
+  every exclusion `Variant_Classification_analysis.ipynb` and
   `src/build_variant_reclassification_dataset.py` apply first. Each step's
   effect is reported two ways: distinct DNA variants (the reclassification
   pipeline's own dedup key, `Gene`/`Chrom`/`hg38_start`/`ref_allele`/
@@ -97,11 +96,6 @@ It also reports two further sections, sourced from separate input files:
     expanded file) purely to report their individual effects.
   - `--chek2-file` (default `data/input/maves/CHEK2_Gebbia_2024.xlsx`): same
     CHEK2 QC workbook `build_variant_reclassification_dataset.py` uses.
-
-  If the funnel's own final distinct-DNA-variant count doesn't match the
-  reclassification export's actual row count, a note is appended -- a sign
-  the checkpoint/CHEK2/reclassification files are out of sync with each other
-  (e.g. after a partial pipeline rerun).
 - **Reclassification agreement** (Figure 4c): for every sheet in
   `--controls-file` (default `data/output/supplementary_data/Supplementary_Data_5.xlsx`)
   whose name starts with `controls_` -- one per predictor/calibration
@@ -126,36 +120,22 @@ It also reports two further sections, sourced from separate input files:
   ClinGen Evidence Repository control need not have an unambiguous ClinVar
   entry of its own). See `compute_control_concordance`'s docstring in the
   script.
-- **Variant classification** (two versions, answering the same three
-  questions -- how many distinct DNA variants have a classification, how
-  many of those are pathogenic or benign, and how many ClinVar VUS /
-  unobserved variants are "resolved" -- reclassified/classified pathogenic
-  or benign -- and what percent of that category that is): (re)classification
-  of DNA variants using functional evidence points (ExCALIBR for most genes,
-  OddsPath for F9/TP53 -- see `docs/variant_classification.md`) plus REVEL
-  predictor evidence, gene-specific calibration falling back to genome-wide.
-
-  - **Supplementary Data 5 version**: reads the `--controls-file`'s
-    `controls_REVEL_GeneSpecific`, `ClinGen_Repo_REVEL_GeneSpecific`,
-    `VUS_REVEL`, `gnomAD_REVEL`, and `Unobserved_REVEL` sheets' precomputed
-    `Class_REVEL` column, deduplicated to one row per distinct DNA variant
-    (by `Gene`/`Chrom`/`hg38_start`/`ref_allele`/`alt_allele`) -- restricted
-    to variants falling into one of those five categories, and (for
-    `controls`/`ClinGen_Repo`) deduplicated by that category's own
-    DNA-resolution-preferred rule (see
-    `docs/variant_classification.md#decided-approach`), which is why this
-    version's counts differ from the reclassification-export version below.
-  - **Reclassification-export version** (`--reclassification-file`, default
-    `data/output/reclassification/integrated_variant_effect_reclassification.tsv.gz`,
-    `src/build_variant_reclassification_dataset.py`'s output): every variant
-    surviving the notebook's exclusion rules, with no restriction to those
-    five categories, deduplicated by a single `abs(Combined_points)`-max rule
-    applied uniformly to every variant. Pathogenic-or-benign is derived from
-    `Combined_points` (this file has no precomputed `Class_REVEL`); VUS is
-    `clinvar_sig_2025 == "Uncertain significance"`; Unobserved is
-    `clinvar_sig_2025`/`gnomad_MAF` both null, restricted to SNVs (single-base
-    `ref_allele`/`alt_allele`) -- the same category definitions
-    Supplementary Data 5's split uses.
+- **Variant classification**: how many distinct DNA variants have a
+  classification, how many of those are pathogenic or benign, and how many
+  ClinVar VUS / unobserved variants are "resolved" -- reclassified/classified
+  pathogenic or benign -- and what percent of that category that is:
+  (re)classification of DNA variants using functional evidence points
+  (ExCALIBR for most genes, OddsPath for F9/TP53 -- see
+  `docs/variant_classification.md`) plus REVEL predictor evidence,
+  gene-specific calibration falling back to genome-wide. Reads the
+  `--controls-file`'s `controls_REVEL_GeneSpecific`,
+  `ClinGen_Repo_REVEL_GeneSpecific`, `VUS_REVEL`, `gnomAD_REVEL`, and
+  `Unobserved_REVEL` sheets' precomputed `Class_REVEL` column, deduplicated to
+  one row per distinct DNA variant (by `Gene`/`Chrom`/`hg38_start`/
+  `ref_allele`/`alt_allele`) -- restricted to variants falling into one of
+  those five categories, and (for `controls`/`ClinGen_Repo`) deduplicated by
+  that category's own DNA-resolution-preferred rule (see
+  `docs/variant_classification.md#decided-approach`).
 - **Chi-squared tests**: for each predictor, whether the Pathogenic/Likely
   Pathogenic and Benign/Likely Benign rates cited in the manuscript's Fig.
   6d/e paragraphs actually differ between gnomAD, ClinVar VUS, and
@@ -165,21 +145,21 @@ It also reports two further sections, sourced from separate input files:
   Each comparison is a 2x2 Pearson's chi-squared test of independence with
   Yates' continuity correction (R's `chisq.test()` default for a 2x2 table,
   equivalent to `prop.test(..., correct = TRUE)`) run on the two groups'
-  raw counts/totals from the Supplementary Data 5 version's own stats --
+  raw counts/totals from the variant classification section's own stats --
   the rate over the full category, not just the "resolved"
   (pathogenic-or-benign) subset. See
   `compute_variant_classification_chi_squared_tests` in the script.
 - **Gene-level discordance**: the top 5 genes by number of control variants
-  where the Supplementary Data 5 `controls_REVEL_GeneSpecific` sheet's
-  `Class_REVEL` classification disagrees with the row's ClinVar
-  pathogenic-or-benign control label (`clnsig_group_18_25`) -- i.e. a ClinVar
-  Pathogenic/Likely pathogenic control classified Benign/Likely benign, or a
-  ClinVar Benign/Likely benign control classified Pathogenic/Likely
-  Pathogenic. Deduplicated to one row per distinct DNA variant the same way
-  as the Supplementary Data 5 variant classification section above. Each of
-  the top 5 genes is broken down by direction of discordance (ClinVar P/LP
-  reclassified B/LB, vs. ClinVar B/LB reclassified P/LP). See
-  `compute_gene_discordance_stats` in the script.
+  where the `controls_REVEL_GeneSpecific` sheet's `Class_REVEL`
+  classification disagrees with the row's ClinVar pathogenic-or-benign
+  control label (`clnsig_group_18_25`) -- i.e. a ClinVar Pathogenic/Likely
+  pathogenic control classified Benign/Likely benign, or a ClinVar
+  Benign/Likely benign control classified Pathogenic/Likely Pathogenic.
+  Deduplicated to one row per distinct DNA variant the same way as the
+  variant classification section above. Each of the top 5 genes is broken
+  down by direction of discordance (ClinVar P/LP reclassified B/LB, vs.
+  ClinVar B/LB reclassified P/LP). See `compute_gene_discordance_stats` in
+  the script.
 
 ## Inputs
 
@@ -210,12 +190,6 @@ It also reports two further sections, sourced from separate input files:
   `ClinGen_Repo_REVEL_GeneSpecific`, `VUS_REVEL`, `gnomAD_REVEL`, and
   `Unobserved_REVEL` sheets, using their `Gene`, `Chrom`, `hg38_start`,
   `ref_allele`, `alt_allele`, and `Class_REVEL` columns.
-- **Reclassification export** (`--reclassification-file`, default
-  `data/output/reclassification/integrated_variant_effect_reclassification.tsv.gz`):
-  one row per distinct DNA variant, using its `clinvar_sig_2025`,
-  `gnomad_MAF`, `ref_allele`, `alt_allele`, and `Combined_points` columns, for
-  the reclassification-export variant classification section, and (its row
-  count only) as the filter-funnel section's cross-check.
 - **Checkpoint file** (`--checkpoint-file`, default
   `data/output/reclassification/integrated_variant_effect_dataset_analysis.csv.gz`):
   `Variant_Classification_analysis.ipynb`'s pre-category-split checkpoint, for
@@ -263,7 +237,6 @@ poetry run python -m src.mave_dataset_stats \
   data/output/maves/integrated_variant_effect_dataset.tsv.gz \
   [--excalibr-calibrations-file data/output/supplementary_data/Supplementary_Data_4.xlsx] \
   [--controls-file data/output/supplementary_data/Supplementary_Data_5.xlsx] \
-  [--reclassification-file data/output/reclassification/integrated_variant_effect_reclassification.tsv.gz] \
   [--checkpoint-file data/output/reclassification/integrated_variant_effect_dataset_analysis.csv.gz] \
   [--chek2-file data/input/maves/CHEK2_Gebbia_2024.xlsx] \
   [--output stats.txt]
