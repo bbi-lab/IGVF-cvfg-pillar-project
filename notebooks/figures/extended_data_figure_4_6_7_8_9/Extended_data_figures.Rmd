@@ -1026,6 +1026,153 @@ ggsave(file.path(dirname(OUT_DIR), "extended_data_figure_6/cm_clingen_OP_MP2_Uni
 
 ```{r}
 
+#Extended Data Figure 4 missense
+
+# Missense-only companion to Extended Data Figure 4 (AlphaMissense/MutPred2
+# x ClinVar controls/ClinGen Evidence Repository, via ExCALIBR/GeneSpecific
+# calibration): adds a missense-only variant of every panel, doubling the
+# current 8 sankeys+confusion-matrices to 16, so an All-variants block and
+# a Missense-only block can sit side by side -- the same idea as Extended
+# Data Figure 6alt above, applied to Figure 4's own AM/MP2 GeneSpecific
+# panels instead of the OddsPath/Universal REVEL/AM/MP2 panels. All charts
+# are shrunk 50% linearly from Ext. Data Fig 4's own calibrated core
+# dimensions (sankey 37x64mm -> 18.5x32mm, confusion matrix 31x27mm ->
+# 15.5x13.5mm); font sizes stay the same (label_pt = 6 throughout, matching
+# the panel above) -- each chart's own *returned* width/height (which
+# includes label/title overflow beyond that core, same as every other
+# calibrated chart in this project) ends up larger than the core size
+# alone, since the same-size text no longer shrinks with the box. Sankey
+# node labels are abbreviated to P/LP/VUS/LB/B, same as Ext. Data Fig 6alt.
+#
+# Entirely new, isolated code -- doesn't reuse or modify any object from
+# the Ext. Data Fig 4 block above, so that figure's own output can't
+# regress. Does reuse this document's already-defined
+# make_confusion_matrix_clinvar_chek2()/make_confusion_matrix_clingen()/
+# add_clinvar()/fix_clingen_naming() helpers and colors_custom/
+# levels_order_extdata_4_6/make_sankey_calibrated()/
+# make_confusion_matrix_calibrated(), all already in scope from the Ext.
+# Data Fig 4/6 chunk above -- but defines its own label_overrides/filter
+# helper rather than depending on Ext. Data Figure 6alt's (below), so this
+# chunk doesn't need to run in any particular order relative to that one.
+
+EXT_DATA_FIG_4_MISSENSE_DIR <- file.path(dirname(OUT_DIR), "extended_data_figure_4_missense")
+
+SANKEY_4_MISSENSE_WIDTH_MM <- 18.5
+SANKEY_4_MISSENSE_HEIGHT_MM <- 32
+CM_4_MISSENSE_WIDTH_MM <- 15.5
+CM_4_MISSENSE_HEIGHT_MM <- 13.5
+
+label_overrides_4_missense <- c(
+  "Benign" = "B", "Likely benign" = "LB", "Likely Benign" = "LB",
+  "Uncertain" = "VUS", "No Classification" = "VUS",
+  "Likely pathogenic" = "LP", "Likely Pathogenic" = "LP", "Pathogenic" = "P"
+)
+
+# simplified_consequence lives on every GeneSpecific sheet too (same column
+# Figure5_6.Rmd's own consequence_filter param and Ext. Data Figure 6alt use).
+filter_missense_4 <- function(df) df[df$simplified_consequence == "missense_variant", ]
+
+PREDICTORS_4_MISSENSE <- list(
+  AM  = list(class_col = "Class_AM",  pred_col = "Points_AM_GeneSpecific_GenomeWide"),
+  MP2 = list(class_col = "Class_MP2", pred_col = "Points_MP2_GeneSpecific_GenomeWide")
+)
+
+# ---- ClinVar controls ----
+
+clinvar_excalibr_raw_4_missense <- list(AM = clinvar_AM_YP, MP2 = clinvar_MP2_YP)
+
+build_clinvar_excalibr_4_missense <- function(predictor_name, consequence) {
+  spec <- PREDICTORS_4_MISSENSE[[predictor_name]]
+  df <- clinvar_excalibr_raw_4_missense[[predictor_name]]
+  if (consequence == "missense") df <- filter_missense_4(df)
+
+  cm <- make_confusion_matrix_clinvar_chek2(
+    df, spec$class_col, "clnsig_group_18_25", paste0(predictor_name, "_GeneSpecific"),
+    "Fxn_points", spec$pred_col
+  )
+  cm_calibrated <- make_confusion_matrix_calibrated(
+    TP = cm$metrics$TP, TN = cm$metrics$TN, FP = cm$metrics$FP, FN = cm$metrics$FN,
+    total_n = cm$total_n, matrix_width_mm = CM_4_MISSENSE_WIDTH_MM, matrix_height_mm = CM_4_MISSENSE_HEIGHT_MM,
+    x_label = "ClinVar classification", y_label = NULL
+  )
+
+  df_sankey <- add_clinvar(df)
+  sankey_calibrated <- make_sankey_calibrated(
+    df_sankey, source_col = clinvar, points_col = !!rlang::sym(spec$class_col),
+    colors_custom = colors_custom, levels_order = levels_order_extdata_4_6,
+    width_mm = SANKEY_4_MISSENSE_WIDTH_MM, height_mm = SANKEY_4_MISSENSE_HEIGHT_MM, label_pt = 6,
+    show_count = FALSE, wrap_destination_labels = TRUE, label_overrides = label_overrides_4_missense
+  )
+
+  list(cm = cm_calibrated, sankey = sankey_calibrated)
+}
+
+for (predictor_name in names(PREDICTORS_4_MISSENSE)) {
+  for (consequence in c("all", "missense")) {
+    panel <- build_clinvar_excalibr_4_missense(predictor_name, consequence)
+    ggsave(
+      file.path(EXT_DATA_FIG_4_MISSENSE_DIR, sprintf("sankey_clinvar_ExOP_%s_GeneSpecific_%s_calibrated.pdf", predictor_name, consequence)),
+      panel$sankey$plot, width = panel$sankey$width_mm, height = panel$sankey$height_mm,
+      units = 'mm', device = cairo_pdf, create.dir = TRUE
+    )
+    ggsave(
+      file.path(EXT_DATA_FIG_4_MISSENSE_DIR, sprintf("cm_clinvar_ExOP_%s_GeneSpecific_%s_calibrated.pdf", predictor_name, consequence)),
+      panel$cm$plot, width = panel$cm$width_mm, height = panel$cm$height_mm,
+      units = 'mm', device = cairo_pdf, create.dir = TRUE
+    )
+  }
+}
+
+# ---- ClinGen Evidence Repository ----
+
+clingen_excalibr_raw_4_missense <- list(AM = ClinGen_AM_YP, MP2 = ClinGen_MP2_YP)
+
+build_clingen_excalibr_4_missense <- function(predictor_name, consequence) {
+  spec <- PREDICTORS_4_MISSENSE[[predictor_name]]
+  df <- clingen_excalibr_raw_4_missense[[predictor_name]]
+  if (consequence == "missense") df <- filter_missense_4(df)
+
+  cm <- make_confusion_matrix_clingen(
+    df, spec$class_col, "Updated_Classification_ClinGen_repo", paste0(predictor_name, "_GeneSpecific"),
+    "Fxn_points", spec$pred_col
+  )
+  cm_calibrated <- make_confusion_matrix_calibrated(
+    TP = cm$metrics$TP, TN = cm$metrics$TN, FP = cm$metrics$FP, FN = cm$metrics$FN,
+    total_n = cm$total_n, matrix_width_mm = CM_4_MISSENSE_WIDTH_MM, matrix_height_mm = CM_4_MISSENSE_HEIGHT_MM,
+    x_label = "ClinGen classification", y_label = NULL
+  )
+
+  df_sankey <- df %>% filter(Updated_Classification_ClinGen_repo != "VUS")
+  df_sankey <- fix_clingen_naming(df_sankey)
+  sankey_calibrated <- make_sankey_calibrated(
+    df_sankey, source_col = Updated_Classification_ClinGen_repo, points_col = !!rlang::sym(spec$class_col),
+    colors_custom = colors_custom, levels_order = levels_order_extdata_4_6,
+    width_mm = SANKEY_4_MISSENSE_WIDTH_MM, height_mm = SANKEY_4_MISSENSE_HEIGHT_MM, label_pt = 6,
+    show_count = FALSE, wrap_destination_labels = TRUE, label_overrides = label_overrides_4_missense
+  )
+
+  list(cm = cm_calibrated, sankey = sankey_calibrated)
+}
+
+for (predictor_name in names(PREDICTORS_4_MISSENSE)) {
+  for (consequence in c("all", "missense")) {
+    panel <- build_clingen_excalibr_4_missense(predictor_name, consequence)
+    ggsave(
+      file.path(EXT_DATA_FIG_4_MISSENSE_DIR, sprintf("sankey_clingen_ExOP_%s_GeneSpecific_%s_calibrated.pdf", predictor_name, consequence)),
+      panel$sankey$plot, width = panel$sankey$width_mm, height = panel$sankey$height_mm,
+      units = 'mm', device = cairo_pdf, create.dir = TRUE
+    )
+    ggsave(
+      file.path(EXT_DATA_FIG_4_MISSENSE_DIR, sprintf("cm_clingen_ExOP_%s_GeneSpecific_%s_calibrated.pdf", predictor_name, consequence)),
+      panel$cm$plot, width = panel$cm$width_mm, height = panel$cm$height_mm,
+      units = 'mm', device = cairo_pdf, create.dir = TRUE
+    )
+  }
+}
+```
+
+```{r}
+
 #Extended Data Figure 6alt
 
 # Alternate version of Extended Data Figure 6 (REVEL/AlphaMissense/MutPred2

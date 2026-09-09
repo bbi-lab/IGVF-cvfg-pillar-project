@@ -342,6 +342,28 @@ later VUS/gnomAD/donut chunks call `ggsave()` directly with hardcoded
 `extended_data_figures/` and `extended_data_figure_6/` under
 `data/output/figures/` if a figure you expect isn't where you thought.
 
+### Extended Data Figure 4 missense
+
+A missense-only companion to Extended Data Figure 4 (AlphaMissense/MutPred2 x
+ClinVar controls/ClinGen Evidence Repository, via ExCALIBR/GeneSpecific
+calibration), built the same way as Extended Data Figure 6alt below: a new,
+isolated chunk right after the existing Ext. Data Fig 4/6 block in
+`Extended_data_figures.Rmd` -- doesn't touch or reuse any of that block's own
+objects. Adds a missense-only variant of every panel (`simplified_consequence
+== "missense_variant"`, same column/idea as `Figure5_6.Rmd`'s own
+`consequence_filter` param and Ext. Data Figure 6alt), doubling the current 8
+sankeys+confusion-matrices to 16 -- meant to sit as an All-variants block and
+a Missense-only block side by side. Every chart is shrunk 50% linearly from
+Ext. Data Fig 4's own calibrated core dimensions (sankey 37x64mm ->
+18.5x32mm, confusion matrix 31x27mm -> 15.5x13.5mm) with unchanged font
+sizes, same reasoning as Ext. Data Figure 6alt. Sankey node labels are
+abbreviated to P/LP/VUS/LB/B (`label_overrides`), including ClinGen's own
+"No Classification" bucket, mapped to "VUS" like "Uncertain".
+
+Writes 16 PDFs to `data/output/figures/extended_data_figure_4_missense/`,
+named like `sankey_clinvar_ExOP_AM_GeneSpecific_missense_calibrated.pdf` /
+`cm_clingen_ExOP_MP2_GeneSpecific_all_calibrated.pdf`.
+
 ### Extended Data Figure 6alt
 
 An alternate version of Extended Data Figure 6 (REVEL/AlphaMissense/MutPred2
