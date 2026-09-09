@@ -133,9 +133,10 @@ It also reports two further sections, sourced from separate input files:
   `compute_control_concordance`'s docstring in the script.
 
   Immediately after that table, a second, missense-only table repeats the
-  same breakdown for ClinVar controls alone (ClinGen isn't included), with
-  every sheet first restricted to `simplified_consequence == "missense_variant"`
-  rows before scoring. See `MISSENSE_CONTROL_CONCORDANCE_SOURCES`/
+  same breakdown -- ClinVar and ClinGen subsections alike, ClinGen's
+  `Genes`/`PLP`/`BLB` columns included -- with every sheet first restricted
+  to `simplified_consequence == "missense_variant"` rows before scoring.
+  See `MISSENSE_CONTROL_CONCORDANCE_SOURCES`/
   `MISSENSE_CONSEQUENCE_VALUE` in the script.
 - **Variant classification**: how many distinct DNA variants have a
   classification, how many of those are pathogenic or benign, and how many

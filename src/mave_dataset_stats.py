@@ -164,7 +164,8 @@ Supplementary_Data_5.xlsx) respectively:
   counts called out. See `compute_control_concordance`.
 
   Immediately after that table, a second, missense-only table repeats the
-  same breakdown for ClinVar controls alone, restricted to
+  same breakdown -- ClinVar and ClinGen subsections alike, including
+  ClinGen's `Genes`/`PLP`/`BLB` columns -- restricted to
   `simplified_consequence == "missense_variant"` rows before scoring --
   see `MISSENSE_CONTROL_CONCORDANCE_SOURCES`/`MISSENSE_CONSEQUENCE_VALUE`.
 
@@ -520,13 +521,12 @@ CONTROL_CONCORDANCE_TITLE = (
     "=== Control concordance (ClinVar vs. ClinGen; OddsPath alone vs. combined with "
     "REVEL/AlphaMissense/MutPred2) ==="
 )
-# Missense-only companion to the table above -- ClinVar only, since that's the
-# control source with enough missense representation for this breakdown to be
-# meaningful; restricts every sheet to `MISSENSE_CONSEQUENCE_VALUE` rows
-# before scoring concordance, same evidence sources and columns otherwise.
-MISSENSE_CONTROL_CONCORDANCE_SOURCES = {"ClinVar": CONTROL_CONCORDANCE_SOURCES["ClinVar"]}
+# Missense-only companion to the table above -- same control sources
+# (ClinVar, ClinGen), evidence sources, and columns, with every sheet first
+# restricted to `MISSENSE_CONSEQUENCE_VALUE` rows before scoring concordance.
+MISSENSE_CONTROL_CONCORDANCE_SOURCES = CONTROL_CONCORDANCE_SOURCES
 MISSENSE_CONTROL_CONCORDANCE_TITLE = (
-    "=== Control concordance, missense-only (ClinVar; OddsPath alone vs. combined with "
+    "=== Control concordance, missense-only (ClinVar vs. ClinGen; OddsPath alone vs. combined with "
     "REVEL/AlphaMissense/MutPred2) ==="
 )
 

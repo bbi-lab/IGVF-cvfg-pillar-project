@@ -2360,24 +2360,43 @@ def test_format_control_concordance_report(tmp_path):
 
 
 def _write_missense_control_concordance_workbook(path):
-    """One ClinVar `controls_<suffix>_GeneSpecific` sheet per predictor, each
+    """One `controls_<suffix>_GeneSpecific` (ClinVar) and one
+    `ClinGen_Repo_<suffix>_GeneSpecific` (ClinGen) sheet per predictor, each
     with the same 4 rows: 3 missense_variant (2 concordant, 1 discordant --
     control Pathogenic reclassified Benign) plus 1 stop_gained row that
     should be excluded entirely once `compute_control_concordance` is called
-    with `consequence_filter=MISSENSE_CONSEQUENCE_VALUE`.
+    with `consequence_filter=MISSENSE_CONSEQUENCE_VALUE`. ClinVar's 3 missense
+    rows span 2 genes (GENEA x2, GENEB x1); ClinGen's span 2 different genes
+    (GENED x2, GENEE x1).
     """
-    # (clnsig_group_18_25, OP_points, Class_<predictor>, simplified_consequence, Gene)
-    rows = [
+    # (control classification, OP_points, Class_<predictor>, simplified_consequence, Gene)
+    clinvar_rows = [
         ("Pathogenic", 5, "Pathogenic", MISSENSE_CONSEQUENCE_VALUE, "GENEA"),  # missense, concordant
         ("Benign", -1, "Likely Benign", MISSENSE_CONSEQUENCE_VALUE, "GENEA"),  # missense, concordant
         ("Pathogenic", -2, "Benign", MISSENSE_CONSEQUENCE_VALUE, "GENEB"),  # missense, discordant: PLP -> BLB
         ("Pathogenic", 5, "Pathogenic", "stop_gained", "GENEC"),  # not missense -- excluded by the filter
     ]
+    clingen_rows = [
+        ("Pathogenic", 5, "Pathogenic", MISSENSE_CONSEQUENCE_VALUE, "GENED"),  # missense, concordant
+        ("Benign", -1, "Likely Benign", MISSENSE_CONSEQUENCE_VALUE, "GENED"),  # missense, concordant
+        ("Likely Pathogenic", -2, "Benign", MISSENSE_CONSEQUENCE_VALUE, "GENEE"),  # missense, discordant: PLP -> BLB
+        ("Pathogenic", 5, "Pathogenic", "stop_gained", "GENEF"),  # not missense -- excluded by the filter
+    ]
     with pd.ExcelWriter(path) as writer:
         for suffix in ("REVEL", "AM", "MP2"):
-            columns = ["clnsig_group_18_25", "OP_points", f"Class_{suffix}", SIMPLIFIED_CONSEQUENCE_COL, "Gene"]
-            pd.DataFrame(rows, columns=columns).to_excel(
+            clinvar_columns = ["clnsig_group_18_25", "OP_points", f"Class_{suffix}", SIMPLIFIED_CONSEQUENCE_COL, "Gene"]
+            pd.DataFrame(clinvar_rows, columns=clinvar_columns).to_excel(
                 writer, sheet_name=f"controls_{suffix}_GeneSpecific", index=False
+            )
+            clingen_columns = [
+                "Updated_Classification_ClinGen_repo",
+                "OP_points",
+                f"Class_{suffix}",
+                SIMPLIFIED_CONSEQUENCE_COL,
+                "Gene",
+            ]
+            pd.DataFrame(clingen_rows, columns=clingen_columns).to_excel(
+                writer, sheet_name=f"ClinGen_Repo_{suffix}_GeneSpecific", index=False
             )
 
 
@@ -2407,8 +2426,27 @@ def test_compute_control_concordance_missense_only(tmp_path):
         assert table.loc[CONCORDANT_LABEL, "count"] == 2
         assert table.loc[DISCORDANT_LABEL, "count"] == 1
 
-    # ClinGen isn't part of the missense-only breakdown.
-    assert ("ClinGen", CONTROL_CONCORDANCE_EVIDENCE_LABEL) not in concordance
+    # ClinGen is also part of the missense-only breakdown, with its own
+    # (different) rows/genes -- the stop_gained row is excluded the same way.
+    clingen_oddspath_total, clingen_oddspath_table, clingen_oddspath_genes = concordance[
+        ("ClinGen", CONTROL_CONCORDANCE_EVIDENCE_LABEL)
+    ]
+    assert clingen_oddspath_total == 3
+    assert clingen_oddspath_table.loc[CONCORDANT_LABEL, "count"] == 2
+    assert clingen_oddspath_table.loc[DISCORDANT_LABEL, "count"] == 1
+    assert clingen_oddspath_table.loc[DISCORDANT_CONTROL_PLP_TO_EVIDENCE_BLB_LABEL, "count"] == 1
+    # GENED (rows 1-2) and GENEE (row 3); rows 1 and 3 (Pathogenic, Likely
+    # Pathogenic) are PLP, row 2 (Benign) is BLB.
+    assert clingen_oddspath_genes == 2
+    assert clingen_oddspath_table.loc[CONTROL_PLP_LABEL, "count"] == 2
+    assert clingen_oddspath_table.loc[CONTROL_BLB_LABEL, "count"] == 1
+
+    for predictor in VARIANT_CLASSIFICATION_PREDICTORS:
+        total, table, genes = concordance[("ClinGen", COMBINED_EVIDENCE_LABEL_BY_PREDICTOR[predictor])]
+        assert total == 3
+        assert table.loc[CONCORDANT_LABEL, "count"] == 2
+        assert table.loc[DISCORDANT_LABEL, "count"] == 1
+        assert genes == 2
 
 
 def test_format_control_concordance_report_missense_only(tmp_path):
@@ -2426,10 +2464,18 @@ def test_format_control_concordance_report_missense_only(tmp_path):
 
     assert text.startswith(MISSENSE_CONTROL_CONCORDANCE_TITLE)
     assert "ClinVar controls (controls_*_GeneSpecific sheets):" in text
-    assert "ClinGen controls" not in text
-    # 2 concordant, 1 discordant (all PLP-to-BLB), of 3 total, for every evidence source.
-    assert text.count("2 of 3 (66.7%)") == 4
-    assert text.count("1 of 3 (33.3%)") == 4 * 2  # Discordant + its PLP-to-BLB sub-column
+    assert "ClinGen controls (ClinGen_Repo_*_GeneSpecific sheets):" in text
+
+    clinvar_section, clingen_section = text.split("ClinGen controls (ClinGen_Repo_*_GeneSpecific sheets):")
+    # ClinVar: 2 concordant, 1 discordant (all PLP-to-BLB), of 3 total, for every evidence source.
+    assert "Genes" not in clinvar_section
+    assert clinvar_section.count("2 of 3 (66.7%)") == 4
+    assert clinvar_section.count("1 of 3 (33.3%)") == 4 * 2  # Discordant + its PLP-to-BLB sub-column
+
+    # ClinGen: same shape, plus Genes=2 and a PLP/BLB population split (2 of 3 / 1 of 3).
+    assert "Genes" in clingen_section
+    assert clingen_section.count("2 of 3 (66.7%)") == 4 * 2  # Concordant + PLP
+    assert clingen_section.count("1 of 3 (33.3%)") == 4 * 3  # Discordant + its PLP-to-BLB sub-column + BLB
 
 
 def test_reclassification_flags_agree_disagree_and_no_evidence():
