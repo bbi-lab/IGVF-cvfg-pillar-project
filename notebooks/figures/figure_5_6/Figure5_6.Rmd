@@ -80,11 +80,9 @@ colors_custom <- c(
   "Functional only" = "#00A087FF",
     "Predictive only" = "#F39B7FFF",
     "Both"            = "gold",
-  "-12 to -6" = "#176082",
-  "-12 to -5" = "#176082",
-  "-5 to -4" = "#63A1C4",
+  "-12 to -7" = "#176082",
+  "-6 to -4" = "#63A1C4",
   "-3 to -1" = "#99C8DC" ,
-  "-4 to -1" = "#99C8DC" ,
   "1 to 3" = "#F0D0D5",
   "4 to 5" = "#D68F99",
   "0" = 'grey',
@@ -1231,8 +1229,8 @@ plot_summary_2 <- plot_summary %>%
   mutate(
     Total_Points_REVEL = cut(
       Total_Points_REVEL,
-      breaks = c(-Inf, -12, -5, -3, 0,0.000001,4, 6, 10, 13, Inf),
-      labels = c("< -12", "-12 to -6", "-5 to -4", "-3 to -1","0","1 to 3",
+      breaks = c(-Inf, -12, -6, -3, 0,0.000001,4, 6, 10, 13, Inf),
+      labels = c("< -12", "-12 to -7", "-6 to -4", "-3 to -1","0","1 to 3",
                  "4 to 5", "6 to 9", "10 to 12", "> 12"),
       right = FALSE
     )
@@ -1284,7 +1282,7 @@ uncertain <- plot_summary_2 %>%
   filter(Total_Points_REVEL %in% c("0","1 to 3", "4 to 5"))
 
 benign <- plot_summary_2 %>%
-  filter(Total_Points_REVEL %in% c("< -12", "-12 to -6", "-5 to -4", "-3 to -1"))
+  filter(Total_Points_REVEL %in% c("< -12", "-12 to -7", "-6 to -4", "-3 to -1"))
 
 # Produce the plots with labels and without labels
 path_plot <- make_three_ring_plot(pathogenic, "Pathogenic range")

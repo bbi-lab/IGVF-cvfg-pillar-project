@@ -38,11 +38,9 @@ OUT_DIR <- "../../../data/output/figures"
 RING_DIAMETER_MM <- 28.7
 
 colors_custom <- c(
-  "-12 to -6" = "#176082",
-  "-12 to -5" = "#176082",
-  "-5 to -4" = "#63A1C4",
+  "-12 to -7" = "#176082",
+  "-6 to -4" = "#63A1C4",
   "-3 to -1" = "#99C8DC",
-  "-4 to -1" = "#99C8DC",
   "6 to 9" = "#B85C6B",
   "10 to 12" = "#520F1C",
   "Functional only" = "#00A087FF",
@@ -60,8 +58,8 @@ colors_custom <- c(
 # with both Arial and sans), so a hyphen here would render as "1 to  3".
 bin_display_labels <- c(
   "< -12" = "< −12",
-  "-12 to -6" = "−6 to −12",
-  "-5 to -4" = "−4 to −5",
+  "-12 to -7" = "−7 to −12",
+  "-6 to -4" = "−4 to −6",
   "-3 to -1" = "−1 to −3",
   "0" = "0",
   "1 to 3" = "1 to 3",
@@ -109,8 +107,8 @@ plot_summary_2 <- plot_summary %>%
   mutate(
     Total_Points_REVEL = cut(
       Total_Points_REVEL,
-      breaks = c(-Inf, -12, -5, -3, 0, 0.000001, 4, 6, 10, 13, Inf),
-      labels = c("< -12", "-12 to -6", "-5 to -4", "-3 to -1", "0", "1 to 3",
+      breaks = c(-Inf, -12, -6, -3, 0, 0.000001, 4, 6, 10, 13, Inf),
+      labels = c("< -12", "-12 to -7", "-6 to -4", "-3 to -1", "0", "1 to 3",
                  "4 to 5", "6 to 9", "10 to 12", "> 12"),
       right = FALSE
     )
@@ -120,7 +118,7 @@ plot_summary_2 <- plot_summary %>%
   ungroup()
 
 benign <- plot_summary_2 %>%
-  filter(Total_Points_REVEL %in% c("< -12", "-12 to -6", "-5 to -4", "-3 to -1"))
+  filter(Total_Points_REVEL %in% c("< -12", "-12 to -7", "-6 to -4", "-3 to -1"))
 
 pathogenic <- plot_summary_2 %>%
   filter(Total_Points_REVEL %in% c("6 to 9", "10 to 12"))
@@ -251,7 +249,7 @@ needs_reposition <- function(start, end, cos_threshold = 0.5) {
   abs(cos(mid)) < cos_threshold
 }
 
-# White text on dark/saturated fills (e.g. the "-12 to -6" navy, "Functional
+# White text on dark/saturated fills (e.g. the "-12 to -7" navy, "Functional
 # only" teal), black text otherwise -- generalizes across panels instead of
 # hardcoding which categories are "dark".
 text_color_for_fill <- function(fill_value) {

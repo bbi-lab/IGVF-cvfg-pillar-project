@@ -43,8 +43,8 @@ format_count <- function(x) {
 # Arial and sans), so a hyphen here would render as "1 to  3".
 bin_display_labels <- c(
   "< -12" = "< −12",
-  "-12 to -6" = "−6 to −12",
-  "-5 to -4" = "−4 to −5",
+  "-12 to -7" = "−7 to −12",
+  "-6 to -4" = "−4 to −6",
   "-3 to -1" = "−1 to −3",
   "0" = "0",
   "1 to 3" = "1 to 3",
@@ -337,7 +337,7 @@ needs_reposition <- function(start, end, cos_threshold = 0.5) {
   abs(cos(mid)) < cos_threshold
 }
 
-# White text on dark/saturated fills (e.g. the "-12 to -6" navy, "Functional
+# White text on dark/saturated fills (e.g. the "-12 to -7" navy, "Functional
 # only" teal), black text otherwise -- generalizes across panels instead of
 # hardcoding which categories are "dark".
 text_color_for_fill <- function(fill_value) {
