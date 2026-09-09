@@ -119,14 +119,20 @@ Supplementary_Data_5.xlsx) respectively:
   determinate original ClinGen classification (`Assertion_ClinGen_repo`) and
   MAVE experimental data (after the same checkpoint-downstream exclusions as
   the filter funnel above, minus its training-variant split); how many
-  retain a determinate classification after
+  distinct DNA variants from that same MAVE-experimental-data population --
+  regardless of their *original* ClinGen classification -- have a
+  determinate classification after
   `src/recalculate_clingen_classification.py` recomputes it with functional
   (BS3/PS3) and predictive (BP4/PP3) evidence removed
-  (`Updated_Classification_ClinGen_repo`); and how many are ultimately
-  retained per predictor (the `ClinGen_Repo_*_GeneSpecific` sheets, after
-  also excluding that predictor's own training variants -- these three
-  totals are also each `Control concordance`'s "ClinGen" `Total` above). See
-  `compute_clingen_evidence_repository_stats`.
+  (`Updated_Classification_ClinGen_repo`), including a breakout of how many
+  of those were originally Uncertain Significance in ClinGen (matching the
+  population gate `Variant_Classification_analysis.ipynb` actually uses --
+  see `compute_clingen_evidence_repository_stats`'s docstring); and how many
+  are ultimately retained per predictor (the `ClinGen_Repo_*_GeneSpecific`
+  sheets, after also excluding that predictor's own training variants and
+  deduplicating amino-acid-resolution variants to a representative DNA
+  variant -- these three totals are also each `Control concordance`'s
+  "ClinGen" `Total` above). See `compute_clingen_evidence_repository_stats`.
 
 - **Reclassification agreement** (Figure 4c): for every sheet in the controls
   file whose name starts with `controls_` (one per predictor/calibration
@@ -1854,16 +1860,31 @@ def compute_clingen_evidence_repository_stats(checkpoint, chek2, controls_workbo
     """The ClinGen Evidence Repository "evidence removal" control set: how
     many DNA variants have a determinate (Pathogenic/Likely Pathogenic/
     Benign/Likely Benign) *original* ClinGen classification
-    (`ASSERTION_CLINGEN_REPO_COL`) and MAVE experimental data; how many of
-    those retain a determinate classification after
+    (`ASSERTION_CLINGEN_REPO_COL`) and MAVE experimental data; how many
+    distinct DNA variants (from that same MAVE-experimental-data population,
+    regardless of their *original* ClinGen classification) have a
+    determinate classification after
     `src/recalculate_clingen_classification.py` recomputes it with the
     functional (BS3/PS3) and predictive (BP4/PP3) evidence codes removed
-    (`CLINGEN_CLASSIFICATION_COL`); and how many are ultimately retained for
-    analysis with each of REVEL/AlphaMissense/MutPred2 (the
-    `ClinGen_Repo_*_GeneSpecific` sheets, after also excluding that
-    predictor's own training variants).
+    (`CLINGEN_CLASSIFICATION_COL`) -- matching the population gate
+    `Variant_Classification_analysis.ipynb` actually uses to build the
+    `ClinGen_Repo_*` category (`Updated_Classification_ClinGen_repo` notna
+    and not `"VUS"`, cell 107), which was never conditioned on the original
+    classification; and how many are ultimately retained for analysis with
+    each of REVEL/AlphaMissense/MutPred2 (the `ClinGen_Repo_*_GeneSpecific`
+    sheets, after also excluding that predictor's own training variants).
 
-    Distinct DNA variants for the first two counts are by simple genomic-
+    Because the second population isn't conditioned on the original
+    classification, it can include variants ClinGen originally called
+    Uncertain Significance -- not because MAVE/predictor evidence gets added
+    anywhere in this recalculation, but because removing a *conflicting*
+    functional/predictive code can let ClinGen's own remaining codes combine
+    into a determinate call on their own (see
+    `docs/clingen_repo_am_sheet_population_mismatch.md`). `post_removal_
+    originally_vus` counts how many of the post-removal population were in
+    that situation.
+
+    Distinct DNA variants for these two counts are by simple genomic-
     coordinate dedup (`distinct_dna_variants`), not the notebook's fuller
     nt/aa tie-break (`src/lib/dedup.py`), so those two totals may differ
     slightly from a from-scratch reproduction of the notebook's own
@@ -1875,10 +1896,9 @@ def compute_clingen_evidence_repository_stats(checkpoint, chek2, controls_workbo
     determinate_original = survivors[survivors[ASSERTION_CLINGEN_REPO_COL].isin(CLASS_PATHOGENIC_OR_BENIGN_VALUES)]
     pre_removal = distinct_dna_variants(determinate_original)
 
-    retained = determinate_original[
-        determinate_original[CLINGEN_CLASSIFICATION_COL].isin(CLASS_PATHOGENIC_OR_BENIGN_VALUES)
-    ]
+    retained = survivors[survivors[CLINGEN_CLASSIFICATION_COL].isin(CLASS_PATHOGENIC_OR_BENIGN_VALUES)]
     post_removal = distinct_dna_variants(retained)
+    post_removal_originally_vus = ~post_removal[ASSERTION_CLINGEN_REPO_COL].isin(CLASS_PATHOGENIC_OR_BENIGN_VALUES)
 
     stats = {
         "pre_removal_total": len(pre_removal),
@@ -1891,6 +1911,7 @@ def compute_clingen_evidence_repository_stats(checkpoint, chek2, controls_workbo
         "post_removal_genes": int(post_removal[GENE_COL].nunique()),
         "post_removal_plp": int(post_removal[CLINGEN_CLASSIFICATION_COL].isin(CLASS_PATHOGENIC_VALUES).sum()),
         "post_removal_blb": int(post_removal[CLINGEN_CLASSIFICATION_COL].isin(CLASS_BENIGN_VALUES).sum()),
+        "post_removal_originally_vus": int(post_removal_originally_vus.sum()),
     }
 
     for predictor in VARIANT_CLASSIFICATION_PREDICTORS:
@@ -1925,8 +1946,11 @@ def format_clingen_evidence_repository_summary(stats, title=CLINGEN_EVIDENCE_REP
         + f" distinct DNA variants across {stats['post_removal_genes']} genes",
         f"    Pathogenic or Likely Pathogenic: {stats['post_removal_plp']}",
         f"    Benign or Likely Benign: {stats['post_removal_blb']}",
+        "    Originally Uncertain Significance in ClinGen: "
+        + _format_count_and_pct(stats["post_removal_originally_vus"], stats["post_removal_total"]),
         "",
-        "Post filtering (excluding each predictor's own training variants), retained for analysis:",
+        "Post filtering (excluding each predictor's own training variants and deduplicating "
+        "amino-acid-resolution variants to a representative DNA variant), retained for analysis:",
     ]
     for predictor in VARIANT_CLASSIFICATION_PREDICTORS:
         lines.append(

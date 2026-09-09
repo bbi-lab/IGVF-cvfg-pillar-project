@@ -2066,6 +2066,12 @@ def test_compute_clingen_evidence_repository_stats(tmp_path):
     # have a determinate original classification: s5 stays Pathogenic after
     # removal (retained), s6 drops to Uncertain (not retained), s7 flips
     # direction (Likely Pathogenic -> Benign, still determinate, retained).
+    # s9: original classification Uncertain Significance (excluded from
+    # pre-removal, like s4) but the *recalculated* classification is
+    # determinate (Likely Pathogenic) -- matches the real population gate
+    # `Variant_Classification_analysis.ipynb` uses (not conditioned on the
+    # original classification), so it's retained post-removal and counted
+    # in post_removal_originally_vus.
     checkpoint_path = tmp_path / "checkpoint.csv"
     _write_checkpoint_file(
         checkpoint_path,
@@ -2077,6 +2083,7 @@ def test_compute_clingen_evidence_repository_stats(tmp_path):
             ("DS1", "GENEA", "urn:s5", "1", 50, "A", "G", "p5", None, None, None, "No", "No", "No", "Pathogenic", "Pathogenic"),
             ("DS1", "GENEB", "urn:s6", "1", 60, "A", "G", "p6", None, None, None, "No", "No", "No", "Likely Benign", "Uncertain"),
             ("DS1", "GENEB", "urn:s7", "1", 70, "A", "G", "p7", None, None, None, "No", "No", "No", "Likely Pathogenic", "Benign"),
+            ("DS1", "GENEA", "urn:s9", "1", 90, "A", "G", "p9", None, None, None, "No", "No", "No", "Uncertain Significance", "Likely Pathogenic"),
         ],
     )
     chek2_path = tmp_path / "chek2.xlsx"
@@ -2108,10 +2115,11 @@ def test_compute_clingen_evidence_repository_stats(tmp_path):
     assert stats["pre_removal_benign"] == 0
     assert stats["pre_removal_likely_benign"] == 1
 
-    assert stats["post_removal_total"] == 2
+    assert stats["post_removal_total"] == 3
     assert stats["post_removal_genes"] == 2
-    assert stats["post_removal_plp"] == 1
+    assert stats["post_removal_plp"] == 2
     assert stats["post_removal_blb"] == 1
+    assert stats["post_removal_originally_vus"] == 1
 
     assert stats["REVEL_total"] == 2
     assert stats["REVEL_genes"] == 2
@@ -2130,12 +2138,17 @@ def test_compute_clingen_evidence_repository_stats(tmp_path):
 
 
 def test_format_clingen_evidence_repository_summary(tmp_path):
+    # s10: original classification Uncertain Significance (so it's excluded
+    # from the pre-removal/812-style count) but recalculates to a
+    # determinate Benign -- exercises the new "Originally Uncertain
+    # Significance in ClinGen" line.
     checkpoint_path = tmp_path / "checkpoint.csv"
     _write_checkpoint_file(
         checkpoint_path,
         [
             ("DS1", "GENEA", "urn:s5", "1", 50, "A", "G", "p5", None, None, None, "No", "No", "No", "Pathogenic", "Pathogenic"),
             ("DS1", "GENEB", "urn:s6", "1", 60, "A", "G", "p6", None, None, None, "No", "No", "No", "Likely Benign", "Uncertain"),
+            ("DS1", "GENEC", "urn:s10", "1", 70, "A", "G", "p10", None, None, None, "No", "No", "No", "Uncertain Significance", "Benign"),
         ],
     )
     chek2_path = tmp_path / "chek2.xlsx"
@@ -2158,9 +2171,14 @@ def test_format_clingen_evidence_repository_summary(tmp_path):
     assert "2 distinct DNA variants across 2 genes" in text
     assert "Pathogenic: 1" in text
     assert "Likely Benign: 1" in text
-    assert "Retained a determinate classification: 1 of 2 (50.0%) distinct DNA variants across 1 genes" in text
+    assert "Retained a determinate classification: 2 of 2 (100.0%) distinct DNA variants across 2 genes" in text
     assert "Pathogenic or Likely Pathogenic: 1" in text
-    assert "Benign or Likely Benign: 0" in text
+    assert "Benign or Likely Benign: 1" in text
+    assert "Originally Uncertain Significance in ClinGen: 1 of 2 (50.0%)" in text
+    assert (
+        "Post filtering (excluding each predictor's own training variants and deduplicating "
+        "amino-acid-resolution variants to a representative DNA variant), retained for analysis:"
+    ) in text
     for predictor in VARIANT_CLASSIFICATION_PREDICTORS:
         assert f"{predictor}: 1 variants across 1 genes (Pathogenic or Likely Pathogenic: 1, Benign or Likely Benign: 0)" in text
 
