@@ -16,7 +16,9 @@ from src.mave_dataset_stats import (
     COMPOSITE_SCORE_DATASETS_TITLE,
     CONCORDANT_LABEL,
     CONFLICTING_EVIDENCE_VALUE,
+    CONTROL_BLB_LABEL,
     CONTROL_CONCORDANCE_EVIDENCE_LABEL,
+    CONTROL_PLP_LABEL,
     CONTROL_VUS_LABEL,
     DISAGREE_LABEL,
     DISCORDANT_BENIGN_TO_PATHOGENIC_LABEL,
@@ -2159,7 +2161,15 @@ def _write_control_concordance_workbook(path):
     out by hand in the test docstrings below (OddsPath alone: sign of
     OP_points, read only from the REVEL sheet; combined with each predictor:
     that predictor's own Class_* category membership on its own sheet).
+
+    Each row also carries a `Gene` -- 3 distinct genes across the 5 ClinVar
+    rows (GENEA x2, GENEB x2, GENEC x1), 2 distinct across the 3 ClinGen rows
+    (GENEA x2, GENEB x1) -- reused identically across all three predictors'
+    sheets, since every sheet shares the same rows here and only the
+    evidence columns (`OP_points`/`Class_*`) vary by predictor.
     """
+    clinvar_genes = ["GENEA", "GENEA", "GENEB", "GENEB", "GENEC"]
+    clingen_genes = ["GENEA", "GENEA", "GENEB"]
     clinvar_rows_revel = [
         # (clnsig_group_18_25, OP_points, Class_REVEL)
         ("Pathogenic", 2, "Pathogenic"),  # both concordant
@@ -2200,25 +2210,32 @@ def _write_control_concordance_workbook(path):
         ("Benign", "Pathogenic"),
         ("Likely Pathogenic", "Likely Pathogenic"),
     ]
+
+    def _with_genes(rows, genes):
+        return [(*row, gene) for row, gene in zip(rows, genes)]
+
     with pd.ExcelWriter(path) as writer:
-        pd.DataFrame(clinvar_rows_revel, columns=["clnsig_group_18_25", "OP_points", "Class_REVEL"]).to_excel(
-            writer, sheet_name="controls_REVEL_GeneSpecific", index=False
-        )
         pd.DataFrame(
-            clingen_rows_revel, columns=["Updated_Classification_ClinGen_repo", "OP_points", "Class_REVEL"]
+            _with_genes(clinvar_rows_revel, clinvar_genes), columns=["clnsig_group_18_25", "OP_points", "Class_REVEL", "Gene"]
+        ).to_excel(writer, sheet_name="controls_REVEL_GeneSpecific", index=False)
+        pd.DataFrame(
+            _with_genes(clingen_rows_revel, clingen_genes),
+            columns=["Updated_Classification_ClinGen_repo", "OP_points", "Class_REVEL", "Gene"],
         ).to_excel(writer, sheet_name="ClinGen_Repo_REVEL_GeneSpecific", index=False)
-        pd.DataFrame(clinvar_rows_am, columns=["clnsig_group_18_25", "Class_AM"]).to_excel(
-            writer, sheet_name="controls_AM_GeneSpecific", index=False
-        )
-        pd.DataFrame(clingen_rows_am, columns=["Updated_Classification_ClinGen_repo", "Class_AM"]).to_excel(
-            writer, sheet_name="ClinGen_Repo_AM_GeneSpecific", index=False
-        )
-        pd.DataFrame(clinvar_rows_mp2, columns=["clnsig_group_18_25", "Class_MP2"]).to_excel(
-            writer, sheet_name="controls_MP2_GeneSpecific", index=False
-        )
-        pd.DataFrame(clingen_rows_mp2, columns=["Updated_Classification_ClinGen_repo", "Class_MP2"]).to_excel(
-            writer, sheet_name="ClinGen_Repo_MP2_GeneSpecific", index=False
-        )
+        pd.DataFrame(
+            _with_genes(clinvar_rows_am, clinvar_genes), columns=["clnsig_group_18_25", "Class_AM", "Gene"]
+        ).to_excel(writer, sheet_name="controls_AM_GeneSpecific", index=False)
+        pd.DataFrame(
+            _with_genes(clingen_rows_am, clingen_genes),
+            columns=["Updated_Classification_ClinGen_repo", "Class_AM", "Gene"],
+        ).to_excel(writer, sheet_name="ClinGen_Repo_AM_GeneSpecific", index=False)
+        pd.DataFrame(
+            _with_genes(clinvar_rows_mp2, clinvar_genes), columns=["clnsig_group_18_25", "Class_MP2", "Gene"]
+        ).to_excel(writer, sheet_name="controls_MP2_GeneSpecific", index=False)
+        pd.DataFrame(
+            _with_genes(clingen_rows_mp2, clingen_genes),
+            columns=["Updated_Classification_ClinGen_repo", "Class_MP2", "Gene"],
+        ).to_excel(writer, sheet_name="ClinGen_Repo_MP2_GeneSpecific", index=False)
 
 
 def test_compute_control_concordance_clinvar_and_clingen(tmp_path):
@@ -2227,46 +2244,67 @@ def test_compute_control_concordance_clinvar_and_clingen(tmp_path):
 
     concordance = compute_control_concordance(pd.ExcelFile(path))
 
-    clinvar_oddspath_total, clinvar_oddspath_table = concordance[("ClinVar", CONTROL_CONCORDANCE_EVIDENCE_LABEL)]
+    clinvar_oddspath_total, clinvar_oddspath_table, clinvar_oddspath_genes = concordance[
+        ("ClinVar", CONTROL_CONCORDANCE_EVIDENCE_LABEL)
+    ]
     assert clinvar_oddspath_total == 5
     assert clinvar_oddspath_table.loc[CONCORDANT_LABEL, "count"] == 2
     assert clinvar_oddspath_table.loc[DISCORDANT_LABEL, "count"] == 1
     assert clinvar_oddspath_table.loc[CONTROL_VUS_LABEL, "count"] == 2
     assert clinvar_oddspath_table.loc[CONCORDANT_LABEL, "pct"] == pytest.approx(40.0)
+    # GENEA, GENEB, GENEC across the 5 ClinVar rows.
+    assert clinvar_oddspath_genes == 3
 
-    clinvar_combined_total, clinvar_combined_table = concordance[("ClinVar", COMBINED_REVEL_EVIDENCE_LABEL)]
+    clinvar_combined_total, clinvar_combined_table, _clinvar_combined_genes = concordance[
+        ("ClinVar", COMBINED_REVEL_EVIDENCE_LABEL)
+    ]
     assert clinvar_combined_total == 5
     assert clinvar_combined_table.loc[CONCORDANT_LABEL, "count"] == 3
     assert clinvar_combined_table.loc[DISCORDANT_LABEL, "count"] == 1
     assert clinvar_combined_table.loc[CONTROL_VUS_LABEL, "count"] == 1
 
-    clingen_oddspath_total, clingen_oddspath_table = concordance[("ClinGen", CONTROL_CONCORDANCE_EVIDENCE_LABEL)]
+    clingen_oddspath_total, clingen_oddspath_table, clingen_oddspath_genes = concordance[
+        ("ClinGen", CONTROL_CONCORDANCE_EVIDENCE_LABEL)
+    ]
     assert clingen_oddspath_total == 3
     assert clingen_oddspath_table.loc[CONCORDANT_LABEL, "count"] == 1
     assert clingen_oddspath_table.loc[DISCORDANT_LABEL, "count"] == 1
     assert clingen_oddspath_table.loc[CONTROL_VUS_LABEL, "count"] == 1
+    # GENEA (rows 1-2) and GENEB (row 3) across the 3 ClinGen rows; rows 1 and 3
+    # (Pathogenic, Likely Pathogenic) are PLP, row 2 (Benign) is BLB.
+    assert clingen_oddspath_genes == 2
+    assert clingen_oddspath_table.loc[CONTROL_PLP_LABEL, "count"] == 2
+    assert clingen_oddspath_table.loc[CONTROL_BLB_LABEL, "count"] == 1
 
-    clingen_combined_total, clingen_combined_table = concordance[("ClinGen", COMBINED_REVEL_EVIDENCE_LABEL)]
+    clingen_combined_total, clingen_combined_table, clingen_combined_genes = concordance[
+        ("ClinGen", COMBINED_REVEL_EVIDENCE_LABEL)
+    ]
     assert clingen_combined_total == 3
     assert clingen_combined_table.loc[CONCORDANT_LABEL, "count"] == 1
     assert clingen_combined_table.loc[DISCORDANT_LABEL, "count"] == 1
     assert clingen_combined_table.loc[CONTROL_VUS_LABEL, "count"] == 1
+    assert clingen_combined_genes == 2
+    assert clingen_combined_table.loc[CONTROL_PLP_LABEL, "count"] == 2
+    assert clingen_combined_table.loc[CONTROL_BLB_LABEL, "count"] == 1
 
     am_label = COMBINED_EVIDENCE_LABEL_BY_PREDICTOR["AlphaMissense"]
-    clinvar_am_total, clinvar_am_table = concordance[("ClinVar", am_label)]
+    clinvar_am_total, clinvar_am_table, _clinvar_am_genes = concordance[("ClinVar", am_label)]
     assert clinvar_am_total == 5
     assert clinvar_am_table.loc[CONCORDANT_LABEL, "count"] == 3
     assert clinvar_am_table.loc[DISCORDANT_LABEL, "count"] == 1
     assert clinvar_am_table.loc[CONTROL_VUS_LABEL, "count"] == 1
 
-    clingen_am_total, clingen_am_table = concordance[("ClinGen", am_label)]
+    clingen_am_total, clingen_am_table, clingen_am_genes = concordance[("ClinGen", am_label)]
     assert clingen_am_total == 3
     assert clingen_am_table.loc[CONCORDANT_LABEL, "count"] == 2
     assert clingen_am_table.loc[DISCORDANT_LABEL, "count"] == 0
     assert clingen_am_table.loc[CONTROL_VUS_LABEL, "count"] == 1
+    assert clingen_am_genes == 2
+    assert clingen_am_table.loc[CONTROL_PLP_LABEL, "count"] == 2
+    assert clingen_am_table.loc[CONTROL_BLB_LABEL, "count"] == 1
 
     mp2_label = COMBINED_EVIDENCE_LABEL_BY_PREDICTOR["MutPred2"]
-    clinvar_mp2_total, clinvar_mp2_table = concordance[("ClinVar", mp2_label)]
+    clinvar_mp2_total, clinvar_mp2_table, _clinvar_mp2_genes = concordance[("ClinVar", mp2_label)]
     assert clinvar_mp2_total == 5
     assert clinvar_mp2_table.loc[CONCORDANT_LABEL, "count"] == 2
     assert clinvar_mp2_table.loc[DISCORDANT_LABEL, "count"] == 2
@@ -2276,8 +2314,11 @@ def test_compute_control_concordance_clinvar_and_clingen(tmp_path):
     assert clinvar_mp2_table.loc[DISCORDANT_CONTROL_PLP_TO_EVIDENCE_BLB_LABEL, "count"] == 1
     assert clinvar_mp2_table.loc[DISCORDANT_CONTROL_BLB_TO_EVIDENCE_PLP_LABEL, "count"] == 1
 
-    clingen_mp2_total, clingen_mp2_table = concordance[("ClinGen", mp2_label)]
+    clingen_mp2_total, clingen_mp2_table, clingen_mp2_genes = concordance[("ClinGen", mp2_label)]
     assert clingen_mp2_total == 3
+    assert clingen_mp2_genes == 2
+    assert clingen_mp2_table.loc[CONTROL_PLP_LABEL, "count"] == 2
+    assert clingen_mp2_table.loc[CONTROL_BLB_LABEL, "count"] == 1
     assert clingen_mp2_table.loc[CONCORDANT_LABEL, "count"] == 2
     assert clingen_mp2_table.loc[DISCORDANT_LABEL, "count"] == 1
     assert clingen_mp2_table.loc[CONTROL_VUS_LABEL, "count"] == 0
@@ -2309,6 +2350,14 @@ def test_format_control_concordance_report(tmp_path):
     # ClinVar/MutPred2 row: 1 PLP-to-BLB and 1 BLB-to-PLP discordance, each of 5 total.
     assert text.count("1 of 5 (20.0%)") >= 2
 
+    clinvar_section, clingen_section = text.split("ClinGen controls (ClinGen_Repo_*_GeneSpecific sheets):")
+    # Genes/PLP/BLB are ClinGen-only -- ClinVar's own control set doesn't report them.
+    assert "Genes" not in clinvar_section
+    assert "Genes" in clingen_section
+    # Every ClinGen row: 2 genes (GENEA, GENEB), PLP=2 of 3, BLB=1 of 3.
+    assert clingen_section.count("2 of 3 (66.7%)") >= 4  # PLP, plus each row's own concordance count
+    assert clingen_section.count("1 of 3 (33.3%)") >= 4  # BLB, plus each row's own discordance count
+
 
 def _write_missense_control_concordance_workbook(path):
     """One ClinVar `controls_<suffix>_GeneSpecific` sheet per predictor, each
@@ -2317,16 +2366,16 @@ def _write_missense_control_concordance_workbook(path):
     should be excluded entirely once `compute_control_concordance` is called
     with `consequence_filter=MISSENSE_CONSEQUENCE_VALUE`.
     """
-    # (clnsig_group_18_25, OP_points, Class_<predictor>, simplified_consequence)
+    # (clnsig_group_18_25, OP_points, Class_<predictor>, simplified_consequence, Gene)
     rows = [
-        ("Pathogenic", 5, "Pathogenic", MISSENSE_CONSEQUENCE_VALUE),  # missense, concordant
-        ("Benign", -1, "Likely Benign", MISSENSE_CONSEQUENCE_VALUE),  # missense, concordant
-        ("Pathogenic", -2, "Benign", MISSENSE_CONSEQUENCE_VALUE),  # missense, discordant: PLP -> BLB
-        ("Pathogenic", 5, "Pathogenic", "stop_gained"),  # not missense -- excluded by the filter
+        ("Pathogenic", 5, "Pathogenic", MISSENSE_CONSEQUENCE_VALUE, "GENEA"),  # missense, concordant
+        ("Benign", -1, "Likely Benign", MISSENSE_CONSEQUENCE_VALUE, "GENEA"),  # missense, concordant
+        ("Pathogenic", -2, "Benign", MISSENSE_CONSEQUENCE_VALUE, "GENEB"),  # missense, discordant: PLP -> BLB
+        ("Pathogenic", 5, "Pathogenic", "stop_gained", "GENEC"),  # not missense -- excluded by the filter
     ]
     with pd.ExcelWriter(path) as writer:
         for suffix in ("REVEL", "AM", "MP2"):
-            columns = ["clnsig_group_18_25", "OP_points", f"Class_{suffix}", SIMPLIFIED_CONSEQUENCE_COL]
+            columns = ["clnsig_group_18_25", "OP_points", f"Class_{suffix}", SIMPLIFIED_CONSEQUENCE_COL, "Gene"]
             pd.DataFrame(rows, columns=columns).to_excel(
                 writer, sheet_name=f"controls_{suffix}_GeneSpecific", index=False
             )
@@ -2345,7 +2394,7 @@ def test_compute_control_concordance_missense_only(tmp_path):
     # The stop_gained row is filtered out entirely, leaving 3 in-scope rows for
     # every evidence source (OddsPath alone, reusing the REVEL sheet, and each
     # predictor's own combined evidence, since all three sheets share the same rows).
-    oddspath_total, oddspath_table = concordance[("ClinVar", CONTROL_CONCORDANCE_EVIDENCE_LABEL)]
+    oddspath_total, oddspath_table, _oddspath_genes = concordance[("ClinVar", CONTROL_CONCORDANCE_EVIDENCE_LABEL)]
     assert oddspath_total == 3
     assert oddspath_table.loc[CONCORDANT_LABEL, "count"] == 2
     assert oddspath_table.loc[DISCORDANT_LABEL, "count"] == 1
@@ -2353,7 +2402,7 @@ def test_compute_control_concordance_missense_only(tmp_path):
     assert oddspath_table.loc[DISCORDANT_CONTROL_BLB_TO_EVIDENCE_PLP_LABEL, "count"] == 0
 
     for predictor in VARIANT_CLASSIFICATION_PREDICTORS:
-        total, table = concordance[("ClinVar", COMBINED_EVIDENCE_LABEL_BY_PREDICTOR[predictor])]
+        total, table, _genes = concordance[("ClinVar", COMBINED_EVIDENCE_LABEL_BY_PREDICTOR[predictor])]
         assert total == 3
         assert table.loc[CONCORDANT_LABEL, "count"] == 2
         assert table.loc[DISCORDANT_LABEL, "count"] == 1

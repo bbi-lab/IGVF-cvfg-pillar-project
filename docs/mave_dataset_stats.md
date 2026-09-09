@@ -124,8 +124,13 @@ It also reports two further sections, sourced from separate input files:
   `Updated_Classification_ClinGen_repo` (its own P/LP/B/LB assertion --
   `clnsig_group_18_25` isn't a clean ClinVar label for these rows, since a
   ClinGen Evidence Repository control need not have an unambiguous ClinVar
-  entry of its own). See `compute_control_concordance`'s docstring in the
-  script.
+  entry of its own). The ClinGen table additionally reports each row's
+  `Genes` (distinct genes among that row's in-scope ClinGen control
+  variants) and its own `PLP`/`BLB` population split (ClinGen's
+  classification alone, independent of the evidence source, summing to
+  `Total`) -- not shown for ClinVar, whose much larger, more stable control
+  set doesn't need this called out per row. See
+  `compute_control_concordance`'s docstring in the script.
 
   Immediately after that table, a second, missense-only table repeats the
   same breakdown for ClinVar controls alone (ClinGen isn't included), with

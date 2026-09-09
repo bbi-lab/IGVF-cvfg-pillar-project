@@ -156,7 +156,12 @@ Supplementary_Data_5.xlsx) respectively:
   to the Discordant count. ClinVar's control label is `clnsig_group_18_25`;
   ClinGen's is `Updated_Classification_ClinGen_repo` (its own assertion,
   since `clnsig_group_18_25` isn't a clean ClinVar label for ClinGen-only
-  controls). See `compute_control_concordance`.
+  controls). The ClinGen table additionally reports each row's `Genes`
+  (distinct genes among that row's in-scope ClinGen control variants) and
+  its `PLP`/`BLB` population split (ClinGen's own classification alone,
+  independent of the evidence source, summing to `Total`) -- not shown for
+  ClinVar, whose much larger control set doesn't need per-row gene/PLP-BLB
+  counts called out. See `compute_control_concordance`.
 
   Immediately after that table, a second, missense-only table repeats the
   same breakdown for ClinVar controls alone, restricted to
@@ -489,6 +494,17 @@ CONTROL_CONCORDANCE_LABELS_ORDER = [
     DISCORDANT_CONTROL_BLB_TO_EVIDENCE_PLP_LABEL,
     CONTROL_VUS_LABEL,
 ]
+# The control classification alone (independent of the evidence source) --
+# mutually exclusive and exhaustive over a row's `in_scope` population, so
+# these two always sum to that row's `Total`. Reported only for the ClinGen
+# table (see `format_control_concordance_report`), since its much smaller,
+# per-predictor-varying control set makes the PLP/BLB composition worth
+# calling out; ClinVar's is large and stable enough across evidence sources
+# that it isn't.
+CONTROL_PLP_LABEL = "PLP"
+CONTROL_BLB_LABEL = "BLB"
+CONTROL_POPULATION_LABELS_ORDER = [CONTROL_PLP_LABEL, CONTROL_BLB_LABEL]
+CONTROL_CONCORDANCE_TABLE_LABELS_ORDER = CONTROL_CONCORDANCE_LABELS_ORDER + CONTROL_POPULATION_LABELS_ORDER
 CONTROL_CONCORDANCE_EVIDENCE_LABEL = "OddsPath calibration"
 COMBINED_EVIDENCE_LABEL_BY_PREDICTOR = {
     predictor: f"ExCALIBR/OddsPath + {predictor} gene-specific" for predictor in VARIANT_CLASSIFICATION_PREDICTORS
@@ -1620,8 +1636,11 @@ def control_concordance_flags(control_group, pathogenic_values, benign_values, a
     set counts as VUS. `DISCORDANT_LABEL` also carries two mutually-exclusive
     sub-flags (`DISCORDANT_CONTROL_PLP_TO_EVIDENCE_BLB_LABEL`/
     `DISCORDANT_CONTROL_BLB_TO_EVIDENCE_PLP_LABEL`) breaking discordant rows
-    out by direction. Returns (flags, in_scope), both boolean Series/
-    DataFrame aligned to `control_group`'s index.
+    out by direction. `CONTROL_PLP_LABEL`/`CONTROL_BLB_LABEL` carry the
+    control classification alone (`is_pathogenic`/`is_benign`), independent
+    of the evidence source -- together they equal `in_scope`. Returns
+    (flags, in_scope), both boolean Series/DataFrame aligned to
+    `control_group`'s index.
     """
     is_pathogenic = control_group.isin(pathogenic_values)
     is_benign = control_group.isin(benign_values)
@@ -1640,6 +1659,8 @@ def control_concordance_flags(control_group, pathogenic_values, benign_values, a
             DISCORDANT_CONTROL_PLP_TO_EVIDENCE_BLB_LABEL: discordant_plp_to_blb,
             DISCORDANT_CONTROL_BLB_TO_EVIDENCE_PLP_LABEL: discordant_blb_to_plp,
             CONTROL_VUS_LABEL: vus,
+            CONTROL_PLP_LABEL: is_pathogenic,
+            CONTROL_BLB_LABEL: is_benign,
         }
     )
     return flags, in_scope
@@ -1661,8 +1682,16 @@ def compute_control_concordance(workbook, control_sources=CONTROL_CONCORDANCE_SO
     that value before scoring -- used for the missense-only companion table
     (`MISSENSE_CONTROL_CONCORDANCE_SOURCES`).
 
-    Returns {(control_source_label, evidence_label): (total, table)}, where
-    `table` is the `summarize_flags` output over the in-scope rows.
+    Returns {(control_source_label, evidence_label): (total, table, n_genes)}.
+    `table` is the `summarize_flags` output over the in-scope rows, covering
+    `CONTROL_CONCORDANCE_LABELS_ORDER` plus, for every row,
+    `CONTROL_POPULATION_LABELS_ORDER` (the control classification alone --
+    see `control_concordance_flags`). `n_genes` is the number of distinct
+    genes (`GENE_COL`) among the in-scope rows -- reported alongside
+    `Total` in `format_control_concordance_report`'s ClinGen table, since
+    unlike ClinVar's, the ClinGen control set is small enough that its
+    gene coverage (and how it shrinks per predictor's own training-variant
+    exclusion) is worth surfacing directly.
     """
 
     def _filtered(sheet_name):
@@ -1679,8 +1708,9 @@ def compute_control_concordance(workbook, control_sources=CONTROL_CONCORDANCE_SO
         oddspath_flags, oddspath_in_scope = control_concordance_flags(
             revel_df[control_col], pathogenic_values, benign_values, op_points > 0, op_points < 0
         )
-        results[(control_label, CONTROL_CONCORDANCE_EVIDENCE_LABEL)] = summarize_flags(
-            oddspath_flags.loc[oddspath_in_scope, CONTROL_CONCORDANCE_LABELS_ORDER]
+        results[(control_label, CONTROL_CONCORDANCE_EVIDENCE_LABEL)] = (
+            *summarize_flags(oddspath_flags.loc[oddspath_in_scope, CONTROL_CONCORDANCE_TABLE_LABELS_ORDER]),
+            int(revel_df.loc[oddspath_in_scope, GENE_COL].nunique()),
         )
 
         for predictor in VARIANT_CLASSIFICATION_PREDICTORS:
@@ -1694,8 +1724,9 @@ def compute_control_concordance(workbook, control_sources=CONTROL_CONCORDANCE_SO
                 df[class_col].isin(CLASS_PATHOGENIC_VALUES),
                 df[class_col].isin(CLASS_BENIGN_VALUES),
             )
-            results[(control_label, COMBINED_EVIDENCE_LABEL_BY_PREDICTOR[predictor])] = summarize_flags(
-                combined_flags.loc[combined_in_scope, CONTROL_CONCORDANCE_LABELS_ORDER]
+            results[(control_label, COMBINED_EVIDENCE_LABEL_BY_PREDICTOR[predictor])] = (
+                *summarize_flags(combined_flags.loc[combined_in_scope, CONTROL_CONCORDANCE_TABLE_LABELS_ORDER]),
+                int(df.loc[combined_in_scope, GENE_COL].nunique()),
             )
     return results
 
@@ -1712,6 +1743,13 @@ def format_control_concordance_report(concordance, control_sources=CONTROL_CONCO
     of that row's own total, same as `Concordant`/`Discordant`/`VUS` --
     together they sum to `Discordant`.
 
+    The ClinGen table additionally reports each row's `Genes` (distinct
+    genes among that row's in-scope ClinGen control variants, from
+    `compute_control_concordance`'s `n_genes`) and its `PLP`/`BLB`
+    population split (`CONTROL_POPULATION_LABELS_ORDER` -- the control
+    classification alone, which sums to `Total`) -- not shown for ClinVar,
+    whose much larger control set doesn't need this called out per row.
+
     `control_sources`/`title` are overridden together for the missense-only
     companion table -- see `MISSENSE_CONTROL_CONCORDANCE_SOURCES`/
     `MISSENSE_CONTROL_CONCORDANCE_TITLE`.
@@ -1724,11 +1762,19 @@ def format_control_concordance_report(concordance, control_sources=CONTROL_CONCO
         sheet_pattern = VARIANT_CLASSIFICATION_CATEGORY_SHEETS_BY_PREDICTOR["REVEL"][category].replace("REVEL", "*")
         rows = {}
         for evidence_label in evidence_labels:
-            total, table = concordance[(control_label, evidence_label)]
-            rows[evidence_label] = {"Total": total} | {
+            total, table, n_genes = concordance[(control_label, evidence_label)]
+            row = {"Total": total}
+            if control_label == "ClinGen":
+                row["Genes"] = n_genes
+                row |= {
+                    label: _format_count_and_pct(int(table.loc[label, "count"]), total)
+                    for label in CONTROL_POPULATION_LABELS_ORDER
+                }
+            row |= {
                 label: _format_count_and_pct(int(table.loc[label, "count"]), total)
                 for label in CONTROL_CONCORDANCE_LABELS_ORDER
             }
+            rows[evidence_label] = row
         report_table = pd.DataFrame(rows).T
         sections.append(f"{control_label} controls ({sheet_pattern} sheets):\n{report_table.to_string()}")
     return "\n\n".join(sections)
