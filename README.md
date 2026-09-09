@@ -370,7 +370,7 @@ docker compose run --rm -w /usr/src/app/notebooks/figures/extended_data_figure_4
 poetry run python -m src.make_extended_data_figure_7alt
 
 # Optional: same chart, restricted to missense_variant rows only. Writes to
-# extended_data_figure_7alt_missense/ instead, so it doesn't overwrite the
+# new_classification_heatmap_missense/ instead, so it doesn't overwrite the
 # all-consequences run above.
 poetry run python -m src.make_extended_data_figure_7alt --consequence-filter missense
 ```

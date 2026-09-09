@@ -392,11 +392,11 @@ reads `Supplementary_Data_5.xlsx` directly -- no R/Docker required:
 poetry run python -m src.make_extended_data_figure_7alt
 ```
 
-Writes `data/output/figures/extended_data_figure_7alt/extended_data_figure_7alt.pdf`
+Writes `data/output/figures/new_classification_heatmap/new_classification_heatmap.pdf`
 by default; see `--input`/`--output` (`--help`) to override either path.
 
 `--consequence-filter missense` restricts every sheet to `simplified_consequence
 == "missense_variant"` rows (the same column/idea as `Figure5_6.Rmd`'s own
 `consequence_filter` param) and writes to
-`extended_data_figure_7alt_missense/` instead, so it doesn't overwrite the
+`new_classification_heatmap_missense/` instead, so it doesn't overwrite the
 all-consequences run.
