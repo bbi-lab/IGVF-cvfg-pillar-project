@@ -236,6 +236,10 @@ Directories: `notebooks/figures/extended_data_figure_2/`,
 `notebooks/figures/extended_data_figure_4_6_7_8_9/`. Ext. Data Figs 2 and 5 are
 standalone scripts, documented in their own subsections below;
 `Extended_data_figures.Rmd` covers Figs 4-9 and is documented further down.
+Ext. Data Fig 7alt and Ext. Data Fig 10 are standalone Python scripts under
+`src/` instead (`src/make_extended_data_figure_7alt.py`,
+`src/ablation_variant_reclassification.py`), also documented in their own
+subsections below.
 
 ### Extended Data Figure 2
 
@@ -422,3 +426,58 @@ by default; see `--input`/`--output` (`--help`) to override either path.
 `consequence_filter` param) and writes to
 `extended_data_figure_7alt_missense/new_classification_heatmap_missense.pdf`
 instead, so it doesn't overwrite the all-consequences run.
+
+### Extended Data Figure 10 (`src/ablation_variant_reclassification.py`)
+
+The functional-vs-predictor evidence ablation analysis (how much of the
+reclassification pipeline's effect comes from functional evidence alone,
+predictor evidence alone, or genuine added value from combining the two --
+see [`docs/ablation_variant_reclassification.md`](ablation_variant_reclassification.md)
+for the full method). Reads the same `Variant_Classification_analysis.ipynb`
+checkpoint as `src/build_variant_reclassification_dataset.py`
+(`data/output/reclassification/integrated_variant_effect_dataset_analysis.csv.gz`
+by default) directly -- no R/Docker required, and no dependency on
+Supplementary Data 5/6.
+
+Unlike every other Extended Data Figure here, this one is generated as many
+small single-panel PDFs (one per chart type x variant-category scope,
+following the same "individual panels assembled by hand" pattern as
+Extended Data Figure 6alt's 24 PDFs above) rather than one PNG/PDF or one
+`.Rmd`-rendered document -- `--document-split-dir` renders exactly the
+per-section chart data `--document`'s combined multi-section image would,
+but writes each `(chart type, scope)` block to its own file instead, each
+already carrying its own legend (no shared or document-level legend to
+reconstruct). See `docs/ablation_variant_reclassification.md`'s "Splitting
+the document into individual chart files" section for the full mechanics.
+
+All three predictors (REVEL, AlphaMissense, MutPred2 -- the default when
+`--predictor` is omitted) and all four chart types (ablation, comparison,
+concordance, gain -- the default when `--document-chart` is omitted):
+
+```bash
+poetry run python -m src.ablation_variant_reclassification \
+  --document-split-dir data/output/figures/extended_data_figure_10
+```
+
+Writes 25 PDFs (`--document-split-dir` creates
+`data/output/figures/extended_data_figure_10/` if it doesn't already exist):
+one `ablation_<scope>.pdf`, `comparison_<scope>.pdf`, and `gain_<scope>.pdf`
+per `--scope` category (`vus`, `gnomad`, `unobserved`, `clinvar_control`,
+`clinvar_control_missense_only`, `clingen_control`,
+`clingen_control_missense_only` -- all seven, regardless of `--scope`, same
+as `--document`), plus one `concordance_<scope>.pdf` for just the four
+control scopes (`clinvar_control`/`clinvar_control_missense_only`/
+`clingen_control`/`clingen_control_missense_only` -- the other three scopes
+carry no known truth to check concordance against, so that file is skipped
+there rather than written empty). 7 + 7 + 4 + 7 = 25 PDFs total. The
+`_missense_only`-suffixed scopes are strictly `condensed_consequence ==
+"missense_variant"` (excluding start-loss, see `is_missense_only`).
+
+Takes several minutes end to end on the real integrated dataset (dominated
+by rendering all 25 panels' worth of charts, not the dedup pass) -- expected,
+not a hang; the "Wrote N chart files" line at the end confirms completion.
+Pass `--predictor`/`--document-chart` to narrow it down if only a subset of
+panels is needed. `--consequence missense_only` (see
+`docs/ablation_variant_reclassification.md`) restricts the whole run to
+missense variants if needed for a supplementary check -- not part of this
+figure's regular generation.

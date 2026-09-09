@@ -184,8 +184,9 @@ above) and are already converted:
   analysis on step 5's checkpoint: how much of the reclassification effect
   comes from functional evidence (ExCALIBR/OddsPath) alone, predictor
   evidence (REVEL/AlphaMissense/MutPred2) alone, or is genuine added value
-  from combining the two. See
-  [`docs/ablation_variant_reclassification.md`](docs/ablation_variant_reclassification.md).
+  from combining the two. Also generates Extended Data Figure 10. See
+  [`docs/ablation_variant_reclassification.md`](docs/ablation_variant_reclassification.md)
+  and [`docs/figures.md`](docs/figures.md).
 
 ### Running it
 
@@ -373,6 +374,13 @@ poetry run python -m src.make_extended_data_figure_7alt
 # extended_data_figure_7alt_missense/ instead, so it doesn't overwrite the
 # all-consequences run above.
 poetry run python -m src.make_extended_data_figure_7alt --consequence-filter missense
+```
+
+#### Extended Data Figure 10 (functional-vs-predictor evidence ablation)
+
+```bash
+poetry run python -m src.ablation_variant_reclassification \
+  --document-split-dir data/output/figures/extended_data_figure_10
 ```
 
 Every `nbconvert --execute` call above leaves a side-effect `executed_<name>.ipynb`
