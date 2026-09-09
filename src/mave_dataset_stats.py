@@ -1370,8 +1370,9 @@ def compute_reclassification_filter_funnel(expanded, checkpoint, chek2, condense
     Returns a list of `{"label", "rows", "rows_removed",
     "variant_effect_measurements", "measurements_removed",
     "distinct_dna_variants", "dna_removed", "distinct_assayed_variants",
-    "assayed_removed"}` dicts, one per step (including a row 0 for the
-    unfiltered expanded file, whose `*_removed` fields are all 0).
+    "assayed_removed"}` dicts, one per step (including two leading rows over
+    the unfiltered expanded file -- see below -- whose `*_removed` fields are
+    all 0 except the second's `measurements_removed`).
     `variant_effect_measurements` is `mavedb_variant_urn`'s distinct-value
     count -- the same measurement-level count as
     `integrated_variant_effect_dataset.condensed.tsv`'s row count (`urn` is
@@ -1380,21 +1381,34 @@ def compute_reclassification_filter_funnel(expanded, checkpoint, chek2, condense
     DNA-level candidates for one protein-resolution measurement) rows by
     their shared `urn` -- unlike `rows`, which counts those DNA-level rows
     directly without collapsing by `urn`.
+
+    The funnel starts with two rows over the same unfiltered `expanded`
+    file, both with identical `rows`/`distinct_dna_variants`/
+    `distinct_assayed_variants`: the first, "including RNA scores", counts
+    every `rna_score`-bearing measurement as an *additional* measurement on
+    top of `variant_effect_measurements`'s usual one-per-urn count (unlike
+    the Dataset summary's `rna_scores`, which is a breakdown of that count,
+    not an addition to it -- see `compute_bucket_stats`); the second,
+    "- RNA scores", drops back to the plain one-per-urn count used by every
+    later step, so its `measurements_removed` is exactly that RNA-score
+    measurement count.
     """
     urn_to_assayed_key = condensed.set_index(MAVEDB_VARIANT_URN_COL)[VARIANT_KEY_COLS].apply(tuple, axis=1)
 
     steps = []
 
-    def record(label, df, baseline=None):
+    def record(label, df, baseline=None, measurement_bonus=0):
         """Append and return a new step dict for `df`. `*_removed` fields are
         the drop from `baseline` (defaulting to the most-recently-recorded
         step) -- pass `baseline` explicitly for a step that doesn't follow
         the previous list entry (e.g. the two training-variant siblings).
+        `measurement_bonus` adds to the usual one-per-urn measurement count --
+        used only by the leading "including RNA scores" row.
         """
         if baseline is None:
             baseline = steps[-1] if steps else None
         row_count = len(df)
-        measurements = int(df[MAVEDB_VARIANT_URN_COL].nunique())
+        measurements = int(df[MAVEDB_VARIANT_URN_COL].nunique()) + measurement_bonus
         dna = funnel_distinct_dna_variants(df)
         assayed = int(df[MAVEDB_VARIANT_URN_COL].map(urn_to_assayed_key).nunique())
         step_record = {
@@ -1413,7 +1427,15 @@ def compute_reclassification_filter_funnel(expanded, checkpoint, chek2, condense
         steps.append(step_record)
         return step_record
 
-    record("Assayed DNA-level measurements (expanded file)", expanded)
+    rna_score_measurements = int(
+        expanded.loc[expanded[RNA_SCORE_COL] != "", MAVEDB_VARIANT_URN_COL].nunique()
+    )
+    record(
+        "Assayed DNA-level measurements, including RNA scores (expanded file)",
+        expanded,
+        measurement_bonus=rna_score_measurements,
+    )
+    record("- RNA scores", expanded)
 
     aa_pos = pd.to_numeric(expanded["aa_pos"], errors="coerce")
     in_vldl_range = pd.Series(False, index=expanded.index)

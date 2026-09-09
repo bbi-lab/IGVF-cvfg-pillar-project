@@ -74,7 +74,12 @@ It also reports two further sections, sourced from separate input files:
   from every DNA-level measurement row in the expanded file down to the
   reclassification export, applying -- in the pipeline's actual order --
   every exclusion `Variant_Classification_analysis.ipynb` and
-  `src/build_variant_reclassification_dataset.py` apply first. Each step's
+  `src/build_variant_reclassification_dataset.py` apply first. The funnel
+  starts with two rows over that same unfiltered file: "including RNA
+  scores" counts each `rna_score`-bearing measurement as an *additional*
+  measurement on top of the usual one-per-`mavedb_variant_urn` count, and
+  "- RNA scores" drops back to that plain count (the baseline every later
+  step uses). Each step's
   effect is reported two ways: distinct DNA variants (the reclassification
   pipeline's own dedup key, `Gene`/`Chrom`/`hg38_start`/`ref_allele`/
   `alt_allele`) and distinct assayed variants -- *not* distinct

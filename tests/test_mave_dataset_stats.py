@@ -1661,6 +1661,10 @@ def _expanded_funnel_fixture():
     count doesn't change at that step (only the distinct-assayed count does).
     row3 is LDLR LA module 1 (blanket-excluded regardless of assay). row4 is
     an F9 dataset not on the meta-analysis allowlist. row5 (GENEA) survives.
+
+    row1 also carries an `rna_score`, the fixture's sole RNA-score-bearing
+    measurement -- exercises the funnel's leading "including RNA scores"/
+    "- RNA scores" rows (see `compute_reclassification_filter_funnel`).
     """
     columns = [
         "Dataset",
@@ -1673,13 +1677,14 @@ def _expanded_funnel_fixture():
         "aa_pos",
         "aa_ref",
         "aa_alt",
+        "rna_score",
     ]
     rows = [
-        ("LDLR_Tabet_2025_presence_VLDL", "LDLR", "urn:mavedb:v1", "19", 100, "A", "G", 70, "A", "V"),
-        ("LDLR_Tabet_2025_abundance", "LDLR", "urn:mavedb:v2", "19", 100, "A", "G", 70, "A", "V"),
-        ("LDLR_Tabet_2025_uptake", "LDLR", "urn:mavedb:v3", "19", 200, "C", "T", 30, "G", "D"),
-        ("F9_Popp_2025_strep_2", "F9", "urn:mavedb:v4", "X", 300, "A", "C", 10, "M", "I"),
-        ("GENEA_Study_2020", "GENEA", "urn:mavedb:v5", "1", 400, "A", "G", 5, "M", "I"),
+        ("LDLR_Tabet_2025_presence_VLDL", "LDLR", "urn:mavedb:v1", "19", 100, "A", "G", 70, "A", "V", "0.5"),
+        ("LDLR_Tabet_2025_abundance", "LDLR", "urn:mavedb:v2", "19", 100, "A", "G", 70, "A", "V", ""),
+        ("LDLR_Tabet_2025_uptake", "LDLR", "urn:mavedb:v3", "19", 200, "C", "T", 30, "G", "D", ""),
+        ("F9_Popp_2025_strep_2", "F9", "urn:mavedb:v4", "X", 300, "A", "C", 10, "M", "I", ""),
+        ("GENEA_Study_2020", "GENEA", "urn:mavedb:v5", "1", 400, "A", "G", 5, "M", "I", ""),
     ]
     return pd.DataFrame(rows, columns=columns)
 
@@ -1866,15 +1871,36 @@ def test_compute_reclassification_filter_funnel_sequential_steps():
     steps = compute_reclassification_filter_funnel(expanded, checkpoint, chek2, condensed)
     by_label = {step["label"]: step for step in steps}
 
+    # steps[0]: "including RNA scores" -- row1's rna_score adds 1 measurement
+    # on top of the usual one-per-urn count (5), on top of the same
+    # rows/dna/assayed counts as every other leading-row assertion below.
     raw = steps[0]
     assert raw["rows"] == 5
     # Every row in this fixture has its own distinct urn, so variant_effect_measurements
     # (grouped by urn) equals rows here -- see
     # test_compute_reclassification_filter_funnel_counts_measurements_by_urn_grouping
     # for a case where they differ.
-    assert raw["variant_effect_measurements"] == 5
+    assert raw["variant_effect_measurements"] == 6
     assert raw["distinct_dna_variants"] == 4  # row1/row2 share a coordinate
     assert raw["distinct_assayed_variants"] == 5
+    assert raw["rows_removed"] == 0
+    assert raw["measurements_removed"] == 0
+    assert raw["dna_removed"] == 0
+    assert raw["assayed_removed"] == 0
+
+    # steps[1]: "- RNA scores" -- drops back to the plain one-per-urn count (5),
+    # with the same rows/dna/assayed as steps[0] (RNA scores are a column, not
+    # extra rows).
+    rna_scores_step = by_label["- RNA scores"]
+    assert steps[1] is rna_scores_step
+    assert rna_scores_step["rows"] == 5
+    assert rna_scores_step["rows_removed"] == 0
+    assert rna_scores_step["variant_effect_measurements"] == 5
+    assert rna_scores_step["measurements_removed"] == 1
+    assert rna_scores_step["distinct_dna_variants"] == 4
+    assert rna_scores_step["dna_removed"] == 0
+    assert rna_scores_step["distinct_assayed_variants"] == 5
+    assert rna_scores_step["assayed_removed"] == 0
 
     vldl = by_label["- LDLR: +VLDL assay preferred over abundance/uptake (LA modules 2/6)"]
     assert vldl["rows"] == 4
@@ -1977,13 +2003,14 @@ def test_compute_reclassification_filter_funnel_counts_measurements_by_urn_group
         "aa_pos",
         "aa_ref",
         "aa_alt",
+        "rna_score",
     ]
     expanded = pd.DataFrame(
         [
             # Two DNA-level candidates for the same measurement (urn:mavedb:1).
-            ("DS_A", "GENEA", "urn:mavedb:1", "1", 100, "A", "G", 1, "M", "I"),
-            ("DS_A", "GENEA", "urn:mavedb:1", "1", 100, "A", "T", 1, "M", "I"),
-            ("DS_B", "GENEB", "urn:mavedb:2", "2", 200, "C", "G", 2, "S", "T"),
+            ("DS_A", "GENEA", "urn:mavedb:1", "1", 100, "A", "G", 1, "M", "I", ""),
+            ("DS_A", "GENEA", "urn:mavedb:1", "1", 100, "A", "T", 1, "M", "I", ""),
+            ("DS_B", "GENEB", "urn:mavedb:2", "2", 200, "C", "G", 2, "S", "T", ""),
         ],
         columns=columns,
     )
@@ -2002,6 +2029,8 @@ def test_compute_reclassification_filter_funnel_counts_measurements_by_urn_group
 
     steps = compute_reclassification_filter_funnel(expanded, checkpoint, chek2, condensed)
 
+    # No rna_score values here, so the leading "including RNA scores" row
+    # (steps[0]) has no bonus over the plain one-per-urn count.
     raw = steps[0]
     assert raw["rows"] == 3
     assert raw["variant_effect_measurements"] == 2  # urn:mavedb:1's two rows collapse to one measurement
