@@ -18,8 +18,9 @@ universal-calibration fallback" classification already used throughout Figure
 --consequence-filter missense restricts every sheet to simplified_consequence
 == "missense_variant" rows (same idea and column as Figure5_6.Rmd's own
 consequence_filter param) and defaults the output path to
-new_classification_heatmap_missense/ instead of new_classification_heatmap/,
-so it doesn't overwrite the all-consequences run.
+extended_data_figure_7alt_missense/new_classification_heatmap_missense.pdf
+instead of extended_data_figure_7alt/new_classification_heatmap.pdf, so it
+doesn't overwrite the all-consequences run.
 """
 
 from pathlib import Path
@@ -47,8 +48,9 @@ CONSEQUENCE_FILTERS = {
 
 def default_output_path(consequence_filter):
     suffix = "" if consequence_filter == "all" else f"_{consequence_filter}"
-    name = f"new_classification_heatmap{suffix}"
-    return Path("data/output/figures") / name / f"{name}.pdf"
+    dirname = f"extended_data_figure_7alt{suffix}"
+    filename = f"new_classification_heatmap{suffix}"
+    return Path("data/output/figures") / dirname / f"{filename}.pdf"
 
 
 GROUPS = ["VUS", "gnomAD", "Unobserved"]
