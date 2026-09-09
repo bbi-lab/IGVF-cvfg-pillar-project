@@ -152,16 +152,28 @@ Supplementary_Data_5.xlsx) respectively:
   separately, how many variants (and what percent) are concordant,
   discordant, or classified VUS -- once for OddsPath calibration evidence
   alone (`OP_points` sign, read once from the REVEL sheet since functional
-  evidence is shared across predictors), and once each for the combined
+  evidence is shared across predictors), once each for the combined
   ExCALIBR/OddsPath + REVEL/AlphaMissense/MutPred2 gene-specific evidence
   (`Class_REVEL`/`Class_AM`/`Class_MP2`, each from that predictor's own
-  sheet), rendered as one table per control source with a row per evidence
-  source so all four can be compared at a glance. Discordant is further
-  broken out by direction: control Pathogenic/Likely Pathogenic reclassified
-  Benign/Likely Benign by the evidence source, vs. the reverse -- the two sum
-  to the Discordant count. ClinVar's control label is `clnsig_group_18_25`;
-  ClinGen's is `Updated_Classification_ClinGen_repo` (its own assertion,
-  since `clnsig_group_18_25` isn't a clean ClinVar label for ClinGen-only
+  Supplementary Data 5 sheet, combining the pipeline's actual "Current"
+  per-gene functional-evidence pick -- ExCALIBR for most genes, OddsPath for
+  F9/TP53 -- with that predictor's gene-specific calibration falling back to
+  genome-wide), and, immediately after each predictor's gene-specific row,
+  once more for that predictor's OddsPath + universal calibration
+  (`Class_OP_REVEL`/`Class_OP_AM`/`Class_OP_MP2`, each from that predictor's
+  own Supplementary Data 6 `{controls,ClinGen_Repo}_*_OP` sheet) -- unlike the
+  gene-specific row, this combines OddsPath functional evidence unconditionally
+  (not the ExCALIBR/OddsPath "Current" per-gene pick) with that predictor's
+  genome-wide-only ("universal") calibration, with no gene-specific fallback --
+  see `docs/conflicting_evidence_concordance.md`'s `OddsPath`/`Universal` axis
+  definitions. Rendered as one table per control source with a row per
+  evidence source so all seven can be compared at a glance. Discordant is
+  further broken out by direction: control
+  Pathogenic/Likely Pathogenic reclassified Benign/Likely Benign by the
+  evidence source, vs. the reverse -- the two sum to the Discordant count.
+  ClinVar's control label is `clnsig_group_18_25`; ClinGen's is
+  `Updated_Classification_ClinGen_repo` (its own assertion, since
+  `clnsig_group_18_25` isn't a clean ClinVar label for ClinGen-only
   controls). The ClinGen table additionally reports each row's `Genes`
   (distinct genes among that row's in-scope ClinGen control variants) and
   its `PLP`/`BLB` population split (ClinGen's own classification alone,
@@ -268,6 +280,7 @@ DEFAULT_EXPANDED_FILE = Path("data/output/maves/integrated_variant_effect_datase
 DEFAULT_METADATA_FILE = Path("data/output/supplementary_data/Supplementary_Data_3.xlsx")
 DEFAULT_EXCALIBR_CALIBRATIONS_FILE = Path("data/output/supplementary_data/Supplementary_Data_4.xlsx")
 DEFAULT_CONTROLS_FILE = Path("data/output/supplementary_data/Supplementary_Data_5.xlsx")
+DEFAULT_UNIVERSAL_CONTROLS_FILE = Path("data/output/supplementary_data/Supplementary_Data_6.xlsx")
 
 METADATA_SHEET = "Curation"
 DATASET_COL = "Dataset"
@@ -527,6 +540,40 @@ COMBINED_EVIDENCE_LABEL_BY_PREDICTOR = {
     predictor: f"ExCALIBR/OddsPath + {predictor} gene-specific" for predictor in VARIANT_CLASSIFICATION_PREDICTORS
 }
 COMBINED_REVEL_EVIDENCE_LABEL = COMBINED_EVIDENCE_LABEL_BY_PREDICTOR["REVEL"]
+
+# Universal (genome-wide) calibration companion to the gene-specific evidence
+# above -- read from Supplementary Data 6's own `{controls,ClinGen_Repo}_
+# {REVEL,AM,MP2}_OP` sheets rather than Supplementary Data 5. Unlike
+# COMBINED_EVIDENCE_LABEL_BY_PREDICTOR's gene-specific evidence -- which
+# combines the pipeline's "Current" per-gene functional-evidence pick
+# (ExCALIBR for most genes, OddsPath for F9/TP53) with that predictor's
+# gene-specific calibration falling back to genome-wide -- each predictor's
+# `Class_OP_<predictor>` column here combines OddsPath functional evidence
+# *unconditionally* (every gene, not just F9/TP53) with that predictor's
+# genome-wide-only ("Universal") calibration, with no gene-specific fallback.
+# See docs/conflicting_evidence_concordance.md's `OddsPath`/`Universal` axis
+# definitions -- this is that `OddsPath` functional-evidence axis crossed with
+# the `Universal` calibration axis, as opposed to Supplementary Data 5's
+# `Current` axis crossed with `GeneSpecific`. Uses the same
+# CLASS_PATHOGENIC_VALUES/CLASS_BENIGN_VALUES categories as the gene-specific
+# Class_* columns. The source workbook's own sheet names are inconsistently
+# cased for AlphaMissense/MutPred2's ClinGen sheet ("ClinGen_repo_*_OP",
+# lowercase "repo", vs. REVEL's "ClinGen_Repo_REVEL_OP") -- spelled out
+# explicitly here rather than derived, unlike VARIANT_CLASSIFICATION_
+# CATEGORY_SHEETS_BY_PREDICTOR's uniform naming.
+UNIVERSAL_CALIBRATION_CATEGORY_SHEETS_BY_PREDICTOR = {
+    "REVEL": {"controls": "controls_REVEL_OP", "ClinGen_Repo": "ClinGen_Repo_REVEL_OP"},
+    "AlphaMissense": {"controls": "controls_AM_OP", "ClinGen_Repo": "ClinGen_repo_AM_OP"},
+    "MutPred2": {"controls": "controls_MP2_OP", "ClinGen_Repo": "ClinGen_repo_MP2_OP"},
+}
+UNIVERSAL_CALIBRATION_CLASS_COL_BY_PREDICTOR = {
+    "REVEL": "Class_OP_REVEL",
+    "AlphaMissense": "Class_OP_AM",
+    "MutPred2": "Class_OP_MP2",
+}
+COMBINED_UNIVERSAL_EVIDENCE_LABEL_BY_PREDICTOR = {
+    predictor: f"OddsPath + {predictor} universal" for predictor in VARIANT_CLASSIFICATION_PREDICTORS
+}
 # {control source label: (category key into VARIANT_CLASSIFICATION_CATEGORY_SHEETS_BY_PREDICTOR,
 #  control classification column, pathogenic values, benign values)}
 CONTROL_CONCORDANCE_SOURCES = {
@@ -1714,7 +1761,9 @@ def control_concordance_flags(control_group, pathogenic_values, benign_values, a
     return flags, in_scope
 
 
-def compute_control_concordance(workbook, control_sources=CONTROL_CONCORDANCE_SOURCES, consequence_filter=None):
+def compute_control_concordance(
+    workbook, control_sources=CONTROL_CONCORDANCE_SOURCES, consequence_filter=None, universal_workbook=None
+):
     """For each control source in `control_sources` (default
     `CONTROL_CONCORDANCE_SOURCES`: ClinVar, ClinGen), the concordant/
     discordant/VUS breakdown against OddsPath calibration evidence alone,
@@ -1730,6 +1779,19 @@ def compute_control_concordance(workbook, control_sources=CONTROL_CONCORDANCE_SO
     that value before scoring -- used for the missense-only companion table
     (`MISSENSE_CONTROL_CONCORDANCE_SOURCES`).
 
+    `universal_workbook`, if given (Supplementary Data 6), adds one more
+    evidence source per predictor -- the combined OddsPath + <predictor>
+    universal (genome-wide) calibration, read from that workbook's own
+    `UNIVERSAL_CALIBRATION_CATEGORY_SHEETS_BY_PREDICTOR` sheets/
+    `UNIVERSAL_CALIBRATION_CLASS_COL_BY_PREDICTOR` columns -- under
+    `COMBINED_UNIVERSAL_EVIDENCE_LABEL_BY_PREDICTOR[predictor]`. Unlike the
+    gene-specific evidence above, this combines OddsPath functional evidence
+    unconditionally (not the ExCALIBR/OddsPath "Current" per-gene pick) with
+    that predictor's genome-wide-only calibration (no gene-specific fallback)
+    -- see docs/conflicting_evidence_concordance.md's `OddsPath`/`Universal`
+    axis definitions. Omitted (the default) when only Supplementary Data 5
+    is available.
+
     Returns {(control_source_label, evidence_label): (total, table, n_genes)}.
     `table` is the `summarize_flags` output over the in-scope rows, covering
     `CONTROL_CONCORDANCE_LABELS_ORDER` plus, for every row,
@@ -1742,16 +1804,29 @@ def compute_control_concordance(workbook, control_sources=CONTROL_CONCORDANCE_SO
     exclusion) is worth surfacing directly.
     """
 
-    def _filtered(sheet_name):
-        df = workbook.parse(sheet_name)
+    def _filtered(source_workbook, sheet_name):
+        df = source_workbook.parse(sheet_name)
         if consequence_filter is not None:
             df = df[df[SIMPLIFIED_CONSEQUENCE_COL] == consequence_filter]
         return df
 
+    def _combined_evidence_result(df, control_col, pathogenic_values, benign_values, class_col):
+        combined_flags, combined_in_scope = control_concordance_flags(
+            df[control_col],
+            pathogenic_values,
+            benign_values,
+            df[class_col].isin(CLASS_PATHOGENIC_VALUES),
+            df[class_col].isin(CLASS_BENIGN_VALUES),
+        )
+        return (
+            *summarize_flags(combined_flags.loc[combined_in_scope, CONTROL_CONCORDANCE_TABLE_LABELS_ORDER]),
+            int(df.loc[combined_in_scope, GENE_COL].nunique()),
+        )
+
     results = {}
     for control_label, (category, control_col, pathogenic_values, benign_values) in control_sources.items():
         revel_sheets = VARIANT_CLASSIFICATION_CATEGORY_SHEETS_BY_PREDICTOR["REVEL"]
-        revel_df = _filtered(revel_sheets[category])
+        revel_df = _filtered(workbook, revel_sheets[category])
         op_points = revel_df[FUNCTIONAL_CLASS_POINTS_COL]
         oddspath_flags, oddspath_in_scope = control_concordance_flags(
             revel_df[control_col], pathogenic_values, benign_values, op_points > 0, op_points < 0
@@ -1764,18 +1839,19 @@ def compute_control_concordance(workbook, control_sources=CONTROL_CONCORDANCE_SO
         for predictor in VARIANT_CLASSIFICATION_PREDICTORS:
             sheets = VARIANT_CLASSIFICATION_CATEGORY_SHEETS_BY_PREDICTOR[predictor]
             class_col = VARIANT_CLASSIFICATION_CLASS_COL_BY_PREDICTOR[predictor]
-            df = _filtered(sheets[category])
-            combined_flags, combined_in_scope = control_concordance_flags(
-                df[control_col],
-                pathogenic_values,
-                benign_values,
-                df[class_col].isin(CLASS_PATHOGENIC_VALUES),
-                df[class_col].isin(CLASS_BENIGN_VALUES),
+            df = _filtered(workbook, sheets[category])
+            results[(control_label, COMBINED_EVIDENCE_LABEL_BY_PREDICTOR[predictor])] = _combined_evidence_result(
+                df, control_col, pathogenic_values, benign_values, class_col
             )
-            results[(control_label, COMBINED_EVIDENCE_LABEL_BY_PREDICTOR[predictor])] = (
-                *summarize_flags(combined_flags.loc[combined_in_scope, CONTROL_CONCORDANCE_TABLE_LABELS_ORDER]),
-                int(df.loc[combined_in_scope, GENE_COL].nunique()),
-            )
+
+        if universal_workbook is not None:
+            for predictor in VARIANT_CLASSIFICATION_PREDICTORS:
+                sheets = UNIVERSAL_CALIBRATION_CATEGORY_SHEETS_BY_PREDICTOR[predictor]
+                class_col = UNIVERSAL_CALIBRATION_CLASS_COL_BY_PREDICTOR[predictor]
+                df = _filtered(universal_workbook, sheets[category])
+                results[(control_label, COMBINED_UNIVERSAL_EVIDENCE_LABEL_BY_PREDICTOR[predictor])] = (
+                    _combined_evidence_result(df, control_col, pathogenic_values, benign_values, class_col)
+                )
     return results
 
 
@@ -1798,13 +1874,25 @@ def format_control_concordance_report(concordance, control_sources=CONTROL_CONCO
     classification alone, which sums to `Total`) -- not shown for ClinVar,
     whose much larger control set doesn't need this called out per row.
 
+    If `concordance` also carries the universal-calibration evidence sources
+    (i.e. `compute_control_concordance` was given a `universal_workbook`),
+    one more row per predictor is appended -- `OddsPath + <predictor>
+    universal` -- after that predictor's gene-specific row.
+
     `control_sources`/`title` are overridden together for the missense-only
     companion table -- see `MISSENSE_CONTROL_CONCORDANCE_SOURCES`/
     `MISSENSE_CONTROL_CONCORDANCE_TITLE`.
     """
-    evidence_labels = [CONTROL_CONCORDANCE_EVIDENCE_LABEL] + [
-        COMBINED_EVIDENCE_LABEL_BY_PREDICTOR[predictor] for predictor in VARIANT_CLASSIFICATION_PREDICTORS
-    ]
+    first_control_label = next(iter(control_sources))
+    has_universal = (
+        first_control_label,
+        COMBINED_UNIVERSAL_EVIDENCE_LABEL_BY_PREDICTOR["REVEL"],
+    ) in concordance
+    evidence_labels = [CONTROL_CONCORDANCE_EVIDENCE_LABEL]
+    for predictor in VARIANT_CLASSIFICATION_PREDICTORS:
+        evidence_labels.append(COMBINED_EVIDENCE_LABEL_BY_PREDICTOR[predictor])
+        if has_universal:
+            evidence_labels.append(COMBINED_UNIVERSAL_EVIDENCE_LABEL_BY_PREDICTOR[predictor])
     sections = [title]
     for control_label, (category, *_rest) in control_sources.items():
         sheet_pattern = VARIANT_CLASSIFICATION_CATEGORY_SHEETS_BY_PREDICTOR["REVEL"][category].replace("REVEL", "*")
@@ -2567,6 +2655,16 @@ def build_report_text(
     ),
 )
 @click.option(
+    "--universal-controls-file",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    default=DEFAULT_UNIVERSAL_CONTROLS_FILE,
+    help=(
+        f"Path to the universal-calibration controls workbook (default {DEFAULT_UNIVERSAL_CONTROLS_FILE}, i.e. "
+        "Supplementary Data 6), read for the control-concordance section's OddsPath + "
+        "REVEL/AlphaMissense/MutPred2 universal (genome-wide) calibration rows."
+    ),
+)
+@click.option(
     "--checkpoint-file",
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
     default=DEFAULT_CHECKPOINT_FILE,
@@ -2619,6 +2717,7 @@ def main(
     expanded_file,
     excalibr_calibrations_file,
     controls_file,
+    universal_controls_file,
     checkpoint_file,
     chek2_file,
     output,
@@ -2657,13 +2756,17 @@ def main(
     calibration_summary = format_calibration_summary(calibration_stats)
 
     controls_workbook = pd.ExcelFile(controls_file)
+    universal_controls_workbook = pd.ExcelFile(universal_controls_file)
     reclassification_sections = build_reclassification_report(controls_workbook)
-    control_concordance_summary = format_control_concordance_report(compute_control_concordance(controls_workbook))
+    control_concordance_summary = format_control_concordance_report(
+        compute_control_concordance(controls_workbook, universal_workbook=universal_controls_workbook)
+    )
     missense_control_concordance_summary = format_control_concordance_report(
         compute_control_concordance(
             controls_workbook,
             control_sources=MISSENSE_CONTROL_CONCORDANCE_SOURCES,
             consequence_filter=MISSENSE_CONSEQUENCE_VALUE,
+            universal_workbook=universal_controls_workbook,
         ),
         control_sources=MISSENSE_CONTROL_CONCORDANCE_SOURCES,
         title=MISSENSE_CONTROL_CONCORDANCE_TITLE,

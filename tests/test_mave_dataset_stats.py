@@ -13,6 +13,7 @@ from src.mave_dataset_stats import (
     CLINVAR_CONFLICT_LABEL,
     COMBINED_EVIDENCE_LABEL_BY_PREDICTOR,
     COMBINED_REVEL_EVIDENCE_LABEL,
+    COMBINED_UNIVERSAL_EVIDENCE_LABEL_BY_PREDICTOR,
     COMPOSITE_SCORE_DATASETS_TITLE,
     CONCORDANT_LABEL,
     CONFLICTING_EVIDENCE_VALUE,
@@ -42,6 +43,8 @@ from src.mave_dataset_stats import (
     SIMPLIFIED_CONSEQUENCE_COL,
     SNV_ACCESSIBLE_LABEL,
     SNV_LABEL,
+    UNIVERSAL_CALIBRATION_CATEGORY_SHEETS_BY_PREDICTOR,
+    UNIVERSAL_CALIBRATION_CLASS_COL_BY_PREDICTOR,
     VARIANT_CLASSIFICATION_CATEGORY_SHEETS_BY_PREDICTOR,
     VARIANT_CLASSIFICATION_CHI_SQUARED_COMPARISONS,
     VARIANT_CLASSIFICATION_CHI_SQUARED_TITLE,
@@ -276,6 +279,43 @@ def _write_variant_classification_sheets_by_predictor(path, category_rows, mode=
                 opposite_signs = (df[FUNCTIONAL_POINTS_COL] * df[predictor_points_col]) < 0
                 df[conflicting_col] = df[points_col].where(~opposite_signs, CONFLICTING_EVIDENCE_VALUE)
                 df.to_excel(writer, sheet_name=category_sheets[category], index=False)
+
+
+def _write_universal_calibration_sheets_by_predictor(path, mode="w"):
+    """Minimal Supplementary Data 6-style workbook -- one ClinVar and one
+    ClinGen row per predictor's own `controls_*_OP`/`ClinGen_*_OP` sheet
+    (`UNIVERSAL_CALIBRATION_CATEGORY_SHEETS_BY_PREDICTOR`), concordant on
+    every row (`Class_OP_<predictor>` agrees with the control label).
+    Structurally valid for `compute_control_concordance`'s universal-
+    calibration evidence source -- the CLI tests using this only check the
+    row's presence, not its exact counts.
+    """
+    with pd.ExcelWriter(path, mode=mode, engine="openpyxl") as writer:
+        for predictor in VARIANT_CLASSIFICATION_PREDICTORS:
+            sheets = UNIVERSAL_CALIBRATION_CATEGORY_SHEETS_BY_PREDICTOR[predictor]
+            class_col = UNIVERSAL_CALIBRATION_CLASS_COL_BY_PREDICTOR[predictor]
+            pd.DataFrame(
+                [
+                    {
+                        "Gene": "GENEX",
+                        "clnsig_group_18_25": "Pathogenic",
+                        "Updated_Classification_ClinGen_repo": None,
+                        class_col: "Pathogenic",
+                        "simplified_consequence": "missense_variant",
+                    }
+                ]
+            ).to_excel(writer, sheet_name=sheets["controls"], index=False)
+            pd.DataFrame(
+                [
+                    {
+                        "Gene": "GENEX",
+                        "clnsig_group_18_25": None,
+                        "Updated_Classification_ClinGen_repo": "Pathogenic",
+                        class_col: "Pathogenic",
+                        "simplified_consequence": "missense_variant",
+                    }
+                ]
+            ).to_excel(writer, sheet_name=sheets["ClinGen_Repo"], index=False)
 
 
 def _write_gene_discordance_sheet(path, rows, mode="w"):
@@ -690,6 +730,9 @@ def full_dataset_files(tmp_path):
     chek2_path = tmp_path / "chek2.xlsx"
     _write_chek2_file(chek2_path)
 
+    universal_controls_path = tmp_path / "universal_controls.xlsx"
+    _write_universal_calibration_sheets_by_predictor(universal_controls_path)
+
     return (
         condensed_path,
         metadata_path,
@@ -698,6 +741,7 @@ def full_dataset_files(tmp_path):
         controls_path,
         checkpoint_path,
         chek2_path,
+        universal_controls_path,
     )
 
 
@@ -1196,6 +1240,7 @@ def test_cli_prints_table_and_writes_output(full_dataset_files, tmp_path):
         controls_path,
         checkpoint_path,
         chek2_path,
+        universal_controls_path,
     ) = full_dataset_files
     output_path = tmp_path / "report.txt"
 
@@ -1209,6 +1254,8 @@ def test_cli_prints_table_and_writes_output(full_dataset_files, tmp_path):
             str(excalibr_path),
             "--controls-file",
             str(controls_path),
+            "--universal-controls-file",
+            str(universal_controls_path),
             "--checkpoint-file",
             str(checkpoint_path),
             "--chek2-file",
@@ -1445,11 +1492,15 @@ def test_cli_allow_clinvar_conflicts_flag_toggles_conflict_handling(tmp_path):
     )
     chek2_path = tmp_path / "chek2.xlsx"
     _write_chek2_file(chek2_path)
+    universal_controls_path = tmp_path / "universal_controls.xlsx"
+    _write_universal_calibration_sheets_by_predictor(universal_controls_path)
     extra_args = [
         "--excalibr-calibrations-file",
         str(excalibr_path),
         "--controls-file",
         str(controls_path),
+        "--universal-controls-file",
+        str(universal_controls_path),
         "--checkpoint-file",
         str(checkpoint_path),
         "--chek2-file",
@@ -1484,6 +1535,7 @@ def test_cli_reports_missing_metadata_as_click_error(full_dataset_files):
         _controls_path,
         _checkpoint_path,
         _chek2_path,
+        _universal_controls_path,
     ) = full_dataset_files
     _write_full_variant_file(
         condensed_path,
@@ -2499,6 +2551,155 @@ def test_format_control_concordance_report(tmp_path):
     # Every ClinGen row: 2 genes (GENEA, GENEB), PLP=2 of 3, BLB=1 of 3.
     assert clingen_section.count("2 of 3 (66.7%)") >= 4  # PLP, plus each row's own concordance count
     assert clingen_section.count("1 of 3 (33.3%)") >= 4  # BLB, plus each row's own discordance count
+
+
+def _write_universal_control_concordance_workbook(path):
+    """Supplementary Data 6-style counterpart to
+    `_write_control_concordance_workbook`, for the universal (genome-wide)
+    calibration evidence source -- 5 ClinVar + 3 ClinGen rows per predictor's
+    own `UNIVERSAL_CALIBRATION_CATEGORY_SHEETS_BY_PREDICTOR` sheet/
+    `UNIVERSAL_CALIBRATION_CLASS_COL_BY_PREDICTOR` column. Deliberately
+    different concordance patterns from `_write_control_concordance_workbook`
+    (which a test reading the wrong workbook/column would fail to reproduce).
+    """
+    clinvar_genes = ["GENEA", "GENEA", "GENEB", "GENEB", "GENEC"]
+    clingen_genes = ["GENEA", "GENEA", "GENEB"]
+    # REVEL universal: concordant=2, discordant=1, vus=2 (ClinVar); concordant=2, discordant=0, vus=1 (ClinGen)
+    clinvar_rows_revel = [
+        ("Pathogenic", "Pathogenic"),
+        ("Benign", "Likely Benign"),
+        ("Pathogenic", "Benign"),
+        ("Benign", "Uncertain"),
+        ("Likely pathogenic", "Uncertain"),
+    ]
+    clingen_rows_revel = [
+        ("Pathogenic", "Likely Pathogenic"),
+        ("Benign", "Benign"),
+        ("Likely Pathogenic", "Uncertain"),
+    ]
+    # AM universal: concordant=3, discordant=1, vus=1 (ClinVar); concordant=2, discordant=0, vus=1 (ClinGen)
+    clinvar_rows_am = [
+        ("Pathogenic", "Uncertain"),
+        ("Benign", "Pathogenic"),
+        ("Pathogenic", "Pathogenic"),
+        ("Benign", "Benign"),
+        ("Likely pathogenic", "Likely Pathogenic"),
+    ]
+    clingen_rows_am = [
+        ("Pathogenic", "Pathogenic"),
+        ("Benign", "Uncertain"),
+        ("Likely Pathogenic", "Likely Pathogenic"),
+    ]
+    # MP2 universal: concordant=2, discordant=2, vus=1 (ClinVar); concordant=2, discordant=1, vus=0 (ClinGen)
+    clinvar_rows_mp2 = [
+        ("Pathogenic", "Benign"),
+        ("Benign", "Pathogenic"),
+        ("Pathogenic", "Pathogenic"),
+        ("Benign", "Benign"),
+        ("Likely pathogenic", "Uncertain"),
+    ]
+    clingen_rows_mp2 = [
+        ("Pathogenic", "Pathogenic"),
+        ("Benign", "Pathogenic"),
+        ("Likely Pathogenic", "Likely Pathogenic"),
+    ]
+
+    def _with_genes(rows, genes):
+        return [(*row, gene) for row, gene in zip(rows, genes)]
+
+    def _sheet(predictor, category):
+        return UNIVERSAL_CALIBRATION_CATEGORY_SHEETS_BY_PREDICTOR[predictor][category]
+
+    with pd.ExcelWriter(path) as writer:
+        pd.DataFrame(
+            _with_genes(clinvar_rows_revel, clinvar_genes), columns=["clnsig_group_18_25", "Class_OP_REVEL", "Gene"]
+        ).to_excel(writer, sheet_name=_sheet("REVEL", "controls"), index=False)
+        pd.DataFrame(
+            _with_genes(clingen_rows_revel, clingen_genes),
+            columns=["Updated_Classification_ClinGen_repo", "Class_OP_REVEL", "Gene"],
+        ).to_excel(writer, sheet_name=_sheet("REVEL", "ClinGen_Repo"), index=False)
+        pd.DataFrame(
+            _with_genes(clinvar_rows_am, clinvar_genes), columns=["clnsig_group_18_25", "Class_OP_AM", "Gene"]
+        ).to_excel(writer, sheet_name=_sheet("AlphaMissense", "controls"), index=False)
+        pd.DataFrame(
+            _with_genes(clingen_rows_am, clingen_genes),
+            columns=["Updated_Classification_ClinGen_repo", "Class_OP_AM", "Gene"],
+        ).to_excel(writer, sheet_name=_sheet("AlphaMissense", "ClinGen_Repo"), index=False)
+        pd.DataFrame(
+            _with_genes(clinvar_rows_mp2, clinvar_genes), columns=["clnsig_group_18_25", "Class_OP_MP2", "Gene"]
+        ).to_excel(writer, sheet_name=_sheet("MutPred2", "controls"), index=False)
+        pd.DataFrame(
+            _with_genes(clingen_rows_mp2, clingen_genes),
+            columns=["Updated_Classification_ClinGen_repo", "Class_OP_MP2", "Gene"],
+        ).to_excel(writer, sheet_name=_sheet("MutPred2", "ClinGen_Repo"), index=False)
+
+
+def test_compute_control_concordance_with_universal_workbook(tmp_path):
+    path = tmp_path / "controls.xlsx"
+    universal_path = tmp_path / "universal_controls.xlsx"
+    _write_control_concordance_workbook(path)
+    _write_universal_control_concordance_workbook(universal_path)
+
+    concordance = compute_control_concordance(pd.ExcelFile(path), universal_workbook=pd.ExcelFile(universal_path))
+
+    revel_universal_label = COMBINED_UNIVERSAL_EVIDENCE_LABEL_BY_PREDICTOR["REVEL"]
+    clinvar_total, clinvar_table, clinvar_genes = concordance[("ClinVar", revel_universal_label)]
+    assert clinvar_total == 5
+    assert clinvar_table.loc[CONCORDANT_LABEL, "count"] == 2
+    assert clinvar_table.loc[DISCORDANT_LABEL, "count"] == 1
+    assert clinvar_table.loc[CONTROL_VUS_LABEL, "count"] == 2
+    assert clinvar_genes == 3
+
+    clingen_total, clingen_table, clingen_genes = concordance[("ClinGen", revel_universal_label)]
+    assert clingen_total == 3
+    assert clingen_table.loc[CONCORDANT_LABEL, "count"] == 2
+    assert clingen_table.loc[DISCORDANT_LABEL, "count"] == 0
+    assert clingen_table.loc[CONTROL_VUS_LABEL, "count"] == 1
+    assert clingen_genes == 2
+
+    am_label = COMBINED_UNIVERSAL_EVIDENCE_LABEL_BY_PREDICTOR["AlphaMissense"]
+    clinvar_am_total, clinvar_am_table, _clinvar_am_genes = concordance[("ClinVar", am_label)]
+    assert clinvar_am_total == 5
+    assert clinvar_am_table.loc[CONCORDANT_LABEL, "count"] == 3
+    assert clinvar_am_table.loc[DISCORDANT_LABEL, "count"] == 1
+    assert clinvar_am_table.loc[CONTROL_VUS_LABEL, "count"] == 1
+
+    mp2_label = COMBINED_UNIVERSAL_EVIDENCE_LABEL_BY_PREDICTOR["MutPred2"]
+    clinvar_mp2_total, clinvar_mp2_table, _clinvar_mp2_genes = concordance[("ClinVar", mp2_label)]
+    assert clinvar_mp2_total == 5
+    assert clinvar_mp2_table.loc[CONCORDANT_LABEL, "count"] == 2
+    assert clinvar_mp2_table.loc[DISCORDANT_LABEL, "count"] == 2
+    assert clinvar_mp2_table.loc[DISCORDANT_CONTROL_PLP_TO_EVIDENCE_BLB_LABEL, "count"] == 1
+    assert clinvar_mp2_table.loc[DISCORDANT_CONTROL_BLB_TO_EVIDENCE_PLP_LABEL, "count"] == 1
+
+    # Without universal_workbook (the default), no universal-evidence keys are computed at all.
+    gene_specific_only = compute_control_concordance(pd.ExcelFile(path))
+    assert ("ClinVar", revel_universal_label) not in gene_specific_only
+
+
+def test_format_control_concordance_report_includes_universal_rows(tmp_path):
+    path = tmp_path / "controls.xlsx"
+    universal_path = tmp_path / "universal_controls.xlsx"
+    _write_control_concordance_workbook(path)
+    _write_universal_control_concordance_workbook(universal_path)
+
+    concordance = compute_control_concordance(pd.ExcelFile(path), universal_workbook=pd.ExcelFile(universal_path))
+    text = format_control_concordance_report(concordance)
+
+    for predictor in VARIANT_CLASSIFICATION_PREDICTORS:
+        gene_specific_label = COMBINED_EVIDENCE_LABEL_BY_PREDICTOR[predictor]
+        universal_label = COMBINED_UNIVERSAL_EVIDENCE_LABEL_BY_PREDICTOR[predictor]
+        assert universal_label in text
+        # Each predictor's universal row is rendered immediately after its own
+        # gene-specific row.
+        assert text.index(gene_specific_label) < text.index(universal_label)
+
+    # Without a universal_workbook, compute_control_concordance never produces
+    # universal-evidence keys, so format_control_concordance_report shows none
+    # of these labels either.
+    gene_specific_only_text = format_control_concordance_report(compute_control_concordance(pd.ExcelFile(path)))
+    for predictor in VARIANT_CLASSIFICATION_PREDICTORS:
+        assert COMBINED_UNIVERSAL_EVIDENCE_LABEL_BY_PREDICTOR[predictor] not in gene_specific_only_text
 
 
 def _write_missense_control_concordance_workbook(path):
