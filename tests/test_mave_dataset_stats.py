@@ -141,11 +141,13 @@ def _write_full_variant_file(path, rows):
 def _write_checkpoint_file(path, rows):
     """`rows` is a list of (Dataset, Gene, mavedb_variant_urn, Chrom, hg38_start,
     ref_allele, alt_allele, hgvs_p, auth_reported_score, Flag, VariantNotes,
-    splice_var_amino, revel_train_amino, mp2_train_amino,
+    splice_var_amino, splice_measure, revel_train_amino, mp2_train_amino,
     Assertion_ClinGen_repo, Updated_Classification_ClinGen_repo) tuples --
     the columns compute_reclassification_filter_funnel and
     compute_clingen_evidence_repository_stats read from
-    Variant_Classification_analysis.ipynb's checkpoint file.
+    Variant_Classification_analysis.ipynb's checkpoint file. `splice_measure
+    == "Yes"` (a splice-aware dataset) exempts a row from the
+    `splice_var_amino` exclusion -- see SPLICE_MEASURE_COL/SPLICE_MEASURE_VALUE.
     """
     columns = [
         "Dataset",
@@ -160,6 +162,7 @@ def _write_checkpoint_file(path, rows):
         "Flag",
         "VariantNotes",
         "splice_var_amino",
+        "splice_measure",
         "revel_train_amino",
         "mp2_train_amino",
         "Assertion_ClinGen_repo",
@@ -663,23 +666,23 @@ def full_dataset_files(tmp_path):
         checkpoint_path,
         [
             (
-                "DS_IGVF_A", "BRCA1", "urn:mavedb:1a", "17", 100, "A", "G", "p1", 0.5, None, None, "No", "No", "No",
+                "DS_IGVF_A", "BRCA1", "urn:mavedb:1a", "17", 100, "A", "G", "p1", 0.5, None, None, "No", "No", "No", "No",
                 "Pathogenic", "Pathogenic",
             ),
             (
-                "DS_IGVF_B", "GENEB, GENEC", "urn:mavedb:2", "17", 200, "A", "T", "p2", None, None, None, "No", "No", "No",
+                "DS_IGVF_B", "GENEB, GENEC", "urn:mavedb:2", "17", 200, "A", "T", "p2", None, None, None, "No", "No", "No", "No",
                 "Benign", "Uncertain",
             ),
             (
-                "DS_COMM_A", "GENEC", "urn:mavedb:3", "17", 300, "A", "G", "p3", None, None, None, "No", "No", "No",
+                "DS_COMM_A", "GENEC", "urn:mavedb:3", "17", 300, "A", "G", "p3", None, None, None, "No", "No", "No", "No",
                 None, None,
             ),
             (
-                "DS_COMM_B", "GENED", "urn:mavedb:4", "17", 400, "AC", "GT", "p4", 0.2, None, None, "No", "No", "No",
+                "DS_COMM_B", "GENED", "urn:mavedb:4", "17", 400, "AC", "GT", "p4", 0.2, None, None, "No", "No", "No", "No",
                 None, None,
             ),
             (
-                "DS_COMM_B", "GENED", "urn:mavedb:4", "17", 401, "A", "G", "p4", None, None, None, "No", "No", "No",
+                "DS_COMM_B", "GENED", "urn:mavedb:4", "17", 401, "A", "G", "p4", None, None, None, "No", "No", "No", "No",
                 None, None,
             ),
         ],
@@ -1438,7 +1441,7 @@ def test_cli_allow_clinvar_conflicts_flag_toggles_conflict_handling(tmp_path):
     checkpoint_path = tmp_path / "checkpoint.csv"
     _write_checkpoint_file(
         checkpoint_path,
-        [("DS_A", "GENEA", "urn:mavedb:1a", "17", 100, "A", "G", "p1", None, None, None, "No", "No", "No", None, None)],
+        [("DS_A", "GENEA", "urn:mavedb:1a", "17", 100, "A", "G", "p1", None, None, None, "No", "No", "No", "No", None, None)],
     )
     chek2_path = tmp_path / "chek2.xlsx"
     _write_chek2_file(chek2_path)
@@ -1697,7 +1700,11 @@ def _checkpoint_funnel_fixture():
     `VariantNotes` tags (`conflicting_fxn_data`/`splice_variant_not_measured`/
     `start_lost_variant_not_measured`) -- each removed at its own funnel step,
     distinct from DS_SPLICE, which instead carries `splice_var_amino ==
-    "Yes"` (the separate, later "at the amino-acid level" step).
+    "Yes"` (the separate, later "at the amino-acid level" step). None of
+    these datasets is splice-aware (`splice_measure == "No"` throughout), so
+    DS_SPLICE is still excluded here -- see
+    `test_compute_reclassification_filter_funnel_keeps_splice_aware_amino_variant`
+    for the exemption itself.
 
     DS_REVEL (revel_train_amino="Yes", mp2_train_amino="No") and DS_SURVIVOR
     (revel_train_amino="No", mp2_train_amino="Yes") both reach the "Other
@@ -1719,11 +1726,12 @@ def _checkpoint_funnel_fixture():
         "Flag",
         "VariantNotes",
         "splice_var_amino",
+        "splice_measure",
         "revel_train_amino",
         "mp2_train_amino",
     ]
     rows = [
-        ("DS_SFPQ", "SFPQ", "urn:mavedb:c1", "1", 10, "A", "G", "NP_1.1:p.Ser1Ala", 0.1, None, None, "No", "No", "No"),
+        ("DS_SFPQ", "SFPQ", "urn:mavedb:c1", "1", 10, "A", "G", "NP_1.1:p.Ser1Ala", 0.1, None, None, "No", "No", "No", "No"),
         (
             "DS_CHEK2",
             "CHEK2",
@@ -1736,6 +1744,7 @@ def _checkpoint_funnel_fixture():
             0.5,
             None,
             None,
+            "No",
             "No",
             "No",
             "No",
@@ -1755,6 +1764,7 @@ def _checkpoint_funnel_fixture():
             "No",
             "No",
             "No",
+            "No",
         ),
         (
             "DS_SPLICE_VN",
@@ -1768,6 +1778,7 @@ def _checkpoint_funnel_fixture():
             0.8,
             None,
             "splice_variant_not_measured",
+            "No",
             "No",
             "No",
             "No",
@@ -1787,6 +1798,7 @@ def _checkpoint_funnel_fixture():
             "No",
             "No",
             "No",
+            "No",
         ),
         (
             "DS_SPLICE",
@@ -1803,8 +1815,25 @@ def _checkpoint_funnel_fixture():
             "Yes",
             "No",
             "No",
+            "No",
         ),
-        ("DS_FLAG", "GENED", "urn:mavedb:c5", "4", 50, "A", "G", "NP_5.1:p.Ser5Ala", 0.5, "*", None, "No", "No", "No"),
+        (
+            "DS_FLAG",
+            "GENED",
+            "urn:mavedb:c5",
+            "4",
+            50,
+            "A",
+            "G",
+            "NP_5.1:p.Ser5Ala",
+            0.5,
+            "*",
+            None,
+            "No",
+            "No",
+            "No",
+            "No",
+        ),
         (
             "DS_REVEL",
             "GENEE",
@@ -1817,6 +1846,7 @@ def _checkpoint_funnel_fixture():
             0.6,
             None,
             None,
+            "No",
             "No",
             "Yes",
             "No",
@@ -1833,6 +1863,7 @@ def _checkpoint_funnel_fixture():
             0.7,
             None,
             None,
+            "No",
             "No",
             "No",
             "Yes",
@@ -1943,7 +1974,10 @@ def test_compute_reclassification_filter_funnel_sequential_steps():
 
     # DS_SPLICE (splice_var_amino == "Yes", a different column from VariantNotes) is
     # removed here -- distinct from the VariantNotes-tag-based steps above.
-    splice = by_label["- Splice variant not measured at the amino-acid level (aa-level candidates sharing a splice-affecting group)"]
+    splice = by_label[
+        "- Splice variant not measured at the amino-acid level (aa-level candidates sharing a "
+        "splice-affecting group, unless the assay detects splicing)"
+    ]
     assert splice["rows"] == 4
     assert splice["distinct_dna_variants"] == 4
     assert splice["distinct_assayed_variants"] == 4
@@ -2016,7 +2050,16 @@ def test_compute_reclassification_filter_funnel_counts_measurements_by_urn_group
     )
     checkpoint = pd.DataFrame(
         columns=columns
-        + ["hgvs_p", "auth_reported_score", "Flag", "VariantNotes", "splice_var_amino", "revel_train_amino", "mp2_train_amino"]
+        + [
+            "hgvs_p",
+            "auth_reported_score",
+            "Flag",
+            "VariantNotes",
+            "splice_var_amino",
+            "splice_measure",
+            "revel_train_amino",
+            "mp2_train_amino",
+        ]
     )
     chek2 = pd.DataFrame(columns=["hgvs_pro", "score", "Filter_CI"])
     condensed = pd.DataFrame(
@@ -2034,6 +2077,53 @@ def test_compute_reclassification_filter_funnel_counts_measurements_by_urn_group
     raw = steps[0]
     assert raw["rows"] == 3
     assert raw["variant_effect_measurements"] == 2  # urn:mavedb:1's two rows collapse to one measurement
+
+
+def test_compute_reclassification_filter_funnel_keeps_splice_aware_amino_variant():
+    """A `splice_var_amino == 'Yes'` row from a splice-aware dataset
+    (`splice_measure == 'Yes'`) is exempt from the amino-acid-level splice
+    exclusion and survives, unlike an otherwise-identical row from a
+    non-splice-aware dataset -- matching `src.build_variant_
+    reclassification_dataset.apply_notebook_exclusions`'s own exemption.
+    """
+    expanded = pd.DataFrame(
+        columns=["Dataset", "Gene", "mavedb_variant_urn", "Chrom", "hg38_start", "ref_allele", "alt_allele", "aa_pos", "aa_ref", "aa_alt", "rna_score"]
+    )
+    checkpoint = pd.DataFrame(
+        [
+            (
+                "DS_NOT_SPLICE_AWARE", "GENEA", "urn:mavedb:1", "1", 10, "A", "G", "NP_1.1:p.Ser1Ala", 0.1,
+                None, None, "Yes", "No", "No", "No",
+            ),
+            (
+                "DS_SPLICE_AWARE", "GENEB", "urn:mavedb:2", "2", 20, "A", "G", "NP_2.1:p.Ser2Ala", 0.2,
+                None, None, "Yes", "Yes", "No", "No",
+            ),
+        ],
+        columns=[
+            "Dataset", "Gene", "mavedb_variant_urn", "Chrom", "hg38_start", "ref_allele", "alt_allele", "hgvs_p",
+            "auth_reported_score", "Flag", "VariantNotes", "splice_var_amino", "splice_measure",
+            "revel_train_amino", "mp2_train_amino",
+        ],
+    )
+    chek2 = pd.DataFrame(columns=["hgvs_pro", "score", "Filter_CI"])
+    condensed = pd.DataFrame(
+        {
+            "mavedb_variant_urn": ["urn:mavedb:1", "urn:mavedb:2"],
+            "hgvs_c": ["c.1A>G", "c.2A>G"],
+            "hgvs_p": ["p.Ser1Ala", "p.Ser2Ala"],
+        }
+    )
+
+    steps = compute_reclassification_filter_funnel(expanded, checkpoint, chek2, condensed)
+    by_label = {step["label"]: step for step in steps}
+
+    splice = by_label[
+        "- Splice variant not measured at the amino-acid level (aa-level candidates sharing a "
+        "splice-affecting group, unless the assay detects splicing)"
+    ]
+    assert splice["rows"] == 1  # DS_NOT_SPLICE_AWARE removed, DS_SPLICE_AWARE kept
+    assert splice["rows_removed"] == 1
 
 
 def test_format_reclassification_filter_funnel_summary_lines():
@@ -2066,6 +2156,10 @@ def test_compute_clingen_evidence_repository_stats(tmp_path):
     # have a determinate original classification: s5 stays Pathogenic after
     # removal (retained), s6 drops to Uncertain (not retained), s7 flips
     # direction (Likely Pathogenic -> Benign, still determinate, retained).
+    # s8: splice_var_amino == "Yes" but from a splice-aware dataset
+    # (splice_measure == "Yes"), so it's exempt from that exclusion and
+    # survives like s5/s7 (stays Pathogenic, retained) -- proves the
+    # exemption reaches this section, not just the filter-funnel one.
     # s9: original classification Uncertain Significance (excluded from
     # pre-removal, like s4) but the *recalculated* classification is
     # determinate (Likely Pathogenic) -- matches the real population gate
@@ -2076,14 +2170,15 @@ def test_compute_clingen_evidence_repository_stats(tmp_path):
     _write_checkpoint_file(
         checkpoint_path,
         [
-            ("DS1", "SFPQ", "urn:s1", "1", 10, "A", "G", "p1", None, None, None, "No", "No", "No", "Pathogenic", "Pathogenic"),
-            ("DS1", "GENEA", "urn:s2", "1", 20, "A", "G", "p2", None, "*", None, "No", "No", "No", "Pathogenic", "Pathogenic"),
-            ("DS1", "GENEA", "urn:s3", "1", 30, "A", "G", "p3", None, None, "conflicting_fxn_data", "No", "No", "No", "Pathogenic", "Pathogenic"),
-            ("DS1", "GENEA", "urn:s4", "1", 40, "A", "G", "p4", None, None, None, "No", "No", "No", "Uncertain Significance", "Uncertain Significance"),
-            ("DS1", "GENEA", "urn:s5", "1", 50, "A", "G", "p5", None, None, None, "No", "No", "No", "Pathogenic", "Pathogenic"),
-            ("DS1", "GENEB", "urn:s6", "1", 60, "A", "G", "p6", None, None, None, "No", "No", "No", "Likely Benign", "Uncertain"),
-            ("DS1", "GENEB", "urn:s7", "1", 70, "A", "G", "p7", None, None, None, "No", "No", "No", "Likely Pathogenic", "Benign"),
-            ("DS1", "GENEA", "urn:s9", "1", 90, "A", "G", "p9", None, None, None, "No", "No", "No", "Uncertain Significance", "Likely Pathogenic"),
+            ("DS1", "SFPQ", "urn:s1", "1", 10, "A", "G", "p1", None, None, None, "No", "No", "No", "No", "Pathogenic", "Pathogenic"),
+            ("DS1", "GENEA", "urn:s2", "1", 20, "A", "G", "p2", None, "*", None, "No", "No", "No", "No", "Pathogenic", "Pathogenic"),
+            ("DS1", "GENEA", "urn:s3", "1", 30, "A", "G", "p3", None, None, "conflicting_fxn_data", "No", "No", "No", "No", "Pathogenic", "Pathogenic"),
+            ("DS1", "GENEA", "urn:s4", "1", 40, "A", "G", "p4", None, None, None, "No", "No", "No", "No", "Uncertain Significance", "Uncertain Significance"),
+            ("DS1", "GENEA", "urn:s5", "1", 50, "A", "G", "p5", None, None, None, "No", "No", "No", "No", "Pathogenic", "Pathogenic"),
+            ("DS1", "GENEB", "urn:s6", "1", 60, "A", "G", "p6", None, None, None, "No", "No", "No", "No", "Likely Benign", "Uncertain"),
+            ("DS1", "GENEB", "urn:s7", "1", 70, "A", "G", "p7", None, None, None, "No", "No", "No", "No", "Likely Pathogenic", "Benign"),
+            ("DS1", "GENEC", "urn:s8", "1", 80, "A", "G", "p8", None, None, None, "Yes", "Yes", "No", "No", "Pathogenic", "Pathogenic"),
+            ("DS1", "GENEA", "urn:s9", "1", 90, "A", "G", "p9", None, None, None, "No", "No", "No", "No", "Uncertain Significance", "Likely Pathogenic"),
         ],
     )
     chek2_path = tmp_path / "chek2.xlsx"
@@ -2108,16 +2203,16 @@ def test_compute_clingen_evidence_repository_stats(tmp_path):
 
     stats = compute_clingen_evidence_repository_stats(checkpoint, chek2, controls_workbook)
 
-    assert stats["pre_removal_total"] == 3
-    assert stats["pre_removal_genes"] == 2
-    assert stats["pre_removal_pathogenic"] == 1
+    assert stats["pre_removal_total"] == 4
+    assert stats["pre_removal_genes"] == 3
+    assert stats["pre_removal_pathogenic"] == 2
     assert stats["pre_removal_likely_pathogenic"] == 1
     assert stats["pre_removal_benign"] == 0
     assert stats["pre_removal_likely_benign"] == 1
 
-    assert stats["post_removal_total"] == 3
-    assert stats["post_removal_genes"] == 2
-    assert stats["post_removal_plp"] == 2
+    assert stats["post_removal_total"] == 4
+    assert stats["post_removal_genes"] == 3
+    assert stats["post_removal_plp"] == 3
     assert stats["post_removal_blb"] == 1
     assert stats["post_removal_originally_vus"] == 1
 
@@ -2146,9 +2241,9 @@ def test_format_clingen_evidence_repository_summary(tmp_path):
     _write_checkpoint_file(
         checkpoint_path,
         [
-            ("DS1", "GENEA", "urn:s5", "1", 50, "A", "G", "p5", None, None, None, "No", "No", "No", "Pathogenic", "Pathogenic"),
-            ("DS1", "GENEB", "urn:s6", "1", 60, "A", "G", "p6", None, None, None, "No", "No", "No", "Likely Benign", "Uncertain"),
-            ("DS1", "GENEC", "urn:s10", "1", 70, "A", "G", "p10", None, None, None, "No", "No", "No", "Uncertain Significance", "Benign"),
+            ("DS1", "GENEA", "urn:s5", "1", 50, "A", "G", "p5", None, None, None, "No", "No", "No", "No", "Pathogenic", "Pathogenic"),
+            ("DS1", "GENEB", "urn:s6", "1", 60, "A", "G", "p6", None, None, None, "No", "No", "No", "No", "Likely Benign", "Uncertain"),
+            ("DS1", "GENEC", "urn:s10", "1", 70, "A", "G", "p10", None, None, None, "No", "No", "No", "No", "Uncertain Significance", "Benign"),
         ],
     )
     chek2_path = tmp_path / "chek2.xlsx"

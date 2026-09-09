@@ -372,6 +372,16 @@ F9_TP53_RESTRICTED_DATASETS = frozenset(
 CONFLICTING_FXN_DATA_TAG = "conflicting_fxn_data"
 SPLICE_VARIANT_NOT_MEASURED_TAG = "splice_variant_not_measured"
 START_LOST_VARIANT_NOT_MEASURED_TAG = "start_lost_variant_not_measured"
+# A dataset curated as able to detect splicing effects (`Supplementary_Data_3`'s
+# "Detects Splicing Variants?" column) is exempt from the `splice_var_amino`
+# drop below -- see `src.build_variant_reclassification_dataset.
+# apply_notebook_exclusions`'s matching `(df["splice_var_amino"] != "Yes") |
+# (df["splice_measure"] == "Yes")` condition. `SPLICE_VARIANT_NOT_MEASURED_TAG`
+# itself needs no matching exemption here: the notebook now folds this same
+# check into the tag's own computation upstream of the checkpoint file, so a
+# splice-aware dataset's rows never carry that tag in the first place.
+SPLICE_MEASURE_COL = "splice_measure"
+SPLICE_MEASURE_VALUE = "Yes"
 
 # The REVEL- and MutPred2-training exclusions are alternative endpoints of the
 # funnel, not a chain: both apply to the same "Other flagged variants" survivor
@@ -1348,6 +1358,12 @@ def compute_reclassification_filter_funnel(expanded, checkpoint, chek2, condense
     `SPLICE_VARIANT_NOT_MEASURED_TAG`/`START_LOST_VARIANT_NOT_MEASURED_TAG`),
     applied in that order so a combined-tag row (e.g. both conflicting and
     splice-related) is removed at whichever of its tags' steps comes first.
+    The `splice_var_amino`-based step exempts rows from a splice-aware
+    dataset (`SPLICE_MEASURE_COL == SPLICE_MEASURE_VALUE`), matching
+    `apply_notebook_exclusions`'s own exemption -- `SPLICE_VARIANT_NOT_
+    MEASURED_TAG` needs no matching exemption here, since the notebook
+    folds the same check into that tag's own computation upstream of
+    `checkpoint`.
 
     A "distinct assayed variant" is *not* a distinct `mavedb_variant_urn`:
     that identifies one MaveDB score-set record (one per dataset), so the
@@ -1499,8 +1515,12 @@ def compute_reclassification_filter_funnel(expanded, checkpoint, chek2, condense
     step = step[~variant_notes.str.contains(START_LOST_VARIANT_NOT_MEASURED_TAG, regex=False)]
     record("- Start-lost variant not measured (no functional measurement at all)", step)
 
-    step = step[step["splice_var_amino"] != "Yes"]
-    record("- Splice variant not measured at the amino-acid level (aa-level candidates sharing a splice-affecting group)", step)
+    step = step[(step["splice_var_amino"] != "Yes") | (step[SPLICE_MEASURE_COL] == SPLICE_MEASURE_VALUE)]
+    record(
+        "- Splice variant not measured at the amino-acid level (aa-level candidates sharing a "
+        "splice-affecting group, unless the assay detects splicing)",
+        step,
+    )
 
     step = step[~chek2_flag_mask.reindex(step.index, fill_value=False)]
     record("- CHEK2 QC flag (Filter_CI == 1)", step)
@@ -1821,14 +1841,15 @@ def distinct_dna_variants(df):
 def _checkpoint_other_flagged_survivors(checkpoint, chek2):
     """Reproduce `compute_reclassification_filter_funnel`'s exclusion chain
     (SFPQ, CHEK2 QC flag, `VariantNotes` conflict/splice/start-lost tags,
-    `splice_var_amino`, any other pre-existing `Flag == '*'`), collapsed to
-    its final surviving population -- the same "Other flagged variants"
-    step, i.e. `Variant_Classification_analysis.ipynb`'s `sankey_f` after
-    cell 77, before the REVEL-/MutPred2-training split. Duplicated here
-    (rather than sharing code with the funnel) because the funnel needs
-    every sub-step recorded individually for its own report section, while
-    this only needs the final surviving rows -- see that function's
-    docstring for the step-by-step version this mirrors.
+    `splice_var_amino` (exempting splice-aware datasets, `SPLICE_MEASURE_COL
+    == SPLICE_MEASURE_VALUE`), any other pre-existing `Flag == '*'`),
+    collapsed to its final surviving population -- the same "Other flagged
+    variants" step, i.e. `Variant_Classification_analysis.ipynb`'s
+    `sankey_f` after cell 77, before the REVEL-/MutPred2-training split.
+    Duplicated here (rather than sharing code with the funnel) because the
+    funnel needs every sub-step recorded individually for its own report
+    section, while this only needs the final surviving rows -- see that
+    function's docstring for the step-by-step version this mirrors.
     """
     step = checkpoint[checkpoint[GENE_COL] != "SFPQ"].copy()
     step = step.reset_index(drop=True)
@@ -1852,7 +1873,7 @@ def _checkpoint_other_flagged_survivors(checkpoint, chek2):
     step = step[~variant_notes.str.contains(SPLICE_VARIANT_NOT_MEASURED_TAG, regex=False)]
     variant_notes = variant_notes.reindex(step.index)
     step = step[~variant_notes.str.contains(START_LOST_VARIANT_NOT_MEASURED_TAG, regex=False)]
-    step = step[step["splice_var_amino"] != "Yes"]
+    step = step[(step["splice_var_amino"] != "Yes") | (step[SPLICE_MEASURE_COL] == SPLICE_MEASURE_VALUE)]
     return step[step["Flag"] != "*"]
 
 

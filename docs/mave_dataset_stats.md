@@ -219,7 +219,9 @@ It also reports two further sections, sourced from separate input files:
   the filter-funnel section's post-checkpoint steps -- uses its `Gene`,
   `Chrom`, `hg38_start`, `ref_allele`, `alt_allele`, `mavedb_variant_urn`,
   `hgvs_p`, `auth_reported_score`, `Flag`, `VariantNotes`, `splice_var_amino`,
-  and `revel_train_amino` columns.
+  `splice_measure` (a splice-aware dataset, `splice_measure == "Yes"`, is
+  exempt from the `splice_var_amino` exclusion), and `revel_train_amino`
+  columns.
 - **CHEK2 QC workbook** (`--chek2-file`, default
   `data/input/maves/CHEK2_Gebbia_2024.xlsx`): same file
   `build_variant_reclassification_dataset.py` uses, for the filter-funnel
