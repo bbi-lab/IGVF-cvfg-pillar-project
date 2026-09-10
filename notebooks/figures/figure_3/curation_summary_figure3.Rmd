@@ -376,28 +376,22 @@ sum(data_2$gene_test_count)
 filtered_data <- data %>%
   distinct(Gene, .keep_all = TRUE)
 
+# ACMG secondary findings list from
+# https://www.sciencedirect.com/science/article/pii/S1098360025001017
 acmg_sf_genes <- c(
-  "BRCA1",
-  "BRCA2",
-  "PTEN",
-  "TP53",
-  "MSH2",
-  "PALB2",
-  "RAD51C",
-  "RAD51D",
-  "CHEK2",
-  "VHL",
-  "TSC2",
-  "F9",
-  "SCN5A",
-  "KCNH2",
-  "KCNE1",
-  "CALM1", "CALM2", "CALM3",
-  "GCK",
-  "JAG1"
+  "ABCD1", "ACTA2", "ACTC1", "ACVRL1", "APC", "APOB", "ATP7B", "BAG3", "BAG3",
+  "BMPR1A", "BRCA1", "BRCA2", "BTD", "CACNA1S", "CALM1", "CALM1", "CALM2",
+  "CALM2", "CALM3", "CALM3", "CASQ2", "COL3A1", "CYP27A1", "DES", "DES", "DSC2",
+  "DSG2", "DSP", "DSP", "ENG", "FBN1", "FLNC", "FLNC", "FLNC", "GAA", "GLA",
+  "HFE", "HNF1A", "KCNH2", "KCNQ1", "LDLR", "LMNA", "MAX", "MEN1", "MLH1",
+  "MSH2", "MSH6", "MUTYH", "MYBPC3", "MYH11", "MYH7", "MYH7", "MYL2", "MYL3",
+  "NF2", "OTC", "PALB2", "PCSK9", "PKP2", "PLN", "PMS2", "PRKAG2", "PTEN",
+  "RB1", "RBM20", "RET", "RET", "RET", "RPE65", "RYR1", "RYR2", "SCN5A",
+  "SCN5A", "SCN5A", "SDHAF2", "SDHB", "SDHC", "SDHD", "SMAD3", "SMAD4", "SMAD4",
+  "STK11", "TGFBR1", "TGFBR2", "TMEM127", "TMEM43", "TNNC1", "TNNI3", "TNNT2",
+  "TNNT2", "TP53", "TPM1", "TRDN", "TRDN", "TSC1", "TSC2", "TTN", "TTR", "VHL",
+  "WT1"
 )
-
-length(acmg_sf_genes)
 
 label_genes <- c("BRCA1",
   "BRCA2",
