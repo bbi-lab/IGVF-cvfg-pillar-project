@@ -65,6 +65,7 @@ from src.ablation_variant_reclassification import (
     resolved_mask,
     restrict_to_consequence,
     save_ablation_document,
+    save_calibrated_ablation_figure,
     save_control_concordance_chart,
     save_document_charts_as_files,
     save_redundant_gain_chart,
@@ -1089,13 +1090,17 @@ def test_predictor_control_concordance_counts_uses_predictor_specific_arms():
     assert counts["combined"] == {"concordant": 1, "discordant": 0, "unresolved": 0}  # combined=11, resolved
 
 
-def test_concordance_status_colors_use_the_reserved_dataviz_status_palette():
+def test_concordance_status_colors_avoid_the_categorical_palette_and_green_red():
     """`--show-class-upgrade` already uses the categorical palette's
     light/dark shades on the "alone sufficient" bars, so control concordance
-    -- a correctness dimension, not a category identity -- deliberately
-    reuses the dataviz skill's reserved good/critical status colors instead,
-    to avoid colliding with that existing meaning."""
-    assert CONCORDANCE_STATUS_COLORS[CONCORDANT] == "#0ca30c"
+    -- a correctness dimension, not a category identity -- deliberately uses
+    its own status colors instead, to avoid colliding with that existing
+    meaning. Blue/red rather than the dataviz skill's default green/red
+    good/critical status colors, too: green paired with red is a classic
+    colorblind confusion, so this reuses the project's own blue-vs-red
+    convention for opposite states instead (e.g. figure_4/plot_utils.py's
+    BENIGN_THRESHOLD_COLOR/PATHOGENIC_THRESHOLD_COLOR)."""
+    assert CONCORDANCE_STATUS_COLORS[CONCORDANT] == "#1D7AAB"
     assert CONCORDANCE_STATUS_COLORS[DISCORDANT] == "#d03b3b"
 
 
@@ -1294,6 +1299,24 @@ def test_save_ablation_document_with_concordance_chart_writes_a_file(tmp_path):
 
     output_path = tmp_path / "document_concordance_only.png"
     save_ablation_document(document_data, output_path, chart_types=("concordance",))
+    assert output_path.exists()
+    assert output_path.stat().st_size > 0
+
+
+# --- save_calibrated_ablation_figure ---------------------------------------------------------
+
+
+def test_save_calibrated_ablation_figure_writes_a_file(tmp_path):
+    """Smoke test for Extended Data Figure 10's final layout -- exercises all
+    three row shapes (comparison-only, comparison-only, comparison+
+    concordance x2) against `_document_checkpoint_frame`'s one variant per
+    scope, same fixture `test_save_ablation_document_with_concordance_chart_
+    writes_a_file` above uses.
+    """
+    out = add_ablation_points_columns(_document_checkpoint_frame())
+
+    output_path = tmp_path / "calibrated_figure.png"
+    save_calibrated_ablation_figure(out, ["REVEL"], output_path)
     assert output_path.exists()
     assert output_path.stat().st_size > 0
 

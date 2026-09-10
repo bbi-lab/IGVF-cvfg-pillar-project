@@ -127,6 +127,7 @@ legend) instead of one combined multi-section image -- see
 `docs/figures.md`.
 """
 
+from itertools import pairwise
 from pathlib import Path
 
 import click
@@ -208,12 +209,12 @@ SYNERGY_CATEGORY_ORDER = [FUNCTIONAL_ALONE_LABEL, PREDICTOR_ALONE_LABEL, BOTH_AL
 CONFLICT_ORDER = [CONFLICT_LABEL]
 
 # Chart chrome, and the first four slots of the dataviz skill's validated
-# categorical palette (`references/palette.md`) -- fixed order, never cycled.
-# `CONFLICT_LABEL` deliberately uses the skill's reserved "critical" status
-# color instead of a fifth categorical slot: it isn't a resolution category
-# (combining evidence did *not* resolve those variants), so it's drawn as a
-# separate below-the-baseline bar rather than stacked in with the four that
-# are.
+# categorical palette (`references/palette.md`) -- fixed order, never cycled,
+# except BOTH_ALONE_LABEL (see its own comment below). `CONFLICT_LABEL`
+# deliberately uses the skill's reserved "critical" status color instead of a
+# fifth categorical slot: it isn't a resolution category (combining evidence
+# did *not* resolve those variants), so it's drawn as a separate
+# below-the-baseline bar rather than stacked in with the four that are.
 CHART_SURFACE = "#fcfcfb"
 CHART_INK_PRIMARY = "#0b0b0b"
 CHART_INK_SECONDARY = "#52514e"
@@ -224,7 +225,16 @@ CONFLICT_COLOR = "#d03b3b"
 SYNERGY_CATEGORY_COLORS = {
     FUNCTIONAL_ALONE_LABEL: "#2a78d6",
     PREDICTOR_ALONE_LABEL: "#eb6834",
-    BOTH_ALONE_LABEL: "#1baf7a",
+    # Blue-violet, not the skill's teal-green categorical slot: that teal
+    # shares every ablation/comparison chart with CONFLICT_LABEL's red
+    # below the baseline, and green-vs-red is a classic colorblind
+    # confusion pair. A warm brown was tried first and rejected -- too
+    # close in hue to PREDICTOR_ALONE_LABEL's orange, just swapping one
+    # confusable pair for another. This violet sits apart from
+    # blue/orange/amber/red in hue, reads clearly as its own color rather
+    # than a shade of Functional's blue, and (unlike a reddish-purple/
+    # magenta) doesn't read as pink.
+    BOTH_ALONE_LABEL: "#6A4C93",
     SYNERGY_LABEL: "#eda100",
     CONFLICT_LABEL: CONFLICT_COLOR,
 }
@@ -1194,7 +1204,12 @@ DISCORDANT = "discordant"
 UNRESOLVED = "unresolved"
 CONCORDANCE_STATUS_ORDER = [CONCORDANT, DISCORDANT, UNRESOLVED]
 
-CONCORDANT_COLOR = "#0ca30c"  # dataviz skill's reserved "good" status color
+CONCORDANT_COLOR = "#1D7AAB"  # blue, not the dataviz skill's default green "good" status
+# color -- reused from this project's own recurring blue/red (not red/green)
+# diverging convention for Benign-vs-Pathogenic (e.g. figure_4/plot_utils.py's
+# BENIGN_THRESHOLD_COLOR, Figure5_6.Rmd's "Benign") -- picked over the skill's
+# reserved status colors because pairing green with DISCORDANT_COLOR's red
+# below is a classic red-green colorblind confusion.
 DISCORDANT_COLOR = "#d03b3b"  # dataviz skill's reserved "critical" status color
 UNRESOLVED_CONCORDANCE_COLOR = CHART_INK_MUTED
 CONCORDANCE_STATUS_COLORS = {
@@ -1689,6 +1704,7 @@ def build_document_chart_data(
     direction=DIRECTION_ANY,
     show_class_upgrade=False,
     special_control_dedup=False,
+    document_scopes=SCOPE_ORDER,
 ):
     """Build the chart data for `save_ablation_document`'s multi-section
     document: one section per `SCOPE_ORDER` category -- `vus`, `gnomad`,
@@ -1705,15 +1721,23 @@ def build_document_chart_data(
     that needs it, so a full seven-section, three-chart-type document costs
     the same one-time arm-dedup pass as any single chart, not twenty-one.
 
+    `document_scopes` restricts which of `SCOPE_ORDER`'s seven categories get
+    a section at all (default: all seven, unrestricted, matching every
+    caller before this parameter existed) -- unlike `--scope` elsewhere in
+    this script, which unions categories into one population, this just
+    picks which sections `save_ablation_document`/`save_document_charts_as_
+    files` render, each still its own independent section.
+
     Returns `{scope: {"scope_label": str, "scope_total": int, "ablation":
     chart_data | None, "comparison": {direction: chart_data} | None,
     "concordance": {predictor: concordance_counts(...)} | None, "gain":
-    gain_data | None}}` -- the value for a chart type not in `chart_types` is
-    always `None`, so `save_ablation_document` can tell "not requested" apart
-    from "requested but empty." "concordance" is only ever nonempty for the
-    `clinvar_control`/`clingen_control` sections (see `control_truth_
-    direction_series`) -- every other scope's section still gets a
-    `"concordance"` dict when requested, just with every count zero.
+    gain_data | None}}`, one entry per `document_scopes` -- the value for a
+    chart type not in `chart_types` is always `None`, so `save_ablation_
+    document` can tell "not requested" apart from "requested but empty."
+    "concordance" is only ever nonempty for the `clinvar_control`/`clingen_
+    control` sections (see `control_truth_direction_series`) -- every other
+    scope's section still gets a `"concordance"` dict when requested, just
+    with every count zero.
     """
     functional_arm = build_arm(df, FUNCTIONAL_POINTS_COL)
     functional_points = points_series(functional_arm, FUNCTIONAL_POINTS_COL)
@@ -1734,7 +1758,7 @@ def build_document_chart_data(
     }
 
     document_data = {}
-    for scope in SCOPE_ORDER:
+    for scope in document_scopes:
         scope_flags = scope_mask(functional_arm, (scope,))
         scope_label = SCOPE_LABELS[scope]
         scope_total = int(scope_flags.sum())
@@ -2490,18 +2514,45 @@ def _draw_document_block(block_fig, block_type, block_height, section_data, pred
 DOCUMENT_HEADER_HEIGHT = 0.6
 
 
+def _document_chart_types_for_scope(chart_types, scope):
+    """`chart_types`, minus "concordance" when `scope` isn't one of
+    `CONTROL_SCOPES` -- those sections carry no known truth to check
+    concordance against (`control_truth_direction_series`), so `--document`
+    omits that block there entirely instead of rendering an always-empty
+    (every count zero) one. Mirrors `save_document_charts_as_files`'s own
+    per-scope skip, just as an omitted block instead of an unwritten file.
+    """
+    if "concordance" in chart_types and scope not in CONTROL_SCOPES:
+        return tuple(t for t in chart_types if t != "concordance")
+    return chart_types
+
+
 def save_ablation_document(
-    document_data, output_path, chart_types=DOCUMENT_CHART_TYPES, predictors=None, show_class_upgrade=False
+    document_data,
+    output_path,
+    chart_types=DOCUMENT_CHART_TYPES,
+    predictors=None,
+    show_class_upgrade=False,
+    document_scopes=SCOPE_ORDER,
 ):
     """Render `build_document_chart_data`'s multi-section document to
     `output_path` (format inferred from its extension, e.g.
     `.png`/`.svg`/`.pdf`): a header (document title only, spanning the full
-    document width) followed by one section per `SCOPE_ORDER` category --
-    all seven, always, regardless of population size -- each containing
-    whichever of `chart_types` were requested, stacked top to bottom in
-    `DOCUMENT_CHART_TYPES` order (ablation, comparison, concordance, gain).
-    Each block carries its own legend (see `_draw_document_block`) rather
-    than the document showing one shared legend in its header.
+    document width) followed by one section per `document_scopes` category
+    (default: all seven of `SCOPE_ORDER`, regardless of population size)
+    each containing whichever of `chart_types` were requested, stacked top
+    to bottom in `DOCUMENT_CHART_TYPES` order (ablation, comparison,
+    concordance, gain) -- except "concordance", which is omitted entirely
+    for a section outside `CONTROL_SCOPES` (see `_document_chart_types_for_
+    scope`) rather than rendered empty. Each block carries its own legend
+    (see `_draw_document_block`) rather than the document showing one shared
+    legend in its header.
+
+    `document_scopes` must be a subset of whatever `document_scopes` was
+    passed to the `build_document_chart_data` call that produced
+    `document_data` (default matches: all seven) -- restricting it here
+    further, to a subset `document_data` actually has sections for, is fine;
+    naming a scope `document_data` has no entry for raises a `KeyError`.
 
     `predictors` orders the predictors within each section -- required if
     `document_data` might have empty (all-`None`) sections for some scope
@@ -2532,11 +2583,19 @@ def save_ablation_document(
                 break
     num_predictors = len(predictors)
 
-    block_types, block_heights = _document_block_heights(chart_types, num_predictors, show_class_upgrade)
     section_title_height = 0.5
-    section_height = section_title_height + sum(block_heights)
+    section_block_types = {}
+    section_block_heights = {}
+    section_heights = {}
+    for scope in document_scopes:
+        scope_chart_types = _document_chart_types_for_scope(chart_types, scope)
+        block_types, block_heights = _document_block_heights(scope_chart_types, num_predictors, show_class_upgrade)
+        section_block_types[scope] = block_types
+        section_block_heights[scope] = block_heights
+        section_heights[scope] = section_title_height + sum(block_heights)
+
     width = _document_width(chart_types, num_predictors)
-    body_height = section_height * len(SCOPE_ORDER)
+    body_height = sum(section_heights.values())
 
     fig = plt.figure(figsize=(width, DOCUMENT_HEADER_HEIGHT + body_height), dpi=150)
     fig.patch.set_facecolor(CHART_SURFACE)
@@ -2552,8 +2611,12 @@ def save_ablation_document(
         y=0.55,
     )
 
-    section_figs = body_fig.subfigures(nrows=len(SCOPE_ORDER), ncols=1)
-    for section_fig, scope in zip(section_figs, SCOPE_ORDER):
+    section_figs = body_fig.subfigures(
+        nrows=len(document_scopes), ncols=1, height_ratios=[section_heights[s] for s in document_scopes]
+    )
+    if len(document_scopes) == 1:
+        section_figs = [section_figs]
+    for section_fig, scope in zip(section_figs, document_scopes):
         section_fig.patch.set_facecolor(CHART_SURFACE)
         section_data = document_data[scope]
         section_fig.suptitle(
@@ -2564,6 +2627,8 @@ def save_ablation_document(
             y=0.99,
         )
 
+        block_types = section_block_types[scope]
+        block_heights = section_block_heights[scope]
         block_figs = section_fig.subfigures(nrows=len(block_types), ncols=1, height_ratios=block_heights)
         if len(block_types) == 1:
             block_figs = [block_figs]
@@ -2575,11 +2640,786 @@ def save_ablation_document(
     plt.close(fig)
 
 
+DOCUMENT_GRID_PAGE_WIDTH = 6.5
+# Default cap on scopes per row -- chosen so each scope's own block(s) keep
+# enough width (~page_width/2 at the default page_width) for `_draw_synergy_
+# panel`/`_draw_concordance_panel`'s absolute font sizes (calibrated for
+# `save_ablation_document`'s much wider single-scope rows) to stay legible.
+# A higher cap packs more scopes per row but shrinks each one further --
+# see `save_ablation_document_grid`'s docstring.
+DOCUMENT_GRID_MAX_SCOPES_PER_ROW = 2
+
+
+def _document_scope_groups(document_scopes, chart_types):
+    """Group `document_scopes` by each scope's own effective chart types
+    (`_document_chart_types_for_scope`), preserving `document_scopes`'s
+    order both across and within groups -- used by `save_ablation_document_
+    grid` to pack same-shaped scopes into shared rows, so every cell in a
+    row shares the same block(s) (e.g. "comparison only" vs. "comparison+
+    concordance"), never a short cell next to a tall one. Returns
+    `[(scope_chart_types, [scope, ...]), ...]`, one entry per distinct
+    `scope_chart_types` value encountered.
+    """
+    groups = []
+    scopes_by_key = {}
+    for scope in document_scopes:
+        key = _document_chart_types_for_scope(chart_types, scope)
+        if key not in scopes_by_key:
+            scopes_by_key[key] = []
+            groups.append(key)
+        scopes_by_key[key].append(scope)
+    return [(key, scopes_by_key[key]) for key in groups]
+
+
+def _chunk_scopes(scopes, max_per_row):
+    """Split `scopes` into consecutive chunks of at most `max_per_row`
+    scopes each, preserving order -- used by `save_ablation_document_grid`
+    to wrap an over-long content-shape group (`_document_scope_groups`)
+    across multiple rows, each still holding exactly `max_per_row` column
+    slots (a short last chunk just leaves its remaining slots blank), so
+    every scope of that content shape renders at the same size throughout
+    the document regardless of which row it landed in.
+    """
+    return [scopes[i : i + max_per_row] for i in range(0, len(scopes), max_per_row)]
+
+
+def save_ablation_document_grid(
+    document_data,
+    output_path,
+    chart_types=DOCUMENT_CHART_TYPES,
+    predictors=None,
+    show_class_upgrade=False,
+    document_scopes=SCOPE_ORDER,
+    page_width=DOCUMENT_GRID_PAGE_WIDTH,
+    max_scopes_per_row=DOCUMENT_GRID_MAX_SCOPES_PER_ROW,
+):
+    """Render `build_document_chart_data`'s per-scope chart data as a
+    compact, print-page-width grid, instead of `save_ablation_document`'s
+    one full-width row per scope (sized generously for on-screen viewing,
+    often 15"+ wide for three predictors).
+
+    `document_scopes` is grouped by each scope's own effective chart types
+    (`_document_scope_groups`) -- e.g. five scopes split "comparison only"
+    (`vus`/`gnomad`/`unobserved`) vs. "comparison + concordance"
+    (`clinvar_control`/`clingen_control`). Each group is then wrapped into
+    rows of at most `max_scopes_per_row` scopes (`_chunk_scopes`) -- at the
+    defaults (`page_width=6.5`, `max_scopes_per_row=2`), that's a three-
+    scope group split into a full two-scope row plus a one-scope row, and a
+    two-scope group filling one row, four rows total. Every row reserves
+    exactly `max_scopes_per_row` equal-width column slots (`page_width /
+    max_scopes_per_row` each, ~3.25" at the defaults) regardless of how many
+    scopes actually landed in it, so every scope of a given content shape
+    renders at the identical size wherever its row falls -- a short last row
+    (like the lone `unobserved` row above) just leaves its remaining slots
+    blank rather than stretching to fill them.
+
+    Each scope's own block(s) are still drawn by `_draw_document_block`
+    (identical per-block legend and light/dark `--show-class-upgrade`
+    split), just at that narrower per-scope width -- the absolute font
+    sizes `_draw_synergy_panel`/`_draw_concordance_panel` use are calibrated
+    for `save_ablation_document`'s much wider single-scope rows, so a small
+    `max_scopes_per_row` at a given `page_width` (more width per scope) is
+    what keeps this legible; this function doesn't rescale those font sizes
+    itself. Confirmed to overlap badly at `max_scopes_per_row=3`,
+    `page_width=6.5` (~2.17"/scope) -- matplotlib subfigures don't clip
+    content that overflows their own bounds, so oversized text visibly
+    bleeds into the next cell rather than just looking cramped.
+
+    `predictors`/`show_class_upgrade` -- see `save_ablation_document`.
+    """
+    if predictors is None:
+        for section_data in document_data.values():
+            if section_data.get("ablation") is not None:
+                predictors = list(section_data["ablation"]["predictor_flags"])
+            elif section_data.get("comparison") is not None:
+                first_direction_data = next(iter(section_data["comparison"].values()))
+                predictors = list(first_direction_data["predictor_flags"])
+            elif section_data.get("concordance") is not None:
+                predictors = list(section_data["concordance"])
+            elif section_data.get("gain") is not None:
+                predictors = list(section_data["gain"])
+            if predictors:
+                break
+    num_predictors = len(predictors)
+
+    groups = _document_scope_groups(document_scopes, chart_types)
+    section_title_height = 0.35
+
+    # One entry per rendered row: (chunk of <= max_scopes_per_row scopes,
+    # that content shape's block_types/block_heights) -- an over-long group
+    # becomes multiple entries here (see _chunk_scopes), each still sized
+    # for max_scopes_per_row slots.
+    rows = []
+    for scope_chart_types, scopes in groups:
+        block_types, block_heights = _document_block_heights(scope_chart_types, num_predictors, show_class_upgrade)
+        for chunk in _chunk_scopes(scopes, max_scopes_per_row):
+            rows.append((chunk, block_types, block_heights))
+    row_heights = [section_title_height + sum(block_heights) for _chunk, _block_types, block_heights in rows]
+
+    body_height = sum(row_heights)
+    fig = plt.figure(figsize=(page_width, DOCUMENT_HEADER_HEIGHT + body_height), dpi=150)
+    fig.patch.set_facecolor(CHART_SURFACE)
+    header_fig, body_fig = fig.subfigures(nrows=2, ncols=1, height_ratios=[DOCUMENT_HEADER_HEIGHT, body_height])
+    header_fig.patch.set_facecolor(CHART_SURFACE)
+    body_fig.patch.set_facecolor(CHART_SURFACE)
+
+    header_fig.suptitle(
+        "Ablation analysis: added value of combining functional + predictor evidence",
+        fontsize=13,
+        color=CHART_INK_PRIMARY,
+        fontweight="bold",
+        y=0.5,
+    )
+
+    row_figs = body_fig.subfigures(nrows=len(rows), ncols=1, height_ratios=row_heights)
+    if len(rows) == 1:
+        row_figs = [row_figs]
+    for row_fig, (chunk, block_types, block_heights) in zip(row_figs, rows):
+        row_fig.patch.set_facecolor(CHART_SURFACE)
+        # Always reserve max_scopes_per_row slots, even for a short last
+        # chunk, so every scope of this content shape renders at the same
+        # size regardless of which row it landed in (see _chunk_scopes).
+        scope_figs = row_fig.subfigures(nrows=1, ncols=max_scopes_per_row)
+        if max_scopes_per_row == 1:
+            scope_figs = [scope_figs]
+        for scope_fig, scope in zip(scope_figs, chunk):
+            scope_fig.patch.set_facecolor(CHART_SURFACE)
+            section_data = document_data[scope]
+            scope_fig.suptitle(
+                f"{section_data['scope_label']} -- {section_data['scope_total']:,} variants",
+                fontsize=9,
+                color=CHART_INK_PRIMARY,
+                fontweight="bold",
+                y=0.99,
+            )
+            block_figs = scope_fig.subfigures(nrows=len(block_types), ncols=1, height_ratios=block_heights)
+            if len(block_types) == 1:
+                block_figs = [block_figs]
+            for block_fig, block_type, block_height in zip(block_figs, block_types, block_heights):
+                _draw_document_block(block_fig, block_type, block_height, section_data, predictors, show_class_upgrade)
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output_path, bbox_inches="tight", facecolor=CHART_SURFACE)
+    plt.close(fig)
+
+
+# --- Calibrated ablation figure (Extended Data Figure 10's final layout) -------------------------
+#
+# A hand-calibrated alternative to `save_ablation_document`/`save_ablation_
+# document_grid` above: a single flat GridSpec figure (not nested subfigures
+# -- that's what avoids the content-overflow bug the document renderers'
+# subfigure-per-block approach can hit), fixed at five scopes (`vus`,
+# `gnomad`, `unobserved`, `clinvar_control`, `clingen_control` -- regardless
+# of `--scope`/`--document-scope`, which affect every other output of this
+# module) and three rows: two comparison-only scopes, two control scopes'
+# comparisons, then the fifth scope's comparison plus both controls' own
+# concordance panels. Every constant/helper below is private to this one
+# figure (`_CALIBRATED_*`/`_calibrated_*`) -- e.g. `_calibrated_fmt_count`'s
+# "1.5k"-style abbreviation and `_calibrated_draw_stacked_segment`'s tighter
+# label placement are tuned for this figure's much narrower per-chart
+# columns and aren't meant to replace the wider document renderers' own
+# labeling above.
+_CALIBRATED_PREDICTOR_ABBR = {"REVEL": "REVEL", "AlphaMissense": "AM", "MutPred2": "MP2"}
+_CALIBRATED_ARM_ABBR = {"functional": "Fxn", "predictor": "Pred", "combined": "Comb"}
+_CALIBRATED_SCOPE_TITLE = {
+    "vus": "ClinVar VUS",
+    "gnomad": "gnomAD",
+    "unobserved": "Unobserved",
+    "clinvar_control": "ClinVar controls",
+    "clingen_control": "ClinGen controls",
+}
+# Concordance blocks get their own, more specific group title instead of
+# reusing _CALIBRATED_SCOPE_TITLE verbatim -- "ClinVar controls" alone
+# doesn't say what the block below it actually shows. Wrapped onto two
+# lines: as one line each is wider than the single narrow axes column it's
+# centered above and was confirmed clipping at the figure's right edge.
+_CALIBRATED_CONCORDANCE_TITLE = {
+    "clinvar_control": "ClinVar control\nconcordance",
+    "clingen_control": "ClinGen control\nconcordance",
+}
+_CALIBRATED_LEGEND_LABEL = {
+    SYNERGY_LABEL: "Neither alone",
+    CONFLICT_LABEL: "Lost to combining",
+}
+
+
+def _calibrated_fmt_count(n):
+    """Compact count label: abbreviate to one decimal 'k' above 1000 so
+    annotations don't collide between adjacent bars at this width (e.g.
+    '71.1k' instead of '71,081')."""
+    return f"{n / 1000:.1f}k" if abs(n) >= 1000 else f"{n:,}"
+
+
+def _calibrated_draw_stacked_segment(
+    ax, x_positions, heights, bottoms, color, totals, bar_width, hatch=None, min_frac=0.05, label_candidates=None
+):
+    """Draws one stacked-bar segment. By default (`label_candidates=None`,
+    every chart except the ClinGen-control B/LB one -- see `_calibrated_
+    draw_comparison_chart`'s `use_stagger`), each segment's count label is
+    drawn immediately, centered in place. When `label_candidates` is given
+    instead, the label isn't drawn here at all -- `(x, y_center, text,
+    color)` is appended to it instead, so `_calibrated_draw_comparison_
+    chart` can collect every category's candidates for a given bar before
+    placing any of them, detect labels whose vertical centers are too close
+    together (thin stacked bands, e.g. "Predictive alone"/"Either alone" on
+    that one bar, which has only a handful of variants total), and stagger
+    just the colliding ones instead of stacking illegible overlapping text.
+    """
+    ax.bar(
+        x_positions,
+        heights,
+        bottom=bottoms,
+        width=bar_width,
+        color=color,
+        edgecolor=CHART_SURFACE,
+        linewidth=0.8,
+        hatch=hatch,
+        zorder=3,
+    )
+    for xi, height, bottom, total in zip(x_positions, heights, bottoms, totals):
+        if total and height / total >= min_frac:
+            if label_candidates is not None:
+                label_candidates.append((xi, bottom + height / 2, _calibrated_fmt_count(height), color))
+            else:
+                # Always black (CHART_INK_PRIMARY), not `_label_ink_for(color)`'s
+                # auto white/black choice -- confirmed on the real figure that a
+                # single consistent ink color reads more cleanly across a bar
+                # with several differently-shaded segments than white on the
+                # darker ones and black on the lighter ones.
+                ax.text(
+                    xi, bottom + height / 2, _calibrated_fmt_count(height), ha="center", va="center", fontsize=7,
+                    color=CHART_INK_PRIMARY, zorder=4,
+                )
+    return [b + h for b, h in zip(bottoms, heights)]
+
+
+def _calibrated_label_pixel_height(ax, fontsize):
+    """Real rendered height, in *display* (pixel) units, of one `fontsize`-pt
+    digit label -- via matplotlib's own renderer (a throwaway "0" glyph,
+    immediately removed), so the label-collision check in `_calibrated_
+    place_labels_with_stagger` compares against the actual glyph size rather
+    than a guessed factor.
+
+    Deliberately stays in pixel space rather than converting to data units:
+    an earlier version converted this height into a data-unit "gap" via
+    `ax.transData` once, then compared *data-unit* label-center distances
+    against it -- confirmed on the real figure to still overshoot badly
+    (labels 8 data-units apart, already rendering with plenty of visual
+    clearance, got flagged as colliding), and swapping a hand-tuned line-
+    height factor for a measured one made no difference, which means the
+    bug wasn't the height estimate at all -- comparing in data units after a
+    single conversion compounds whatever's inexact about that mapping being
+    treated as uniform. Doing the whole comparison in pixel space (this
+    function measures in pixels; `_calibrated_place_labels_with_stagger`
+    converts each candidate's data-unit y to pixels via `ax.transData.
+    transform` and compares pixel distances directly) sidesteps that --
+    only the *final* chosen offset gets converted back to data units, once,
+    right before drawing.
+    """
+    fig = ax.figure
+    renderer = fig.canvas.get_renderer()
+    probe = ax.text(0, 0, "0", fontsize=fontsize, ha="center", va="center", alpha=0)
+    height = probe.get_window_extent(renderer=renderer).height
+    probe.remove()
+    return height
+
+
+def _calibrated_place_labels_with_stagger(ax, label_candidates, bar_width, fontsize=6.5, pad=1.3):
+    """Place every `(x, y_center, text, color)` candidate (see `_calibrated_
+    draw_stacked_segment`), grouped by `x` (one group per bar). Collision
+    detection happens in pixel space (see `_calibrated_label_pixel_height`):
+    within each bar, labels are sorted bottom-to-top and partitioned into
+    clusters of mutual near-neighbors (consecutive on-screen distance less
+    than `pad` x one label's rendered height).
+
+    Every label keeps its true vertical center -- centered inside its own
+    segment, exactly like the unstaggered default -- regardless of cluster
+    size; only its horizontal position changes. (Two earlier versions
+    re-spaced colliding labels vertically instead, needing a leader line
+    back to the segment's true center to stay legible once the label no
+    longer sat at the height it was labeling -- moving only horizontally
+    sidesteps that entirely.)
+
+    A cluster of one renders at `x`. A cluster of two or more first tries
+    alternating left/right *within the bar's own footprint* (`x -+
+    bar_width / 4`, safely inside the bar's own `+- bar_width / 2` half-
+    width, so it can never reach a neighboring bar). That's not always
+    enough room, though: with four labels packed into a vertical span
+    smaller than two label-heights (confirmed on the real figure), two of
+    them land on the same side and are still too close there even though
+    every side only got two labels total -- there's no way to separate
+    four points into just two columns without some column holding a pair
+    closer together than a label needs. When that happens, the same
+    cluster re-tries with two more columns just outside the bar (`+- bar_
+    width / 2 + 0.05`) -- outside-left, inside-left, inside-right,
+    outside-right, four distinct columns in top-to-bottom sort order, one
+    label per column, so nothing needs to share a column at all. (An
+    outside column risks reaching a neighboring bar in general -- the
+    reason an earlier version confined everything to inside-only columns
+    -- but this whole function is opted into by exactly one chart, and on
+    it, only the leftmost bar's cluster is ever dense enough to need this,
+    so its outside-left column has an open margin and its outside-right
+    column lands safely short of the next bar.)
+    """
+    label_height_px = _calibrated_label_pixel_height(ax, fontsize) * pad
+    inside = bar_width / 4
+    outside = bar_width / 2 + 0.05
+
+    by_x = {}
+    for x, y, text, color in label_candidates:
+        by_x.setdefault(x, []).append((y, text, color))
+
+    for x, group in by_x.items():
+        group.sort(key=lambda item: item[0])
+        ys_px = [ax.transData.transform((x, y))[1] for y, _, _ in group]
+
+        clusters = [[0]]
+        for i in range(1, len(group)):
+            if ys_px[i] - ys_px[clusters[-1][-1]] < label_height_px:
+                clusters[-1].append(i)
+            else:
+                clusters.append([i])
+
+        for cluster_idx in clusters:
+            if len(cluster_idx) == 1:
+                y, text, color = group[cluster_idx[0]]
+                ax.text(x, y, text, ha="center", va="center", fontsize=7, color=CHART_INK_PRIMARY, zorder=4)
+                continue
+
+            two_col_sides = [i % 2 for i in range(len(cluster_idx))]  # 0 = left, 1 = right
+            fits_two_columns = True
+            for side in (0, 1):
+                same_side_px = [ys_px[cluster_idx[i]] for i in range(len(cluster_idx)) if two_col_sides[i] == side]
+                if any(b - a < label_height_px for a, b in pairwise(same_side_px)):
+                    fits_two_columns = False
+                    break
+
+            if fits_two_columns:
+                dxs = [-inside if side == 0 else inside for side in two_col_sides]
+            else:
+                slots = [-outside, -inside, inside, outside]
+                dxs = [slots[i % 4] for i in range(len(cluster_idx))]
+
+            for i, idx in enumerate(cluster_idx):
+                y, text, color = group[idx]
+                ax.text(x + dxs[i], y, text, ha="center", va="center", fontsize=6, color=CHART_INK_PRIMARY, zorder=4)
+
+
+def _calibrated_draw_comparison_chart(ax, chart_data, ylabel=None, use_stagger=False):
+    """All predictors in `chart_data` as grouped stacked bars in one axes.
+
+    `ylabel`, when given, is used verbatim (e.g. a scope label) instead of
+    omitting it -- `None` omits the ylabel entirely.
+
+    `use_stagger` opts into `_calibrated_place_labels_with_stagger`'s
+    collision-avoiding label placement; default `False` draws every
+    segment's label immediately, centered (see `_calibrated_draw_stacked_
+    segment`). Kept off by default and enabled only for the one chart it
+    was built for (the ClinGen-control B/LB panel, in `save_calibrated_
+    ablation_figure`) rather than everywhere -- every other chart's labels
+    are untouched by any of this.
+    """
+    predictor_counts = {p: synergy_chart_series(p, flags) for p, flags in chart_data["predictor_flags"].items()}
+    scope_total = chart_data["scope_total"]
+    class_upgrade = chart_data.get("class_upgrade")
+    predictors = list(predictor_counts)
+
+    ax.set_facecolor(CHART_SURFACE)
+    x_positions = list(range(len(predictors)))
+    bar_width = 0.6
+    bottoms = [0.0] * len(predictors)
+    resolved_totals = [sum(int(predictor_counts[p][c]) for c in SYNERGY_CATEGORY_ORDER) for p in predictors]
+    label_candidates = [] if use_stagger else None
+
+    for category in SYNERGY_CATEGORY_ORDER:
+        if class_upgrade is not None and category in CLASS_UPGRADE_CATEGORIES:
+            for outcome in CLASS_UPGRADE_STATUS_ORDER:
+                outcome_heights = [int(class_upgrade[p][category][outcome]) for p in predictors]
+                color = (
+                    CLASS_UPGRADE_LIGHT_COLORS[category] if outcome != CLASS_UPGRADED else SYNERGY_CATEGORY_COLORS[category]
+                )
+                bottoms = _calibrated_draw_stacked_segment(
+                    ax,
+                    x_positions,
+                    outcome_heights,
+                    bottoms,
+                    color,
+                    resolved_totals,
+                    bar_width,
+                    hatch=CLASS_DOWNGRADE_HATCH if outcome == CLASS_DOWNGRADED else None,
+                    label_candidates=label_candidates,
+                )
+        else:
+            heights = [int(predictor_counts[p][category]) for p in predictors]
+            bottoms = _calibrated_draw_stacked_segment(
+                ax, x_positions, heights, bottoms, SYNERGY_CATEGORY_COLORS[category], resolved_totals, bar_width,
+                label_candidates=label_candidates,
+            )
+
+    max_resolved = max(resolved_totals, default=1)
+    conflict_counts = [int(predictor_counts[p][CONFLICT_LABEL]) for p in predictors]
+    max_conflict = max(conflict_counts, default=0)
+    # zorder=5: above the axhline drawn below (3.5), which is itself above
+    # the resolved segments (3) -- see that axhline call for why. The
+    # conflict bar is often only a few pixels tall (its scale is set by
+    # max_conflict, routinely 10-100x smaller than max_resolved), so it
+    # must stay on top of the now-raised axhline or the axhline's own
+    # stroke width would visually paint over the entire bar.
+    for x, c in zip(x_positions, conflict_counts):
+        ax.bar(x, -c, width=bar_width * 0.55, color=CONFLICT_COLOR, zorder=5)
+
+    # ylim must be finalized before _calibrated_place_labels_with_stagger's
+    # pixel<->data conversions can read a meaningful transform off this axes
+    # -- placing labels before this point used a transform still keyed to
+    # matplotlib's transient auto-scaled limits.
+    #
+    # Both `top` and `bottom` are solved as a fixed fraction of the *total*
+    # range (top-bottom) reserved as headroom, rather than a multiplier of
+    # max_resolved/max_conflict alone -- so the headroom stays visually
+    # consistent across every chart regardless of its own conflict/resolved
+    # ratio. `top`'s version of this was fixed first: an earlier version
+    # (`max_resolved * 1.25`) sized its headroom without any reference to
+    # how big the negative side had grown, so on a chart where max_conflict
+    # is *not* much smaller than max_resolved -- confirmed on the real
+    # figure for one ClinGen-control panel, where they're within 2x of each
+    # other -- the fixed multiplier gave the positive side only a sliver of
+    # the box, crowding the "X% resolved" annotation against the "P/LP"/
+    # "B/LB" title above it.
+    #
+    # `bottom` originally kept a flat `max_conflict * 6.0`, which looked
+    # fine only because it was tuned against charts where max_conflict was
+    # far smaller than max_resolved (so the negative side was a small slice
+    # of the whole box regardless). On ClinGen controls B/LB, where
+    # max_conflict (48) actually *exceeds* max_resolved (61), that same 6x
+    # multiplier ballooned bottom to -288 -- confirmed on the real figure to
+    # leave most of the negative half of the box empty, far past what the
+    # "lost to combining" bar and its count label actually needed.
+    #
+    # top = R + a*(top-bottom) and bottom = -(C + b*(top-bottom)) are two
+    # linear equations in the two unknowns (top, bottom) -- each depends on
+    # the total range the other partly determines -- solved together below.
+    R = max_resolved
+    C = max_conflict or 1
+    a = 0.22  # top headroom fraction of total range
+    # Bottom headroom fraction of total range, tuned against the ClinVar VUS
+    # P/LP chart (max_conflict << max_resolved, previously confirmed fine at
+    # a flat bottom=-174) so this reproduces essentially the same gap there
+    # while fixing the ClinGen-control blowup above. This is only a starting
+    # point, though -- see the pixel-measured correction below, which is
+    # what actually guarantees the count label fits.
+    b = 0.09
+    denom = (1 - a) * (1 - b) - a * b
+    top = (R * (1 - b) + a * C) / denom
+    bottom = -(C + b * top) / (1 - b)
+    ax.set_ylim(bottom=bottom, top=top)
+
+    # The fraction-of-range `bottom` above keeps typical charts looking
+    # consistent, but it's still just a proportion -- nothing in it
+    # actually guarantees the deepest count label's rendered text fits
+    # above the axis's bottom edge. On ClinGen controls B/LB (max_conflict
+    # close to max_resolved, so the fraction-of-range padding comes out
+    # small in absolute terms) that gap collapsed to a few data units,
+    # confirmed on the real figure to put the label's anchor *below* the
+    # axis edge entirely, overlapping the "REVEL" tick label outright.
+    # Converting the label's real rendered pixel height (`_calibrated_
+    # label_pixel_height`, the same measurement `_calibrated_place_labels_
+    # with_stagger` uses) into this axes' just-established data scale gives
+    # the actual space the text needs, in this chart's own units, rather
+    # than a guessed multiplier -- and `min()` only ever pushes `bottom`
+    # further down, so a typical chart (whose fraction-of-range `bottom`
+    # already clears the label with room to spare) is left untouched.
+    label_h_px = _calibrated_label_pixel_height(ax, 7)
+    px_per_unit = ax.transData.transform((0, 1))[1] - ax.transData.transform((0, 0))[1]
+    label_h_data = label_h_px / px_per_unit
+    gap_data = 3 / px_per_unit  # a small fixed visual gap between a bar and its own label
+    required_bottom = -(C + gap_data + label_h_data * 1.2)
+    bottom = min(bottom, required_bottom)
+    top = (R - a * bottom) / (1 - a)
+    ax.set_ylim(bottom=bottom, top=top)
+
+    if use_stagger:
+        _calibrated_place_labels_with_stagger(ax, label_candidates, bar_width)
+    for x, total in zip(x_positions, resolved_totals):
+        pct = 100 * total / scope_total if scope_total else float("nan")
+        ax.text(
+            x, total + max_resolved * 0.03, f"{pct:.0f}%", ha="center", va="bottom", fontsize=7,
+            color=CHART_INK_SECONDARY, zorder=4,
+        )
+    for x, c in zip(x_positions, conflict_counts):
+        if c:
+            # Each bar's own label sits a small, fixed gap below its own
+            # bar -- not offset by max_conflict's scale -- so a much-shorter
+            # bar sharing a panel with a tall one (e.g. AM's "17" next to
+            # REVEL's "48") doesn't get pushed needlessly far from its own
+            # bar.
+            ax.text(
+                x, -c - gap_data, _calibrated_fmt_count(c), ha="center", va="top", fontsize=7,
+                color=CONFLICT_COLOR, zorder=5,
+            )
+
+    # zorder=3.5: above the resolved (positive) segments (3), whose white
+    # (CHART_SURFACE) edges were otherwise painted over this line everywhere
+    # a bar's own bottom bordered it -- leaving it visible only in the gaps
+    # between bars instead of as one continuous axis. Still below the
+    # conflict bar (5, see above) so that bar -- often just a few pixels
+    # tall -- isn't itself painted over in turn.
+    ax.axhline(0, color=CHART_BASELINE, linewidth=0.8, zorder=3.5)
+    ax.set_xticks(x_positions)
+    ax.set_xticklabels([_CALIBRATED_PREDICTOR_ABBR[p] for p in predictors], fontsize=7, color=CHART_INK_PRIMARY)
+    if ylabel:
+        ax.set_ylabel(ylabel, fontsize=7, color=CHART_INK_SECONDARY)
+    ax.set_yticks([])
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+    ax.tick_params(axis="both", which="both", length=0, colors=CHART_INK_MUTED, labelsize=7)
+
+
+def _calibrated_draw_concordance_subpanel(ax, concordance_data, predictors):
+    """Both control scopes' concordance panels always show arm labels and
+    omit the y-axis label in `save_calibrated_ablation_figure` -- unlike
+    `_draw_concordance_panel` above, this one doesn't need either as a
+    parameter.
+    """
+    ax.set_facecolor(CHART_SURFACE)
+    n_predictors = len(predictors)
+    group_width = 0.85
+    bar_width = group_width / len(CONCORDANCE_ARM_ORDER)
+    max_total = 0
+    for predictor in predictors:
+        arm_counts = concordance_data[predictor]
+        for arm in CONCORDANCE_ARM_ORDER:
+            max_total = max(max_total, sum(arm_counts[arm][s] for s in CONCORDANCE_STATUS_ORDER))
+
+    for p_idx, predictor in enumerate(predictors):
+        arm_counts = concordance_data[predictor]
+        for a_idx, arm in enumerate(CONCORDANCE_ARM_ORDER):
+            x = p_idx + (a_idx - 1) * bar_width
+            bottom = 0.0
+            arm_total = sum(arm_counts[arm][s] for s in CONCORDANCE_STATUS_ORDER)
+            for status in CONCORDANCE_STATUS_ORDER:
+                height = arm_counts[arm][status]
+                color = CONCORDANCE_STATUS_COLORS[status]
+                ax.bar(x, height, bottom=bottom, width=bar_width * 0.85, color=color, zorder=3)
+                # min_frac=0.05, matching _calibrated_draw_stacked_segment's
+                # own default -- skips the label only when a band is too
+                # thin a sliver of its own bar to hold readable text, e.g.
+                # the "Discordant" band on a mostly-concordant "Combined" bar.
+                if arm_total and height / arm_total >= 0.05:
+                    # Black even on the blue "Concordant" segments, despite
+                    # `_label_ink_for` picking white there for contrast --
+                    # these bars are narrow enough that a label routinely
+                    # extends left/right past the bar's own edges into the
+                    # page background, where white text disappears. Red
+                    # "Discordant" segments keep the auto white choice --
+                    # confirmed on the real figure to not run into this,
+                    # since those bands are consistently short enough that
+                    # their labels stay clear of the segment's own edges.
+                    ink = CHART_INK_PRIMARY if status == CONCORDANT else _label_ink_for(color)
+                    ax.text(
+                        x, bottom + height / 2, _calibrated_fmt_count(height), ha="center", va="center", fontsize=6,
+                        color=ink, zorder=4,
+                    )
+                bottom += height
+            # Single-letter (_CALIBRATED_ARM_ABBR[arm][0]), not the full
+            # "Fxn"/"Pred"/"Comb" abbreviation: confirmed on the real figure
+            # that the full form, repeated once per predictor (9 labels
+            # total in this narrow a panel), overlaps into an unreadable
+            # run-on. A shared key below both concordance panels (see
+            # _calibrated_add_concordance_key) spells out what F/P/C mean
+            # instead -- one per-axes key here, tried first, put two copies
+            # close enough together to run into one unreadable line, and
+            # the second was clipped at the figure's right edge besides.
+            ax.text(
+                x, -max_total * 0.06, _CALIBRATED_ARM_ABBR[arm][0], ha="center", va="top", fontsize=7,
+                color=CHART_INK_MUTED, zorder=4,
+            )
+
+    ax.set_ylim(bottom=-max_total * 0.16, top=max_total * 1.05)
+    ax.set_xticks(range(n_predictors))
+    ax.set_xticklabels([_CALIBRATED_PREDICTOR_ABBR[p] for p in predictors], fontsize=7, color=CHART_INK_PRIMARY)
+    ax.tick_params(axis="x", pad=9)
+    ax.set_yticks([])
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+    ax.tick_params(axis="both", which="both", length=0, colors=CHART_INK_MUTED, labelsize=7)
+
+
+def _calibrated_legend_handles():
+    """Handles for `save_calibrated_ablation_figure`'s single, three-row
+    legend -- ordered so matplotlib's column-major `ncol=4` fill produces
+    exactly this grid, with a blank spacer filling "Either alone"'s
+    otherwise-empty third slot (it has no "neither"/"lost" counterpart of
+    its own, unlike "Functional" and "Predictive") rather than leaving a
+    ragged column, and the concordance color key as its own unrelated 4th
+    column (gray/red/blue, matching the concordance charts' own stacking
+    order) rather than reading as a "5th category" of the comparison
+    charts' own scheme:
+
+        Functional alone sufficient   Predictive alone sufficient   Either alone sufficient   Unresolved
+        Upgraded                      Upgraded                      Upgraded                  Discordant
+        Neither alone                 Lost to combining             [blank]                   Concordant
+
+    The light swatch of each pair gets the category's own full label with no
+    qualifier -- readers only ever need the short "Upgraded" label on the
+    dark swatch to tell the pair apart, since "the other one" is implicitly
+    the un-upgraded baseline; spelling that out as "(unchanged)" on every
+    light swatch, tried first, was redundant once "Upgraded" already implies
+    it.
+    """
+    func, pred, either, neither = SYNERGY_CATEGORY_ORDER
+
+    def upgrade_pair(category):
+        return [
+            Patch(color=CLASS_UPGRADE_LIGHT_COLORS[category], label=category),
+            Patch(color=SYNERGY_CATEGORY_COLORS[category], label=CLASS_UPGRADED.capitalize()),
+        ]
+
+    blank = Patch(facecolor="none", edgecolor="none", label=" ")
+    concordance_order = list(reversed(CONCORDANCE_STATUS_ORDER))  # gray (Unresolved), red (Discordant), blue (Concordant)
+    concordance_handles = [Patch(color=CONCORDANCE_STATUS_COLORS[s], label=s.capitalize()) for s in concordance_order]
+
+    return (
+        upgrade_pair(func) + [Patch(color=SYNERGY_CATEGORY_COLORS[neither], label=_CALIBRATED_LEGEND_LABEL[neither])]
+        + upgrade_pair(pred) + [Patch(color=CONFLICT_COLOR, label=_CALIBRATED_LEGEND_LABEL[CONFLICT_LABEL])]
+        + upgrade_pair(either) + [blank]
+        + concordance_handles
+    )
+
+
+def _calibrated_add_group_title(fig, axes, label, pad=0.012, fontsize=7.5):
+    """Center `label` above the combined horizontal extent of `axes` (a list
+    of one or more subplots occupying adjacent columns of the same row),
+    `pad` figure-fraction inches above the tallest of their top edges --
+    used instead of a per-chart title or a left-side y-axis label, so one
+    variant-set name reads as "this whole group of charts is about X"
+    rather than repeating per chart.
+
+    `label` may contain "\\n" -- used for the concordance blocks, whose
+    titles ("ClinGen control concordance") are wider than the single narrow
+    axes column they sit above and were confirmed clipping at the figure's
+    right edge as one line even at a reduced fontsize.
+    """
+    positions = [ax.get_position() for ax in axes]
+    x0 = min(p.x0 for p in positions)
+    x1 = max(p.x1 for p in positions)
+    y = max(p.y1 for p in positions) + pad
+    fig.text((x0 + x1) / 2, y, label, ha="center", va="bottom", fontsize=fontsize, color=CHART_INK_PRIMARY, fontweight="bold")
+
+
+def _calibrated_add_concordance_key(fig, axes, pad=0.006, fontsize=5.5):
+    """One "F/P/C = Functional / Predictor / Combined arm" caption centered
+    below the combined horizontal extent of both concordance panels --
+    tried first as a per-panel `ax.set_xlabel`, but with the two panels
+    sitting right next to each other that put two copies of the same
+    caption close enough together to read as one run-on line, and the
+    second copy was clipped at the figure's right edge besides.
+    """
+    positions = [ax.get_position() for ax in axes]
+    x0 = min(p.x0 for p in positions)
+    x1 = max(p.x1 for p in positions)
+    y = min(p.y0 for p in positions) - pad
+    fig.text(
+        (x0 + x1) / 2, y, "F/P/C = Functional / Predictor / Combined arm",
+        ha="center", va="top", fontsize=fontsize, color=CHART_INK_MUTED,
+    )
+
+
+def save_calibrated_ablation_figure(df, predictors, output_path):
+    """Render Extended Data Figure 10's final, hand-calibrated layout to
+    `output_path` (format inferred from the extension, e.g. .png/.svg/.pdf):
+    four chart slots per row, packed two ways across three rows (12 slots
+    total = 3 scopes x 2 [P/LP, B/LB] + 2 control scopes x 3 [P/LP, B/LB,
+    concordance]):
+
+    Row 1: vus[P/LP, B/LB] + gnomad[P/LP, B/LB].
+    Row 2: clinvar_control[P/LP, B/LB] + clingen_control[P/LP, B/LB].
+    Row 3: unobserved[P/LP, B/LB] + clinvar_control-concordance +
+    clingen_control-concordance.
+
+    Always exactly these five scopes, regardless of `--scope`/`--document-
+    scope` (which affect every other output of this module) -- this is a
+    fixed, finished figure layout, not a general-purpose renderer.
+
+    Each scope's own name is a bold title centered above its own charts
+    (`_calibrated_add_group_title`) rather than a per-row left-side label;
+    the left side instead carries a single generic "# variants" y-axis
+    label per row (comparison charts only).
+
+    Sets Arial/`pdf.fonttype=42` for this figure only (`plt.rc_context`),
+    not globally -- so it doesn't change the font used by this module's
+    other chart-drawing functions.
+    """
+    row_defs = [
+        [("comparison", "vus"), ("comparison", "gnomad")],
+        [("comparison", "clinvar_control"), ("comparison", "clingen_control")],
+        [("comparison", "unobserved"), ("concordance", "clinvar_control"), ("concordance", "clingen_control")],
+    ]
+    n_rows = len(row_defs)
+    row_h = 1.5
+    fig_h = row_h * n_rows + 1.0  # +1.0: room for the legend's three rows
+
+    with plt.rc_context({"font.family": "Arial", "font.size": 7, "pdf.fonttype": 42}):
+        fig = plt.figure(figsize=(6.5, fig_h), dpi=300)
+        fig.patch.set_facecolor(CHART_SURFACE)
+        top = 1 - 0.35 / fig_h
+        bottom = 0.9 / fig_h  # room for the legend's three rows
+        gs = fig.add_gridspec(n_rows, 4, wspace=0.35, hspace=0.8, top=top, bottom=bottom, left=0.08, right=0.99)
+
+        for row, row_def in enumerate(row_defs):
+            col = 0
+            concordance_axes = []
+            for kind, scope in row_def:
+                if kind == "comparison":
+                    comparison_data = build_direction_comparison_chart_data(
+                        df, predictors, scopes=(scope,), show_class_upgrade=True
+                    )
+                    ax_plp = fig.add_subplot(gs[row, col])
+                    _calibrated_draw_comparison_chart(
+                        ax_plp, comparison_data[DIRECTION_PATHOGENIC], ylabel="# variants" if col == 0 else None
+                    )
+                    ax_plp.set_title("P/LP", fontsize=6, color=CHART_INK_MUTED, pad=2)
+                    ax_blb = fig.add_subplot(gs[row, col + 1])
+                    # Label-collision staggering (_calibrated_place_labels_
+                    # with_stagger) is scoped to just this one chart, per
+                    # request -- every other comparison chart here
+                    # (including this same scope's own P/LP panel) keeps
+                    # the plain, always-centered label it always had.
+                    _calibrated_draw_comparison_chart(
+                        ax_blb, comparison_data[DIRECTION_BENIGN], use_stagger=(scope == "clingen_control")
+                    )
+                    ax_blb.set_title("B/LB", fontsize=6, color=CHART_INK_MUTED, pad=2)
+                    fig.canvas.draw()
+                    _calibrated_add_group_title(fig, [ax_plp, ax_blb], _CALIBRATED_SCOPE_TITLE[scope])
+                    col += 2
+                else:
+                    concordance_data = build_control_concordance_chart_data(df, predictors, scopes=(scope,))
+                    ax_conc = fig.add_subplot(gs[row, col])
+                    _calibrated_draw_concordance_subpanel(ax_conc, concordance_data, predictors)
+                    fig.canvas.draw()
+                    _calibrated_add_group_title(fig, [ax_conc], _CALIBRATED_CONCORDANCE_TITLE[scope], fontsize=6.5)
+                    concordance_axes.append(ax_conc)
+                    col += 1
+            if concordance_axes:
+                fig.canvas.draw()
+                _calibrated_add_concordance_key(fig, concordance_axes)
+
+        legend_handles = _calibrated_legend_handles()
+        fig.legend(
+            legend_handles, [h.get_label() for h in legend_handles], loc="lower center", bbox_to_anchor=(0.5, 0.0),
+            ncol=4, frameon=False, fontsize=7, labelcolor=CHART_INK_SECONDARY,
+        )
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(output_path, facecolor=CHART_SURFACE)
+        plt.close(fig)
+
+
 def document_chart_filename(chart_type, scope, fmt):
     return f"{chart_type}_{scope}.{fmt}"
 
 
-def save_document_charts_as_files(document_data, output_dir, chart_types=DOCUMENT_CHART_TYPES, fmt="pdf"):
+def save_document_charts_as_files(
+    document_data, output_dir, chart_types=DOCUMENT_CHART_TYPES, fmt="pdf", document_scopes=SCOPE_ORDER
+):
     """Render each (chart type, scope) block of `build_document_chart_data`'s
     per-scope sections to its own file under `output_dir`, one file per
     block (e.g. `ablation_vus.pdf`, `concordance_clinvar_control.pdf`) --
@@ -2602,12 +3442,17 @@ def save_document_charts_as_files(document_data, output_dir, chart_types=DOCUMEN
     `control_truth_direction_series`) -- this just omits the empty file
     rather than writing one nobody would use.
 
-    Returns the list of paths written, in `SCOPE_ORDER` x `DOCUMENT_CHART_
-    TYPES` order.
+    `document_scopes` restricts which scopes get any files at all (default:
+    all seven of `SCOPE_ORDER`) -- must be a subset of whatever `document_
+    scopes` was passed to the `build_document_chart_data` call that produced
+    `document_data`.
+
+    Returns the list of paths written, in `document_scopes` x `DOCUMENT_
+    CHART_TYPES` order.
     """
     output_dir.mkdir(parents=True, exist_ok=True)
     written = []
-    for scope in SCOPE_ORDER:
+    for scope in document_scopes:
         section_data = document_data[scope]
         if "ablation" in chart_types and section_data["ablation"] is not None:
             path = output_dir / document_chart_filename("ablation", scope, fmt)
@@ -2793,9 +3638,10 @@ def save_document_charts_as_files(document_data, output_dir, chart_types=DOCUMEN
         "Optional path to render a single multi-section document (format inferred from the extension, "
         "e.g. .png/.svg/.pdf): one section per variant category -- vus, gnomad, unobserved, "
         "clinvar_control, clinvar_control_missense_only, clingen_control, "
-        "clingen_control_missense_only -- all seven, individually, regardless of --scope (which "
-        "only affects --plot/--plot-comparison/--plot-redundant-gain/the text report). Each section "
-        "shows whichever --document-chart types were requested."
+        "clingen_control_missense_only -- all seven by default, individually, regardless of --scope "
+        "(which only affects --plot/--plot-comparison/--plot-redundant-gain/the text report; see "
+        "--document-scope to restrict which categories get a section here instead). Each section shows "
+        "whichever --document-chart types were requested."
     ),
 )
 @click.option(
@@ -2814,6 +3660,22 @@ def save_document_charts_as_files(document_data, output_dir, chart_types=DOCUMEN
     ),
 )
 @click.option(
+    "--document-scope",
+    "document_scopes",
+    multiple=True,
+    type=click.Choice(SCOPE_ORDER),
+    help=(
+        "Restrict --document/--document-split-dir to just these variant-category sections (repeatable) "
+        "instead of all seven of SCOPE_ORDER (the default when omitted). A 'concordance' block/file is "
+        "still only ever included for whichever of clinvar_control/clinvar_control_missense_only/"
+        "clingen_control/clingen_control_missense_only are among the selected scopes -- e.g. "
+        "'--document-scope vus --document-scope gnomad --document-scope unobserved --document-scope "
+        "clinvar_control --document-scope clingen_control --document-chart comparison --document-chart "
+        "concordance' renders exactly: a comparison block for all five of those scopes, plus a "
+        "concordance block for just the two control ones."
+    ),
+)
+@click.option(
     "--document-split-dir",
     "document_split_dir",
     type=click.Path(file_okay=False, path_type=Path),
@@ -2823,10 +3685,11 @@ def save_document_charts_as_files(document_data, output_dir, chart_types=DOCUMEN
         "of one combined multi-section image: one file per (chart type, scope) pair, e.g. "
         "ablation_vus.pdf, concordance_clinvar_control.pdf -- each already carrying its own legend, "
         "identical to a standalone --plot/--plot-comparison/--plot-control-concordance/--plot-redundant-"
-        "gain chart. Uses --document-chart to pick which chart types (default: all four) and always "
-        "covers all seven SCOPE_ORDER categories, same as --document; --scope has no effect here. A "
-        "'concordance' file is skipped for the vus/gnomad/unobserved scopes, which carry no known truth "
-        "to check concordance against. See docs/figures.md's Extended Data Figure 10 section."
+        "gain chart. Uses --document-chart to pick which chart types (default: all four) and --document-"
+        "scope to pick which categories get files (default: all seven SCOPE_ORDER categories, same as "
+        "--document); --scope has no effect here. A 'concordance' file is skipped for the "
+        "vus/gnomad/unobserved scopes, which carry no known truth to check concordance against. See "
+        "docs/figures.md's Extended Data Figure 10 section."
     ),
 )
 @click.option(
@@ -2834,6 +3697,54 @@ def save_document_charts_as_files(document_data, output_dir, chart_types=DOCUMEN
     type=click.Choice(["pdf", "png", "svg"]),
     default="pdf",
     help="File format for --document-split-dir's output files (default: pdf).",
+)
+@click.option(
+    "--document-grid",
+    is_flag=True,
+    default=False,
+    help=(
+        "Render --document as a compact, print-page-width grid (save_ablation_document_grid) instead of "
+        "one full-width row per scope: scopes needing the same block(s) (e.g. 'comparison' only vs. "
+        "'comparison'+'concordance') are grouped, then each group is wrapped into rows of at most "
+        "--document-grid-max-per-row scopes -- e.g. five --document-scope selections split 3 'comparison "
+        "only' vs. 2 'comparison'+'concordance', at the default max-per-row of 2, becomes a two-scope row, "
+        "a one-scope row, and a two-scope row (three rows, four column slots total). Every row reserves "
+        "--document-grid-max-per-row equal-width slots of --document-grid-width inches each, regardless "
+        "of how many scopes actually landed in it, so a given content shape's scopes always render at the "
+        "same size. Has no effect on --document-split-dir. Absolute font sizes aren't rescaled for the "
+        "narrower per-scope width this produces -- confirmed to overlap badly with 3+ scopes packed into "
+        'a 6.5"-wide row, so raise --document-grid-max-per-row above the default of 2 with caution.'
+    ),
+)
+@click.option(
+    "--document-grid-width",
+    type=float,
+    default=DOCUMENT_GRID_PAGE_WIDTH,
+    help=f"Row width in inches for --document-grid (default: {DOCUMENT_GRID_PAGE_WIDTH}, a common single-column print width).",
+)
+@click.option(
+    "--document-grid-max-per-row",
+    "document_grid_max_per_row",
+    type=int,
+    default=DOCUMENT_GRID_MAX_SCOPES_PER_ROW,
+    help=(
+        f"Maximum scopes packed into one --document-grid row (default: {DOCUMENT_GRID_MAX_SCOPES_PER_ROW}). "
+        "Each slot gets --document-grid-width / this-value inches -- raising it packs more scopes per row "
+        "but shrinks each one further, which risks the text-overlap issue --document-grid's help text warns "
+        "about."
+    ),
+)
+@click.option(
+    "--calibrated-figure",
+    "calibrated_figure_path",
+    type=click.Path(dir_okay=False, path_type=Path),
+    default=None,
+    help=(
+        "Render Extended Data Figure 10's final, hand-calibrated layout (save_calibrated_ablation_figure) "
+        "to this path (format inferred from the extension, e.g. .png/.svg/.pdf): a fixed three-row, "
+        "vus/gnomad/unobserved/clinvar_control/clingen_control layout, independent of --scope/--document-"
+        "scope. Combine with --consequence missense_only for the missense-only version of the same figure."
+    ),
 )
 def main(
     checkpoint_file,
@@ -2851,8 +3762,13 @@ def main(
     special_control_dedup,
     document_path,
     document_chart_types,
+    document_scopes,
     document_split_dir,
     document_split_format,
+    document_grid,
+    document_grid_width,
+    document_grid_max_per_row,
+    calibrated_figure_path,
 ):
     df = pd.read_csv(checkpoint_file)
     df = apply_notebook_exclusions(df, chek2_file)
@@ -2897,17 +3813,36 @@ def main(
 
     if document_path or document_split_dir:
         chart_types = tuple(t for t in DOCUMENT_CHART_TYPES if t in document_chart_types) or DOCUMENT_CHART_TYPES
+        doc_scopes = tuple(s for s in SCOPE_ORDER if s in document_scopes) or SCOPE_ORDER
         document_data = build_document_chart_data(
-            df, predictors, chart_types, direction, show_class_upgrade, special_control_dedup
+            df, predictors, chart_types, direction, show_class_upgrade, special_control_dedup, doc_scopes
         )
         if document_path:
-            save_ablation_document(document_data, document_path, chart_types, predictors, show_class_upgrade)
+            if document_grid:
+                save_ablation_document_grid(
+                    document_data,
+                    document_path,
+                    chart_types,
+                    predictors,
+                    show_class_upgrade,
+                    doc_scopes,
+                    document_grid_width,
+                    document_grid_max_per_row,
+                )
+            else:
+                save_ablation_document(
+                    document_data, document_path, chart_types, predictors, show_class_upgrade, doc_scopes
+                )
             click.echo(f"Wrote document to {document_path}")
         if document_split_dir:
             written = save_document_charts_as_files(
-                document_data, document_split_dir, chart_types, document_split_format
+                document_data, document_split_dir, chart_types, document_split_format, doc_scopes
             )
             click.echo(f"Wrote {len(written)} chart files to {document_split_dir}")
+
+    if calibrated_figure_path:
+        save_calibrated_ablation_figure(df, predictors, calibrated_figure_path)
+        click.echo(f"Wrote calibrated figure to {calibrated_figure_path}")
 
 
 if __name__ == "__main__":

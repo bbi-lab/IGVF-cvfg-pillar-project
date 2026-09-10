@@ -439,20 +439,41 @@ checkpoint as `src/build_variant_reclassification_dataset.py`
 by default) directly -- no R/Docker required, and no dependency on
 Supplementary Data 5/6.
 
-Unlike every other Extended Data Figure here, this one is generated as many
-small single-panel PDFs (one per chart type x variant-category scope,
-following the same "individual panels assembled by hand" pattern as
-Extended Data Figure 6alt's 24 PDFs above) rather than one PNG/PDF or one
-`.Rmd`-rendered document -- `--document-split-dir` renders exactly the
+The figure itself is `save_calibrated_ablation_figure`'s hand-calibrated
+layout: a fixed three-row grid (comparison charts for `vus`/`gnomad`/
+`unobserved`/`clinvar_control`/`clingen_control`, plus a concordance panel
+for each of the two control scopes), independent of `--scope`. Two versions
+are generated -- all variants, and missense-only (`--consequence missense_
+only`, strictly `condensed_consequence == "missense_variant"` excluding
+start-loss, see `is_missense_only`) -- as separate files rather than
+overwriting one another:
+
+```bash
+poetry run python -m src.ablation_variant_reclassification \
+  --calibrated-figure data/output/figures/extended_data_figure_10/ablation.pdf
+
+poetry run python -m src.ablation_variant_reclassification \
+  --consequence missense_only \
+  --calibrated-figure data/output/figures/extended_data_figure_10/ablation_missense.pdf
+```
+
+All three predictors (REVEL, AlphaMissense, MutPred2 -- the default when
+`--predictor` is omitted). `--calibrated-figure` creates `data/output/
+figures/extended_data_figure_10/` if it doesn't already exist; the file format is
+inferred from the extension (e.g. `.png`/`.svg`/`.pdf`).
+
+**Individual per-panel files**: unlike every other Extended Data Figure
+here, this figure can *also* be generated as many small single-panel PDFs
+(one per chart type x variant-category scope, following the same
+"individual panels assembled by hand" pattern as Extended Data Figure
+6alt's 24 PDFs above) instead of `--calibrated-figure`'s one combined
+image -- useful for inspecting or hand-assembling a subset of panels rather
+than the finished figure. `--document-split-dir` renders exactly the
 per-section chart data `--document`'s combined multi-section image would,
 but writes each `(chart type, scope)` block to its own file instead, each
 already carrying its own legend (no shared or document-level legend to
 reconstruct). See `docs/ablation_variant_reclassification.md`'s "Splitting
 the document into individual chart files" section for the full mechanics.
-
-All three predictors (REVEL, AlphaMissense, MutPred2 -- the default when
-`--predictor` is omitted) and all four chart types (ablation, comparison,
-concordance, gain -- the default when `--document-chart` is omitted):
 
 ```bash
 poetry run python -m src.ablation_variant_reclassification \
@@ -469,15 +490,10 @@ as `--document`), plus one `concordance_<scope>.pdf` for just the four
 control scopes (`clinvar_control`/`clinvar_control_missense_only`/
 `clingen_control`/`clingen_control_missense_only` -- the other three scopes
 carry no known truth to check concordance against, so that file is skipped
-there rather than written empty). 7 + 7 + 4 + 7 = 25 PDFs total. The
-`_missense_only`-suffixed scopes are strictly `condensed_consequence ==
-"missense_variant"` (excluding start-loss, see `is_missense_only`).
+there rather than written empty). 7 + 7 + 4 + 7 = 25 PDFs total.
 
 Takes several minutes end to end on the real integrated dataset (dominated
 by rendering all 25 panels' worth of charts, not the dedup pass) -- expected,
 not a hang; the "Wrote N chart files" line at the end confirms completion.
 Pass `--predictor`/`--document-chart` to narrow it down if only a subset of
-panels is needed. `--consequence missense_only` (see
-`docs/ablation_variant_reclassification.md`) restricts the whole run to
-missense variants if needed for a supplementary check -- not part of this
-figure's regular generation.
+panels is needed.

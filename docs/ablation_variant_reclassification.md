@@ -499,7 +499,7 @@ resolution was correct.
 One panel per predictor, each a three-bar cluster -- functional-only,
 predictor-only, combined -- stacked into:
 
-- **Concordant** (green) -- the arm resolved the variant, and in the same
+- **Concordant** (blue) -- the arm resolved the variant, and in the same
   direction as the known ClinVar/ClinGen truth.
 - **Discordant** (red) -- the arm resolved the variant, but in the *opposite*
   direction from the known truth.
@@ -520,13 +520,22 @@ variant satisfies more than one control scope with disagreeing truth values
 earlier scope wins (ClinVar before ClinGen), a deterministic tiebreak with no
 expected real-world impact.
 
-**Color choice is deliberate**: this chart uses the dataviz skill's reserved
-status palette (`good`/`critical` -- green/red) rather than the categorical
-palette `--show-class-upgrade`/the ablation/comparison charts use elsewhere
-in this script. Concordance is a *correctness* dimension (did the call match
-a known answer), not a category identity, so reusing the categorical colors
-here would collide with their existing meaning in this script's other
-charts.
+**Color choice is deliberate**: this chart uses a blue/red status pair
+(`CONCORDANT_COLOR`/`DISCORDANT_COLOR`) rather than the categorical palette
+`--show-class-upgrade`/the ablation/comparison charts use elsewhere in this
+script. Concordance is a *correctness* dimension (did the call match a known
+answer), not a category identity, so reusing the categorical colors here
+would collide with their existing meaning in this script's other charts.
+Blue/red rather than the dataviz skill's default green/red "good"/"critical"
+status colors, too: green paired with red is a classic colorblind confusion,
+so this reuses the project's own recurring blue-vs-red convention for
+opposite states instead (e.g. `figure_4/plot_utils.py`'s
+`BENIGN_THRESHOLD_COLOR`/`PATHOGENIC_THRESHOLD_COLOR`, `Figure5_6.Rmd`'s
+"Benign"/"Pathogenic"). The same reasoning applies to `BOTH_ALONE_LABEL`'s
+categorical color (see its definition): that teal-green shared every
+ablation/comparison chart with this same red, so it's now a blue-violet
+instead (a warm brown was tried first and rejected -- too close in hue to
+`PREDICTOR_ALONE_LABEL`'s orange).
 
 On the real integrated dataset, the functional-only and combined arms are
 both highly concordant (few percent discordant at most) and mostly resolved,
@@ -608,28 +617,31 @@ ablation_special_dedup.png`, or `--special-control-dedup
 `--document <path>` (format inferred from the extension, e.g.
 `.png`/`.svg`/`.pdf`) renders a single combined document instead of separate
 chart files: a header (document title, spanning the full width) followed by
-**one section per variant category, all seven, always** -- `vus`, `gnomad`,
+**one section per variant category, all seven by default** -- `vus`, `gnomad`,
 `unobserved`, `clinvar_control`,
 `clinvar_control_missense_only`, `clingen_control`,
 `clingen_control_missense_only` -- regardless of `--scope`, which only
 affects `--plot`/`--plot-comparison`/`--plot-redundant-gain`/the text
 report. `--scope` unions whichever categories you pass into one population;
-`--document` instead shows all seven side by side, individually, so you can
-compare them directly. Each section shows a header line ("_scope label_ --
-_N_ variants") followed by whichever `--document-chart` types were
-requested, stacked top to bottom in a fixed order:
+`--document` instead shows each one side by side, individually, so you can
+compare them directly -- pass `--document-scope` (repeatable) to restrict
+which of the seven get a section at all (see below). Each section shows a
+header line ("_scope label_ -- _N_ variants") followed by whichever
+`--document-chart` types were requested, stacked top to bottom in a fixed
+order:
 
 1. **`ablation`** -- `--plot`'s chart, restricted to `--direction`.
 2. **`comparison`** -- `--plot-comparison`'s side-by-side P/LP-vs-B/LB chart
    (always both directions, independent of `--direction`, same as
    `--plot-comparison` itself).
 3. **`concordance`** -- `--plot-control-concordance`'s chart (always all four
-   control scopes, independent of `--direction` and `--scope`). Nonempty only
+   control scopes, independent of `--direction` and `--scope`). Included only
    for the `clinvar_control`/`clinvar_control_missense_only`/
-   `clingen_control`/`clingen_control_missense_only` sections -- the
-   other three sections still get a `concordance` block, just with every bar
-   entirely "unresolved" (zero concordant/discordant), since those scopes
-   carry no known truth to check against (`control_truth_direction_series`).
+   `clingen_control`/`clingen_control_missense_only` sections -- the other
+   three sections carry no known truth to check against
+   (`control_truth_direction_series`), so their section simply omits this
+   block entirely (`_document_chart_types_for_scope`) rather than rendering
+   an always-empty one.
 4. **`gain`** -- `--plot-redundant-gain`'s points-gained histogram,
    restricted to `--direction`.
 
@@ -639,6 +651,35 @@ omit it for all four. `--show-class-upgrade` applies to the document's
 `ablation`/`comparison` blocks the same way it applies to `--plot`/
 `--plot-comparison` (it has no effect on `concordance`, which uses the
 status palette, not the categorical one).
+
+### Restricting which sections appear (`--document-scope`)
+
+`--document-scope` (repeatable, choices are `SCOPE_ORDER`'s seven category
+keys) restricts `--document`/`--document-split-dir` to just the named
+sections instead of all seven; omitting it keeps the default (all seven).
+Combined with `--document-chart`, this lets a single document mix chart
+types by scope without any chart type ever rendering an empty block: e.g.
+
+```bash
+poetry run python -m src.ablation_variant_reclassification \
+  --document-scope vus --document-scope gnomad --document-scope unobserved \
+  --document-scope clinvar_control --document-scope clingen_control \
+  --document-chart comparison --document-chart concordance \
+  --document ablation_5comparison_2concordance.pdf
+```
+
+renders exactly five sections (`vus`, `gnomad`, `unobserved`,
+`clinvar_control`, `clingen_control` -- the two `_missense_only` control
+scopes and the plain `--scope` default population omitted), each with a
+`comparison` block, and -- because `concordance` is only ever included for
+`CONTROL_SCOPES` sections -- a `concordance` block appears under just the
+two control ones. `--special-control-dedup` (see above) is the natural
+companion here, since these two sections' numbers are exactly where it
+matters. `document_scopes` must be a subset of whatever was passed to
+`build_document_chart_data` when `--document-split-dir` is used
+programmatically rather than via this CLI (naming an unbuilt scope raises a
+`KeyError`); the CLI always builds and renders the same `--document-scope`
+selection, so this doesn't come up from the command line.
 
 **Each block carries its own legend** (just the handles relevant to that
 block's own chart type -- `ablation`/`comparison` show the five
@@ -705,10 +746,11 @@ chart nobody would use as a figure panel -- the split output omits the file
 entirely rather than writing an empty one.
 
 `--document-chart` (repeatable; default all four) controls which chart types
-are split out, exactly as it does for `--document`. `--document-split-dir`
-composes with `--document` -- passing both writes the combined image *and*
-the split files from one `build_document_chart_data` pass, rather than
-rebuilding it twice. `--document-split-format` (`pdf`/`png`/`svg`, default
+are split out, and `--document-scope` (repeatable; default all seven)
+controls which scopes get any files at all, exactly as both do for
+`--document`. `--document-split-dir` composes with `--document` -- passing
+both writes the combined image *and* the split files from one
+`build_document_chart_data` pass, rather than rebuilding it twice. `--document-split-format` (`pdf`/`png`/`svg`, default
 `pdf`) sets the file format for every split file, since (unlike every other
 `--plot*`/`--document` path) there's no single output path to infer an
 extension from.

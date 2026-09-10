@@ -180,13 +180,6 @@ above) and are already converted:
   attribute breakdowns; ExCALIBR calibration coverage; reclassification
   agreement) over the integrated dataset. See
   [`docs/mave_dataset_stats.md`](docs/mave_dataset_stats.md).
-- **`src/ablation_variant_reclassification.py`** — optional follow-up
-  analysis on step 5's checkpoint: how much of the reclassification effect
-  comes from functional evidence (ExCALIBR/OddsPath) alone, predictor
-  evidence (REVEL/AlphaMissense/MutPred2) alone, or is genuine added value
-  from combining the two. Also generates Extended Data Figure 10. See
-  [`docs/ablation_variant_reclassification.md`](docs/ablation_variant_reclassification.md)
-  and [`docs/figures.md`](docs/figures.md).
 
 ### Running it
 
@@ -219,9 +212,6 @@ done
 
 # 5. Build the biobank-analysis reclassification export from that notebook's checkpoint
 poetry run python -m src.build_variant_reclassification_dataset
-
-# Optional: functional-vs-predictor evidence ablation, from the same checkpoint
-poetry run python -m src.ablation_variant_reclassification
 ```
 
 Each `nbconvert --execute` leaves a side-effect `executed_<name>.ipynb` next
@@ -380,7 +370,14 @@ poetry run python -m src.make_extended_data_figure_7alt --consequence-filter mis
 
 ```bash
 poetry run python -m src.ablation_variant_reclassification \
-  --document-split-dir data/output/figures/extended_data_figure_10
+  --calibrated-figure data/output/figures/extended_data_figure_10/ablation.pdf
+
+# Optional: same figure, restricted to missense-only variants. Writes to
+# ablation_missense.pdf instead, so it doesn't overwrite the all-variants
+# run above.
+poetry run python -m src.ablation_variant_reclassification \
+  --consequence missense_only \
+  --calibrated-figure data/output/figures/extended_data_figure_10/ablation_missense.pdf
 ```
 
 Every `nbconvert --execute` call above leaves a side-effect `executed_<name>.ipynb`
