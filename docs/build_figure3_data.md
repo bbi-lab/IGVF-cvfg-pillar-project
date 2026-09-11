@@ -54,6 +54,33 @@ variant's 2018 ClinVar snapshot (`clinvar_sig_2018`) rather than the current
 one; every other gene uses `clinvar_sig_2025`. This matches the original
 notebook and isn't something this script tries to change.
 
+### Projecting amino-acid variants onto their nucleotide counterparts
+
+Some genes -- BRCA1 is the clearest example, with `BRCA1_Findlay_2018` (SGE)
+assaying it at nucleotide resolution and the `BRCA1_Adamovich_2022_*`
+datasets (Other) assaying it at amino-acid resolution -- have sibling
+datasets that don't even resolve variants at the same level, so the same
+underlying protein change would otherwise be counted as two "different"
+variants in `Figure3c_assay_combos.csv.gz`: once as a nucleotide-level
+variant and once as its own amino-acid-level variant. By default, an
+amino-acid variant that shares its (Gene, aa_ref, aa_pos, aa_alt, transcript)
+key with one or more nucleotide-level variants gets dropped from the counted
+set entirely. Since an amino-acid variant is one measurement of one variant,
+only one of its matching nucleotide-level variants (a deterministic but
+otherwise arbitrary pick, when there's more than one) picks up its assay
+categories -- so a nucleotide variant tested only by SGE, once also
+"Other"-assayed at the amino-acid level, becomes "Other+SGE" -- while every
+other matching nucleotide-level variant is left exactly as it was, rather
+than every one of them picking up the same single measurement's assay
+category. Pass `--no-project-aa-onto-nt` for the naive per-level count
+instead (the output records which one was used in a `variant_projection`
+column (`"aa_projected_onto_nt"`/`"none"`), matching `Figure3c`/
+`Figure3c_measurements`'s own `variant_dedup_scope` column).
+`curation_summary_figure3.Rmd`'s bar chart is rebuilt with the default -- see
+the comment above its own `assay_combos <- read.csv(...)` call. As of
+2026-09, this drops 119 BRCA1, 291 PALB2, and 231 TP53 amino-acid-level
+variants, each folding onto one nucleotide-level counterpart's combo.
+
 ## The three `data/input/genes/` references `Figure3a` needs
 
 - **`gencc-submissions.csv.gz`** — GenCC gene-disease validity submissions
@@ -131,5 +158,7 @@ poetry run python -m src.build_figure3_data
 
 Optional flags: `--integrated-dataset`, `--curation-sheet`, `--gencc`,
 `--uniprot`, `--testing-registry`, `--figure3a-output`, `--figure3c-output`,
-`--figure3c-measurements-output`, `--figure3d-output` (the last four default
-under `data/intermediate/figures/figure_3/`).
+`--figure3c-measurements-output`, `--figure3c-assay-combos-output`,
+`--figure3d-output` (the output paths default under
+`data/intermediate/figures/figure_3/`), and `--no-project-aa-onto-nt` (see
+above; projection is on by default).

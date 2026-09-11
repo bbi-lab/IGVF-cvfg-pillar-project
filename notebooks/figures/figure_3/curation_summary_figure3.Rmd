@@ -194,6 +194,19 @@ prepare_variant_bar_summary_from_combos <- function(combos) {
 source("../../../src/lib/figures/variant_bar_calibrated.R", local = .bar_lib)
 plot_variant_bar_calibrated <- .bar_lib$plot_variant_bar_calibrated
 
+# Rebuild via `poetry run python -m src.build_figure3_data` -- see
+# docs/build_figure3_data.md. Unlike the other Figure3c files above, this one
+# defaults to projecting amino-acid-level variants onto a matching
+# nucleotide-level counterpart (docs/build_figure3_data.md's "projecting
+# amino-acid variants onto their nucleotide counterparts" section):
+# BRCA1/PALB2/TP53 each have sibling datasets that assay largely the same
+# variants at different resolutions (e.g. BRCA1's Findlay_2018 SGE dataset at
+# nucleotide resolution vs. its Adamovich_2022 datasets at amino-acid
+# resolution), so without that projection the same underlying protein change
+# would get counted twice -- once at each resolution -- inflating those
+# genes' totals and splitting what's really one assay's worth of coverage
+# across two segments. Pass --no-project-aa-onto-nt to rebuild without it.
+#
 # 4.25in x 3.25in total, matching the published figure.
 assay_combos <- read.csv(file.path(INTERMEDIATE_DIR, "Figure3c_assay_combos.csv.gz"))
 summary_df <- prepare_variant_bar_summary_from_combos(assay_combos)

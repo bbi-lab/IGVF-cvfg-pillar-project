@@ -330,6 +330,73 @@ def test_build_figure3c_variant_assay_combos_flags_multi_assay_variants():
     assert ("LDLRX", "Other") not in combos.index
 
 
+def _brca1x_nt_aa_overlap_dataset() -> pd.DataFrame:
+    # Three distinct nucleotide variants (nt1/nt2/nt3, tested by an SGE
+    # dataset) all translate to the same protein change -- p.His100Phe on
+    # NM_1 -- that a separate amino-acid-level variant (aa1, tested by an
+    # "Other" dataset) also represents. A fourth, unrelated amino-acid
+    # variant (aa2, p.Arg5Gly) has no nucleotide-level counterpart at all.
+    # Matching real integrated-dataset rows, amino-acid-level rows still
+    # carry their own (back-mapped) genomic coordinates -- distinct per
+    # protein variant here, so the final genomic-coordinate collapse in
+    # build_figure3c_variant_assay_combos doesn't fold aa1/aa2 into each
+    # other.
+    return pd.DataFrame(
+        {
+            "Gene": ["BRCA1X"] * 5,
+            "Dataset": ["BRCA1X_SGE", "BRCA1X_SGE", "BRCA1X_SGE", "BRCA1X_Other", "BRCA1X_Other"],
+            "nucleotide_or_aa": ["nt", "nt", "nt", "aa", "aa"],
+            "hg38_start": [100, 200, 300, 1000, 2000],
+            "ref_allele": ["A", "C", "G", "A", "C"],
+            "alt_allele": ["T", "G", "C", "G", "A"],
+            "aa_pos": [100, 100, 100, 100, 5],
+            "aa_ref": ["H", "H", "H", "H", "R"],
+            "aa_alt": ["F", "F", "F", "F", "G"],
+            "RefSeq Transcript ID": ["NM_1.2", "NM_1.2", "NM_1.2", "NM_1.3", "NM_1.3"],
+        }
+    )
+
+
+def _brca1x_curation() -> pd.DataFrame:
+    return pd.DataFrame(
+        {
+            "Dataset Name": ["BRCA1X_SGE", "BRCA1X_Other"],
+            "Assay Name": ["SGE", "Other"],
+            "Primary Score Set or Meta-analysis?": ["primary score set", "primary score set"],
+        }
+    )
+
+
+def test_build_figure3c_variant_assay_combos_projects_aa_onto_one_representative_nt_variant_by_default():
+    combos = build_figure3c_variant_assay_combos(_brca1x_nt_aa_overlap_dataset(), _brca1x_curation()).set_index(
+        ["Gene", "assay_combo"]
+    )["n_unique_IDs"]
+
+    # aa1 (p.His100Phe) is dropped entirely, but -- since it's one
+    # measurement of one variant -- its "Other" category is folded onto only
+    # one representative of the three nucleotide-level variants that
+    # translate to the same change (nt1, the lowest hg38_start), not all
+    # three: nt1 becomes "Other+SGE", nt2/nt3 stay plain "SGE". aa2
+    # (p.Arg5Gly) has no nucleotide-level counterpart, so it's untouched and
+    # still counted on its own under "Other". No project_aa_onto_nt argument
+    # is passed here -- this is the default behavior.
+    assert combos[("BRCA1X", "Other+SGE")] == 1
+    assert combos[("BRCA1X", "SGE")] == 2
+    assert combos[("BRCA1X", "Other")] == 1
+
+
+def test_build_figure3c_variant_assay_combos_no_project_aa_onto_nt_keeps_levels_separate():
+    combos = build_figure3c_variant_assay_combos(
+        _brca1x_nt_aa_overlap_dataset(), _brca1x_curation(), project_aa_onto_nt=False
+    ).set_index(["Gene", "assay_combo"])["n_unique_IDs"]
+
+    # With projection explicitly disabled, nt1/nt2/nt3 keep their own
+    # SGE-only combo; aa1 and aa2 are each counted separately under "Other"
+    # -- the shared protein change between aa1 and nt1/nt2/nt3 has no effect.
+    assert combos[("BRCA1X", "SGE")] == 3
+    assert combos[("BRCA1X", "Other")] == 2
+
+
 def test_main_cli_writes_all_four_outputs(tmp_path):
     integrated_dataset_path = tmp_path / "integrated.tsv.gz"
     with gzip.open(integrated_dataset_path, "wt") as f:
@@ -439,7 +506,9 @@ def test_main_cli_writes_all_four_outputs(tmp_path):
     assert set(figure3c_measurements["variant_dedup_scope"]) == {"per-dataset"}
 
     figure3c_assay_combos = pd.read_csv(figure3c_assay_combos_output_path)
-    assert set(figure3c_assay_combos.columns) == {"Gene", "assay_combo", "n_unique_IDs"}
+    assert set(figure3c_assay_combos.columns) == {"Gene", "assay_combo", "n_unique_IDs", "variant_projection"}
+    # --project-aa-onto-nt defaults to on.
+    assert set(figure3c_assay_combos["variant_projection"]) == {"aa_projected_onto_nt"}
 
     figure3d = pd.read_csv(figure3d_output_path)
     assert set(figure3d.columns) == {"Group", "Count", "Count in gnomAD"}

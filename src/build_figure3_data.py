@@ -85,7 +85,13 @@ tested by both an "Other" dataset and a Vamp-seq dataset) gets its own
 "Other+VAMP"-style combo instead of being silently folded into just one
 category. `curation_summary_figure3.Rmd`'s bar chart uses this (rather than
 Figure3c.csv.gz's per-Dataset rows) to render those variants as a
-diagonally-striped segment.
+diagonally-striped segment. By default, this also projects amino-acid-level
+variants onto a matching nucleotide-level counterpart when one exists (e.g.
+BRCA1's Findlay_2018 SGE dataset and its Adamovich_2022 amino-acid-level
+datasets assay much of the same underlying variation) rather than counting
+the same protein change twice -- pass `--no-project-aa-onto-nt` for the
+naive per-level count instead. See build_figure3c_variant_assay_combos()'s
+project_aa_onto_nt parameter.
 
 Figure3d (Euler/venn panel): ClinVar control (Benign/Likely benign/
 Pathogenic/Likely pathogenic and their combined labels), gnomAD,
@@ -427,7 +433,76 @@ def build_figure3c_assay_categories(pp_unique: pd.DataFrame, curation: pd.DataFr
     )
 
 
-def build_figure3c_variant_assay_combos(pp: pd.DataFrame, curation: pd.DataFrame) -> pd.DataFrame:
+def _project_aa_combos_onto_nucleotide(
+    aa_combo: pd.DataFrame, nucleotide_combo: pd.DataFrame, nucleotide: pd.DataFrame
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """For build_figure3c_variant_assay_combos's project_aa_onto_nt=True path.
+
+    `nucleotide` (raw, non-deduped nucleotide-level rows) already carries the
+    aa_pos/aa_ref/aa_alt/RefSeq Transcript ID a nucleotide variant translates
+    to -- the same annotation an amino-acid-level row carries for the change
+    it *is*. Recomputing PROTEIN_GROUP_COLUMNS from those columns for each
+    distinct nucleotide variant, then joining against aa_combo on that key,
+    finds every amino-acid-level variant that's the same underlying protein
+    change as one or more nucleotide-level variants (BRCA1's Findlay_2018 SGE
+    variants vs. its Adamovich_2022 amino-acid-level variants, for example).
+
+    An amino-acid variant is one measurement of one variant, so it should
+    only ever look like it moved *one* nucleotide-level variant into a
+    multi-assay combo -- not every nucleotide-level variant that happens to
+    translate to the same protein change (several distinct base changes can
+    encode the same amino-acid substitution, so one amino-acid variant can
+    match more than one). Each matched amino-acid variant therefore picks
+    exactly one nucleotide-level match -- sorted by NUCLEOTIDE_KEY and taking
+    the first, an arbitrary but deterministic and stable choice of
+    representative -- to fold its assay categories onto; every other
+    matching nucleotide-level variant is left exactly as it was. The
+    amino-acid variant itself is always dropped from aa_combo (regardless of
+    how many nucleotide-level variants it matched), so it no longer
+    contributes its own row.
+    """
+    nt_protein_key = nucleotide.dropna(subset=["aa_pos", "aa_ref", "aa_alt", "RefSeq Transcript ID"]).copy()
+    nt_protein_key["Ref_seq_transcript_ID_stripped"] = (
+        nt_protein_key["RefSeq Transcript ID"].astype("string").str.replace(r"\.\d+$", "", regex=True)
+    )
+    nt_protein_key["aa_pos"] = pd.to_numeric(nt_protein_key["aa_pos"], errors="coerce")
+    nt_protein_key = nt_protein_key.drop_duplicates(NUCLEOTIDE_KEY)[NUCLEOTIDE_KEY + PROTEIN_GROUP_COLUMNS[1:]]
+
+    matches = nt_protein_key.merge(aa_combo, on=PROTEIN_GROUP_COLUMNS, how="inner")
+    if matches.empty:
+        return aa_combo, nucleotide_combo
+
+    representatives = matches.sort_values(NUCLEOTIDE_KEY).drop_duplicates(PROTEIN_GROUP_COLUMNS, keep="first")
+
+    nucleotide_combo = nucleotide_combo.merge(
+        representatives[NUCLEOTIDE_KEY + ["assay_combo_set"]].rename(
+            columns={"assay_combo_set": "assay_combo_set_from_aa"}
+        ),
+        on=NUCLEOTIDE_KEY,
+        how="left",
+    )
+    matched_mask = nucleotide_combo["assay_combo_set_from_aa"].notna()
+    nucleotide_combo.loc[matched_mask, "assay_combo_set"] = [
+        own | from_aa
+        for own, from_aa in zip(
+            nucleotide_combo.loc[matched_mask, "assay_combo_set"],
+            nucleotide_combo.loc[matched_mask, "assay_combo_set_from_aa"],
+        )
+    ]
+    nucleotide_combo = nucleotide_combo.drop(columns=["assay_combo_set_from_aa"])
+
+    projected_aa_keys = matches[PROTEIN_GROUP_COLUMNS].drop_duplicates()
+    aa_combo = aa_combo.merge(
+        projected_aa_keys.assign(_projected=True), on=PROTEIN_GROUP_COLUMNS, how="left"
+    )
+    aa_combo = aa_combo.loc[aa_combo["_projected"].isna()].drop(columns=["_projected"])
+
+    return aa_combo, nucleotide_combo
+
+
+def build_figure3c_variant_assay_combos(
+    pp: pd.DataFrame, curation: pd.DataFrame, project_aa_onto_nt: bool = True
+) -> pd.DataFrame:
     """Per-gene counts of distinct variants (global dedup), split by *which
     combination* of assay types (SGE/Vamp-seq/Other) tested each one.
 
@@ -442,6 +517,31 @@ def build_figure3c_variant_assay_combos(pp: pd.DataFrame, curation: pd.DataFrame
     Only combos that actually occur in the data appear as rows (as of
     2026-09, just "Other+SGE" and "Other+VAMP" -- no gene has variants
     spanning all three categories, or spanning SGE and Vamp-seq directly).
+
+    project_aa_onto_nt (default True; pass False to get the naive per-level
+    count instead): some genes -- BRCA1 is the clearest example, with
+    Findlay_2018 (SGE) assaying it at nucleotide resolution and the
+    Adamovich_2022 datasets (Other) assaying it at amino-acid resolution --
+    are tested by sibling datasets that don't even resolve variants at the
+    same level, so without this, the same underlying protein change would be
+    counted as two "different" variants here: once as a nucleotide-level
+    variant and once as its own amino-acid-level variant. When enabled
+    (the default), an amino-acid variant that shares its (Gene, aa_ref,
+    aa_pos, aa_alt, transcript) key with one or more nucleotide-level
+    variants is dropped from the counted set entirely, and exactly one of
+    those nucleotide-level variants (a deterministic but otherwise arbitrary
+    pick when there's more than one) instead has the amino-acid variant's
+    own assay categories folded into its combo (so a nucleotide variant
+    tested only by SGE, once also "Other"-assayed at the amino-acid level,
+    becomes "Other+SGE") -- treating the two as the same underlying change
+    tested by two different assays rather than as two distinct variants. An
+    amino-acid variant is one measurement of one variant, so only one
+    nucleotide-level variant picks up its assay categories even when several
+    nucleotide-level variants translate to the same protein change; every
+    other matching nucleotide-level variant keeps its original combo
+    unchanged. Amino-acid variants with no nucleotide-level counterpart are
+    unaffected either way. See _project_aa_combos_onto_nucleotide() for the
+    matching logic.
     """
     meta_analysis_datasets, sge_datasets, vamp_datasets = _classify_assay_datasets(curation)
 
@@ -477,7 +577,10 @@ def build_figure3c_variant_assay_combos(pp: pd.DataFrame, curation: pd.DataFrame
         .reset_index()
     )
 
-    aa = aa.merge(aa_combo, on=PROTEIN_GROUP_COLUMNS, how="left")
+    if project_aa_onto_nt:
+        aa_combo, nucleotide_combo = _project_aa_combos_onto_nucleotide(aa_combo, nucleotide_combo, nucleotide)
+
+    aa = aa.merge(aa_combo, on=PROTEIN_GROUP_COLUMNS, how="inner")
     nucleotide = nucleotide.merge(nucleotide_combo, on=NUCLEOTIDE_KEY, how="left")
 
     nucleotide_unique = nucleotide.drop_duplicates(NUCLEOTIDE_KEY).copy()
@@ -558,6 +661,19 @@ def build_figure3c_variant_assay_combos(pp: pd.DataFrame, curation: pd.DataFrame
     default=DEFAULT_FIGURE3D_OUTPUT,
     type=click.Path(path_type=Path),
 )
+@click.option(
+    "--project-aa-onto-nt/--no-project-aa-onto-nt",
+    "project_aa_onto_nt",
+    default=True,
+    help=(
+        "Figure3c_assay_combos.csv.gz only: fold an amino-acid-level variant's "
+        "assay categories onto one representative nucleotide-level counterpart "
+        "(matched by translated Gene/aa_ref/aa_pos/aa_alt/transcript) instead "
+        "of counting it separately -- see build_figure3c_variant_assay_combos()'s "
+        "project_aa_onto_nt parameter. On by default; pass --no-project-aa-onto-nt "
+        "for the naive per-level count instead."
+    ),
+)
 def main(
     integrated_dataset_path,
     curation_sheet_path,
@@ -569,6 +685,7 @@ def main(
     figure3c_measurements_output_path,
     figure3c_assay_combos_output_path,
     figure3d_output_path,
+    project_aa_onto_nt,
 ):
     try:
         pp = pd.read_csv(integrated_dataset_path, sep="\t", low_memory=False)
@@ -586,7 +703,10 @@ def main(
         figure3c["variant_dedup_scope"] = "global"
         figure3c_measurements = build_figure3c_assay_categories(pp_unique_per_dataset, curation)
         figure3c_measurements["variant_dedup_scope"] = "per-dataset"
-        figure3c_assay_combos = build_figure3c_variant_assay_combos(pp, curation)
+        figure3c_assay_combos = build_figure3c_variant_assay_combos(pp, curation, project_aa_onto_nt=project_aa_onto_nt)
+        figure3c_assay_combos["variant_projection"] = (
+            "aa_projected_onto_nt" if project_aa_onto_nt else "none"
+        )
         figure3d = build_figure3d_counts(pp, pp_unique)
     except (ValueError, KeyError) as exc:
         raise click.ClickException(str(exc)) from exc
