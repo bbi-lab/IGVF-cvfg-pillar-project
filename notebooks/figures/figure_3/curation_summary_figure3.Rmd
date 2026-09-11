@@ -20,54 +20,45 @@ INTERMEDIATE_DIR = "../../../data/intermediate/figures/figure_3"
 
 #sunburst plot to show assay type, model system, and gene combinations
 
-library(plotly)
-library(ggsci)
 library(dplyr)
 library(tidyr)
-library(reticulate)
-library(ggrepel)
 library(readxl)
+library(ggplot2)
+library(ggforce)
+library(extrafont)
+library(grid)
 
-npg_colors_extended <- c(
-  "#E64B35FF", # red-orange
-  "#4DBBD5FF", # cyan
-  "#00A087FF", # teal
-  "#3C5488FF", # blue
-  "#F39B7FFF", # peach
-  "#8491B4FF", # lavender-blue
-  "#91D1C2FF", # mint
-  "#DC0000FF", # red
-  "#7E6148FF", # brown
-  "#B09C85FF", # tan
+loadfonts(device = 'all')
 
-  "#1F78B4FF", # steel blue
-  "#33A02CFF", # green
-  "#FB9A99FF", # soft pink
-  "#E31A1CFF", # dark red
-  "#FDBF6FFF", # gold
-  "#6A3D9AFF", # purple
-  "#A6CEE3FF", # light blue
-  "#B2DF8AFF", # light green
-  "#CAB2D6FF", # lilac
-  "#FFFF99FF"  # pale yellow
-)
-
-
-npg_colors = c("#E64B35FF","#4DBBD5FF", "#00A087FF", "#3C5488FF", "#F39B7FFF", "#8491B4FF" ,"#91D1C2FF", "#DC0000FF", "#7E6148FF", "#B09C85FF")
+# Case-insensitive normalization ("Cell Fitness" / "Cell fitness" -> same
+# group) -- Supplementary_Data_3.xlsx has occasional per-row casing
+# inconsistencies in free-text columns like Assay Type (e.g.
+# BRCA2_Huang_2025_SGE's "Cell Fitness" vs. every other row's "Cell
+# fitness"), which would otherwise become a stray near-duplicate wedge. Named
+# distinctly from sunburst_calibrated.R's own to_sentence_case() (which only
+# capitalizes the first letter, leaving the rest as-is, for display only) --
+# this one fully normalizes case for *grouping* correctness, sourced into a
+# separate environment so the two never collide.
+normalize_case <- function(x) paste0(toupper(substr(x, 1, 1)), tolower(substr(x, 2, nchar(x))))
 
 # Derived from data/input/maves/Supplementary_Data_3.xlsx's "Curation" sheet
 # (one row per MAVE dataset) -- the MAVE_curation_v3_figures.csv this chunk
 # originally read was never checked into the repo. Column mapping:
 # "Dataset Name" -> Dataset_tag, "Broad Disease Category" -> Disease,
 # "Assay Type" -> Assay.Type, "Model System" -> Model_system, "Gene" ->
-# Gene..HGNC.symbol. (split on ", " for the one multi-gene dataset,
-# CALM1_CALM2_CALM3_Weile_2017, into one row per gene).
+# Gene..HGNC.symbol. (kept as one row/leaf for the one multi-gene dataset,
+# CALM1_CALM2_CALM3_Weile_2017, labeled "CALM1,2,3" rather than split into
+# three separate gene leaves).
 curation <- read_excel(
   "../../../data/input/maves/Supplementary_Data_3.xlsx",
   sheet = "Curation"
 ) %>%
   filter(!is.na(`Dataset Name`)) %>%
-  separate_rows(Gene, sep = ",\\s*") %>%
+  mutate(
+    Gene = if_else(Gene == "CALM1, CALM2, CALM3", "CALM1,2,3", Gene),
+    `Assay Type` = normalize_case(`Assay Type`),
+    `Model System` = normalize_case(`Model System`)
+  ) %>%
   transmute(
     Dataset_tag = `Dataset Name`,
     Disease = `Broad Disease Category`,
@@ -76,136 +67,44 @@ curation <- read_excel(
     Gene..HGNC.symbol. = Gene
   )
 
-pillar_project_datasets = c('BRCA1_Findlay_2018', 'BRCA2_Hu_2024', 'VHL_Buckley_2024',
-       'JAG1_Gilbert_2024', 'BRCA2_Sahu_2023_exon13_SGE',
-       'BRCA2_Sahu_2023_exon13_Cisplatin_Resistance',
-       'BRCA2_Sahu_2023_exon13_Olaparib_Resistance', 'BARD1_IGVF',
-       'PALB2_IGVF', 'XRCC2_IGVF', 'SFPQ_IGVF',
-       'BRCA2_IGVF', 'RAD51D_IGVF', 'CTCF_IGVF',
-       'BAP1_Waters_2024', 'DDX3X_Radford_2023',
-       'RHO_Wan_2019', 'RAD51C_Olvera-León_2024',
-       'BRCA2_Sahu_2025_SGE', 'BRCA2_Sahu_2023_exon13_global_score',
-       'FKRP_Ma_2024', 'LARGE1_Ma_2024',
-       'CARD11_Meitlis_2020_SGE_Ibrutinib_GoF',
-       'CARD11_Meitlis_2020_SGE_LoF',
-       'ASPA_Grønbæk-Thygesen_2024_abundance',
-       'ASPA_Grønbæk-Thygesen_2024_toxicity',
-       'BRCA1_Adamovich_2022_Cisplatin_Resistance', 'BRCA1_Adamovich_2022_HDR',
-       'CALM1_CALM2_CALM3_Weile_2017', 'CBS_Sun_2020_high_B6',
-       'CBS_Sun_2020_low_B6', 'CHEK2_Gebbia_2024', 'CRX_Shepherdson_2024',
-       'F9_Popp_2025_carboxy_F9_specific',
-       'F9_Popp_2025_carboxy_gla_motif', 'F9_Popp_2025_heavy_chain',
-       'F9_Popp_2025_light_chain', 'F9_Popp_2025_model',
-       'F9_Popp_2025_strep_2', 'G6PD_IGVF',
-       'GCK_Gersing_2023_complementation', 'GCK_Gersing_2024_abundance',
-       'HMBS_van_Loggerenberg_2023_combined',
-       'HMBS_van_Loggerenberg_2023_erythroid',
-       'HMBS_van_Loggerenberg_2023_ubquitous',
-       'KCNE1_Muhammad_2024_trafficking',
-       'KCNE1_Muhammad_2024_potassium_flux',
-       'KCNE1_Muhammad_2024_trafficking_WT_background_DN', 'KCNH2_Jiang_2022',
-       'KCNH2_Kozek_Glazer_2020', 'KCNH2_O_Neill_2024_surface_expression',
-       'MSH2_Jia_2021', 'NDUFAF6_Sung_2024', 'OTC_Lo_2023',
-       'PAX6_McDonnell_2024_BLX_geneticin',
-       'PAX6_McDonnell_2024_BLX_no_geneticin',
-       'PAX6_McDonnell_2024_LE9_geneticin',
-       'PAX6_McDonnell_2024_LE9_no_geneticin', 'PTEN_Matreyek_2018',
-       'PTEN_Mighell_2018', 'SCN5A_Glazer_2020',
-       'SCN5A_Ma_2024', 'SGCB_Li_2023',
-       'TARDBP_Bolognesi_Faure_2019', 'TP53_Boettcher_2019',
-       'TP53_Fayer_2021_meta', 'TP53_Fortuno_2021',
-       'TP53_Giacomelli_2018_combined_score',
-       'TP53_Giacomelli_2018_p53WT_Nutlin3',
-       'TP53_Giacomelli_2018_p53null_Nutlin3',
-       'TP53_Giacomelli_2018_p53null_etoposide', 'TP53_Kato_2003_AIP1nWT',
-       'TP53_Kato_2003_BAXnWT', 'TP53_Kato_2003_GADD45nWT',
-       'TP53_Kato_2003_MDM2nWT', 'TP53_Kato_2003_NOXAnWT',
-       'TP53_Kato_2003_P53R2nWT', 'TP53_Kato_2003_WAF1nWT',
-       'TP53_Kato_2003_h1433snWT', 'TPK1_Weile_2017',
-       'TSC2_IGVF',
-       'KCNQ4_Zheng_2022_current_homozygous',
-       'KCNQ4_Zheng_2022_v12_homozygous')
-
-
-curation <- curation[curation$Dataset_tag %in% pillar_project_datasets, ]
-
+# Previously filtered to a hardcoded 83-dataset snapshot (pillar_project_datasets)
+# that predated 8 datasets since added to the curation sheet -- including all
+# 3 LDLR datasets, which is why LDLR was missing from this plot. Derived
+# dynamically from the curation sheet itself instead (every dataset in
+# Supplementary_Data_3.xlsx, same source src/build_figure3_data.py's Figure3c
+# panel already uses), so newly-added datasets show up here automatically.
 curation <- curation %>%
   filter(
-    Assay.Type != "Not Applicable (trained predictor)",
+    # Compared against normalize_case()'s own output (rest-of-string
+    # lowercased), matching how Assay.Type/Model_system were normalized above.
+    Assay.Type != normalize_case("Not Applicable (trained predictor)"),
     Disease != "None",
-    Model_system != "Not Applicable"
+    Model_system != normalize_case("Not Applicable")
   )
 
-c <- curation %>%
-  mutate(
-    id_type   = paste0("type_", tolower(Disease)),
-    id_assay  = paste0("assay_", tolower(Disease), "_", tolower(Assay.Type)),
-    id_model  = paste0("model_", tolower(Disease), "_", tolower(Assay.Type), "_", tolower(Model_system)),
-    id_gene   = paste0("gene_", tolower(Disease), "_", tolower(Assay.Type), "_", tolower(Model_system), "_", tolower(Gene..HGNC.symbol.))
-  )
+# Calibrated (exact print-size) rendering -- see
+# src/lib/figures/sunburst_calibrated.R for the geometry/text-fit logic.
+# Sourced into its own env (matching Figure5_6.Rmd/Extended_data_figures.Rmd's
+# convention for three_ring_donut.R et al.) so its constants (FONT_FAMILY,
+# LABEL_PT, ...) can't collide with another calibrated lib sourced later in
+# this document.
+.sunburst_lib <- new.env(parent = globalenv())
+source("../../../src/lib/figures/sunburst_calibrated.R", local = .sunburst_lib)
+plot_sunburst_calibrated <- .sunburst_lib$plot_sunburst_calibrated
 
-nodes <- bind_rows(
-  # root: type of gene
-  c %>% distinct(ids = id_type,  labels = tolower(Disease),            parents = ""),
-  # assay types under type of gene
-  c %>% distinct(ids = id_assay, labels = tolower(Assay.Type),         parents = id_type),
-  # model system under assay type
-  c %>% distinct(ids = id_model, labels = tolower(Model_system),       parents = id_assay),
-  # gene under model system
-  c %>% distinct(ids = id_gene,  labels = tolower(Gene..HGNC.symbol.), parents = id_model)
+gene_rows <- curation %>% rename(Gene = Gene..HGNC.symbol.)
+
+# 3.6in diameter, matching the published figure.
+sunburst <- plot_sunburst_calibrated(gene_rows, diameter_mm = 3.6 * 25.4)
+
+sunburst$plot
+
+ggsave(
+  file.path(OUT_DIR, "sunburst_calibrated.pdf"),
+  sunburst$plot,
+  width = sunburst$width_mm, height = sunburst$height_mm, units = 'mm',
+  device = cairo_pdf, create.dir = TRUE
 )
-
-# sort genes alphabetically
-nodes <- nodes %>%
-  group_by(parents) %>%
-  arrange(if_else(grepl("^gene_", ids), labels, ""), .by_group = TRUE) %>%
-  ungroup()
-
-# make a disease → color map
-disease_ids <- unique(nodes$ids[grepl("^type_", nodes$ids)])
-color_map <- setNames(c("#F39B7FFF","#B09C85FF", "#00A087FF", "#3C5488FF")[seq_along(disease_ids)], disease_ids)
-
-# assign colors by tracing back to the disease parent
-nodes <- nodes %>%
-  mutate(
-    disease_parent = case_when(
-      grepl("^type_", ids) ~ ids,
-      TRUE ~ sub("^(type_[^_]+).*", "\\1", parents)  # pull disease id prefix
-    ),
-    color = color_map[disease_parent],
-    labels = if_else(grepl("^type_", ids), "", labels) # hide disease labels
-  )
-
-
-# helper to wrap long text
-wrap_label <- function(x, width = 12) {
-  gsub(paste0("(.{1,", width, "})(\\s|$)"), "\\1<br>", x)
-}
-
-nodes <- nodes %>%
-  mutate(
-    labels = if_else(grepl("^model_", ids),
-                     sapply(labels, wrap_label),  # wrap only model system labels
-                     labels)
-  )
-
-# keep everything (don’t drop diseases; just hide labels)
-fig <- plot_ly(nodes,
-  ids = ~ids,
-  labels = ~labels,
-  parents = ~parents,
-  type = "sunburst",
-  branchvalues = "total",
-  marker = list(colors = ~color),
-  insidetextorientation = "radial"
-)
-
-fig
-
-reticulate::py_module_available("plotly")
-
-dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
-save_image(fig, file.path(OUT_DIR, "sunburst_updated_npg_colors.svg"), width = 2000, height = 1600, scale = 2)
 
 ```
 
@@ -216,48 +115,116 @@ save_image(fig, file.path(OUT_DIR, "sunburst_updated_npg_colors.svg"), width = 2
 
 tested = read.csv(file.path(INTERMEDIATE_DIR, "Figure3c.csv.gz"))
 
-df2 <- tested %>%
-  mutate(
-    assay_type = case_when(
-      SGE == "Yes"  ~ "SGE",
-      Vamp == "Yes" ~ "VAMP",
-      TRUE          ~ "Other"
+# Figure3c.csv.gz (global variant dedup, the default/current methodology) and
+# Figure3c_measurements.csv.gz (per-dataset dedup, the old/preprint
+# methodology) both record which --variant-dedup-scope built them (see
+# docs/build_figure3_data.md) in a variant_dedup_scope column, so each
+# rendered bar chart's y-axis title always matches what's actually being
+# counted: "global" counts a variant once across all of a gene's sibling
+# datasets, so the total is a count of distinct variants, not of per-dataset
+# measurements; "per-dataset" counts a variant once per dataset that tested
+# it, so the total really is a measurement count.
+bar_y_title_for_scope <- function(scope) {
+  if (identical(scope, "global")) "Total unique variants" else "Total variant effect measurements"
+}
+
+# Figure3c.csv.gz's Gene column is the raw integrated-dataset value for the
+# one multi-gene dataset (CALM1_CALM2_CALM3_Weile_2017); matches the
+# "CALM1,2,3" label used for the same dataset in the sunburst above.
+prepare_variant_bar_summary <- function(tested) {
+  df2 <- tested %>%
+    mutate(
+      Gene = if_else(Gene == "CALM1, CALM2, CALM3", "CALM1,2,3", Gene),
+      assay_type = case_when(
+        SGE == "Yes"  ~ "SGE",
+        Vamp == "Yes" ~ "VAMP",
+        TRUE          ~ "Other"
+      )
     )
-  )
 
-summary_df <- df2 %>%
-  group_by(Gene, assay_type) %>%
-  summarise(
-    n_variants = sum(n_unique_IDs, na.rm = TRUE),
-    .groups = "drop"
-  )
+  summary_df <- df2 %>%
+    group_by(Gene, assay_type) %>%
+    summarise(
+      n_variants = sum(n_unique_IDs, na.rm = TRUE),
+      .groups = "drop"
+    )
 
+  gene_order <- summary_df %>%
+    group_by(Gene) %>%
+    summarise(total = sum(n_variants)) %>%
+    arrange(desc(total)) %>%
+    pull(Gene)
 
-gene_order <- summary_df %>%
-  group_by(Gene) %>%
-  summarise(total = sum(n_variants)) %>%
-  arrange(desc(total)) %>%
-  pull(Gene)
+  summary_df %>% mutate(Gene = factor(Gene, levels = gene_order))
+}
 
-# Reorder Gene factor
-summary_df <- summary_df %>%
-  mutate(Gene = factor(Gene, levels = gene_order))
+# Figure3c.csv.gz's global dedup picks one surviving Dataset per variant, so
+# a per-Dataset table can't reveal that a variant was actually tested by
+# more than one assay type (e.g. LDLR has 16,413 variants tested by both an
+# "Other" dataset and a Vamp-seq dataset). Figure3c_assay_combos.csv.gz
+# tallies unique variants by the *set* of assay types that tested each one
+# instead, so those variants get their own "Other+VAMP"-style combo --
+# plot_variant_bar_calibrated() renders combo segments as a diagonal stripe
+# rather than silently folding them into one assay type.
+prepare_variant_bar_summary_from_combos <- function(combos) {
+  summary_df <- combos %>%
+    transmute(
+      Gene = if_else(Gene == "CALM1, CALM2, CALM3", "CALM1,2,3", Gene),
+      assay_type = assay_combo,
+      n_variants = n_unique_IDs
+    ) %>%
+    group_by(Gene, assay_type) %>%
+    summarise(n_variants = sum(n_variants, na.rm = TRUE), .groups = "drop")
 
-# Plot stacked bars in descending order
-y = ggplot(summary_df, aes(x = Gene, y = n_variants, fill = assay_type)) +
-  geom_col(position = "stack", color = NA) +
-  scale_fill_manual(
-    values = c("SGE" = "#E57525",
-               "VAMP" = "#09A3A3",
-               "Other" = "grey") 
-  ) +
-  theme_classic() +
-  labs(x = "Gene", y = "Total Variant effect measurements", fill = "Assay") +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5, face = 'italic'))
+  gene_order <- summary_df %>%
+    group_by(Gene) %>%
+    summarise(total = sum(n_variants)) %>%
+    arrange(desc(total)) %>%
+    pull(Gene)
 
-y
+  summary_df %>% mutate(Gene = factor(Gene, levels = gene_order))
+}
 
-ggsave(file.path(OUT_DIR, "barplot_variants_npg_colors.png"), y, dpi = 300, device = 'png', height = 4, width = 6, create.dir = TRUE)
+# Calibrated (exact print-size) rendering -- see
+# src/lib/figures/variant_bar_calibrated.R for the layout logic. Sourced
+# into its own env (matching the convention for every other calibrated lib
+# in this document) so its constants can't collide with another one sourced
+# elsewhere in this document.
+.bar_lib <- new.env(parent = globalenv())
+source("../../../src/lib/figures/variant_bar_calibrated.R", local = .bar_lib)
+plot_variant_bar_calibrated <- .bar_lib$plot_variant_bar_calibrated
+
+# 4.25in x 3.25in total, matching the published figure.
+assay_combos <- read.csv(file.path(INTERMEDIATE_DIR, "Figure3c_assay_combos.csv.gz"))
+summary_df <- prepare_variant_bar_summary_from_combos(assay_combos)
+bar_chart <- plot_variant_bar_calibrated(summary_df, y_title = bar_y_title_for_scope(unique(tested$variant_dedup_scope)))
+
+bar_chart$plot
+
+ggsave(
+  file.path(OUT_DIR, "barplot_variants_calibrated.pdf"),
+  bar_chart$plot,
+  width = bar_chart$width_mm, height = bar_chart$height_mm, units = 'mm',
+  device = cairo_pdf, create.dir = TRUE
+)
+
+# Old/preprint methodology (per-dataset dedup), rendered for comparison --
+# see docs/build_figure3_data.md's "Figure3c vs Figure3c_measurements".
+tested_measurements <- read.csv(file.path(INTERMEDIATE_DIR, "Figure3c_measurements.csv.gz"))
+summary_df_measurements <- prepare_variant_bar_summary(tested_measurements)
+bar_chart_measurements <- plot_variant_bar_calibrated(
+  summary_df_measurements,
+  y_title = bar_y_title_for_scope(unique(tested_measurements$variant_dedup_scope))
+)
+
+bar_chart_measurements$plot
+
+ggsave(
+  file.path(OUT_DIR, "barplot_variants_measurements_calibrated.pdf"),
+  bar_chart_measurements$plot,
+  width = bar_chart_measurements$width_mm, height = bar_chart_measurements$height_mm, units = 'mm',
+  device = cairo_pdf, create.dir = TRUE
+)
 
 #2C pie chart
 
@@ -311,7 +278,6 @@ ggsave(file.path(OUT_DIR, "IGVF_pie_chart.png"), IGVF_pie, dpi = 300, device = '
 
 venn = read.csv(file.path(INTERMEDIATE_DIR, "Figure3d.csv.gz"))
 
-# install.packages("eulerr")
 library(eulerr)
 
 # Collapse counts
@@ -341,67 +307,39 @@ VG = venn$Count.in.gnomAD[venn$Group == "VUS total"]
 B_new = B - BG
 P_new = P - PG
 V_new = V - VG
-
-B_new
-P_new
-V_new
 G_new <- G - (BG+PG+VG)
 
-B
+# Calibrated (exact print-size) rendering -- see
+# src/lib/figures/euler_venn_calibrated.R for the layout logic (circle
+# geometry still comes from eulerr::euler(), same as before; only the
+# rendering -- exact mm sizing, label placement/rotation/shrink-to-fit, and
+# the legend -- is custom). Sourced into its own env (matching the
+# convention for every other calibrated lib in this document) so its
+# constants can't collide with another one sourced elsewhere in this
+# document.
+.venn_lib <- new.env(parent = globalenv())
+source("../../../src/lib/figures/euler_venn_calibrated.R", local = .venn_lib)
+plot_euler_venn_calibrated <- .venn_lib$plot_euler_venn_calibrated
 
-
-#build Euler input call
-fit <- euler(c(
-  B    = B_new,
-  P    = P_new,
-  G    = G_new,
-  D    = D,
-  V    = V_new,
-  "B&G" = BG,
-  "P&G" = PG,
-  "V&G" = VG
-))
-
-fit
-
-
-
-sets <- unique(unlist(strsplit(names(fit$original), "&")))
-sets
-
-colors <- c("B"  = "#1D7AAB",
-            "P"  = "#CA7682",
-            "G"  = "#A5A9BE",
-            "D"  = "white",
-            "V" = "#545454")
-
-
-#without labels 
-x = plot(fit,
-     fills = list(fill = colors[sets], alpha = 0.5),
-     edges = list(col = "black"),
-     labels = NA)
-
-
-x
-
-#with labels 
-y = plot(
-  fit,
-  fills = list(fill =  colors[sets], alpha = 0.6),
-  edges = list(col = "black"),
-  labels = list(cex = 1.3, font = 2),
-  quantities = list(cex = 0.9, font = 1)
+# 2.4in H x 3in W total, matching the published figure.
+venn_chart <- plot_euler_venn_calibrated(
+  B = B_new, P = P_new, G = G_new, V = V_new, D = D, BG = BG, PG = PG, VG = VG
 )
-y
 
+venn_chart$plot
 
-
-ggsave(file.path(OUT_DIR, "venn_variants_updated.png"), x, dpi = 300, device = 'png', height = 4, width = 4, bg =  "transparent", create.dir = TRUE)
+ggsave(
+  file.path(OUT_DIR, "venn_variants_calibrated.pdf"),
+  venn_chart$plot,
+  width = venn_chart$width_mm, height = venn_chart$height_mm, units = 'mm',
+  device = cairo_pdf, create.dir = TRUE
+)
 
 ```
 
 ```{r}
+
+library(ggrepel)
 
 # Rebuild via `poetry run python -m src.build_figure3_data` -- see
 # docs/build_figure3_data.md.
@@ -450,47 +388,27 @@ label_genes <- c("BRCA1",
 
 
 
-x <- ggplot(filtered_data,
-       aes(x = gene_test_count, 
-           y = possible_SNVs,
-           size = Uncertain.significance,
-           fill = IGVF_produced)) + 
-  geom_point(aes(color = ifelse(gene_symbol %in% acmg_sf_genes, "highlight", "normal")),
-             shape = 21, alpha = 1, stroke = ifelse(filtered_data$gene_symbol %in% acmg_sf_genes, 1, 0)) +
-  geom_text_repel(
-  aes(label = ifelse(gene_symbol %in% label_genes, gene_symbol, NA)),
-  size = 3,
-  fontface = "italic",
-  max.overlaps = 30,     # allow more labels
-  box.padding = 0.7,      # more space around text
-  point.padding = 0.6,    # more space around points
-  force = 2,              # stronger repulsion between labels
-  force_pull = 0.3,       # pull toward data point but not too tight
-  segment.size = 0.2,     # thinner lines
-  segment.color = "grey40",
-  min.segment.length = 0  # always draw a line
-) +
-  theme_classic() +
-  labs(x = "Number of Clinical Tests",
-       y = "Possible Number of SNVs",
-       size = "Number of VUS in ClinVar (SNV)") +
-  scale_fill_manual(name = "IGVF produced",
-                    values = c("Yes" = "#176082","No" = "grey")) +
-  scale_color_manual(values = c("highlight" = "red3", "normal" = 'black'),
-                     guide = "none") +  # border colors
-  theme(
-    plot.title = element_text(size = 18, hjust = 0.5),
-    axis.title = element_text(size = 12),
-    axis.text = element_text(size = 12),
-    legend.title = element_text(size = 8),
-    legend.text = element_text(size = 6),
-    plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"),
-    legend.position = "bottom"
-  )
+# Calibrated (exact print-size) rendering -- see
+# src/lib/figures/bubble_scatter_calibrated.R for the layout logic. Sourced
+# into its own env (matching the convention for every other calibrated lib
+# in this document) so its constants can't collide with another one sourced
+# elsewhere in this document.
+.bubble_lib <- new.env(parent = globalenv())
+source("../../../src/lib/figures/bubble_scatter_calibrated.R", local = .bubble_lib)
+plot_bubble_calibrated <- .bubble_lib$plot_bubble_calibrated
 
+# Plot area (origin to the far edge of each axis line) is 3in x 2in,
+# matching the published figure; axis titles/ticks/legend extend beyond it,
+# so the actual saved canvas ends up somewhat larger than 3in x 2in.
+bubble <- plot_bubble_calibrated(filtered_data, acmg_sf_genes, label_genes)
 
-x
+bubble$plot
 
-ggsave(file.path(OUT_DIR, "bubble_plot_only_pp_no_legend.png"), x, dpi = 300, device = 'png', height = 5, width = 6, create.dir = TRUE)
+ggsave(
+  file.path(OUT_DIR, "bubble_plot_calibrated.pdf"),
+  bubble$plot,
+  width = bubble$width_mm, height = bubble$height_mm, units = 'mm',
+  device = cairo_pdf, create.dir = TRUE
+)
 
 ```

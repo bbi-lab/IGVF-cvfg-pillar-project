@@ -1,9 +1,9 @@
 # build_figure3_data
 
 Rebuilds `data/intermediate/figures/figure_3/Figure3a.csv.gz`,
-`Figure3c.csv.gz`, and `Figure3d.csv.gz` — all three data files
-`notebooks/figures/figure_3/curation_summary_figure3.Rmd` reads. All three
-were originally produced by an ad hoc, uncommitted notebook
+`Figure3c.csv.gz`, `Figure3c_measurements.csv.gz`, and `Figure3d.csv.gz` —
+all four data files `notebooks/figures/figure_3/curation_summary_figure3.Rmd`
+reads. All four were originally produced by an ad hoc, uncommitted notebook
 (`data/output/Curation_summary_V5_cleaned.ipynb`) pointed at a stale personal
 directory layout; this script reproduces their logic against this repo's
 actual current outputs, writing to the gitignored `data/intermediate/`
@@ -16,8 +16,28 @@ regenerated on demand rather than committed as stale snapshots.
 | Output | Contents | Source |
 |---|---|---|
 | `Figure3a.csv.gz` | per-gene ClinVar classification counts, GenCC gene-disease validity, UniProt protein length → possible SNVs, clinical test counts, IGVF flag | `data/output/maves/integrated_variant_effect_dataset.tsv.gz` joined against the three files under `data/input/genes/` (see [`docs/data.md`](data.md)) and `Supplementary_Data_3.xlsx`'s `Curation` sheet (`IGVF Produced?`) |
-| `Figure3c.csv.gz` | per-dataset unique-variant counts, tagged SGE/Vamp-seq/IGVF | `data/output/maves/integrated_variant_effect_dataset.tsv.gz` joined against `data/input/maves/Supplementary_Data_3.xlsx`'s `Curation` sheet (`Assay Name`, `IGVF Produced?`, `Primary Score Set or Meta-analysis?`) |
+| `Figure3c.csv.gz` | unique-variant counts (a variant tested by several sibling datasets for the same gene counts once, globally), tagged SGE/Vamp-seq/IGVF | `data/output/maves/integrated_variant_effect_dataset.tsv.gz` joined against `data/input/maves/Supplementary_Data_3.xlsx`'s `Curation` sheet (`Assay Name`, `IGVF Produced?`, `Primary Score Set or Meta-analysis?`) |
+| `Figure3c_measurements.csv.gz` | the same, but per-dataset: a variant tested by N sibling datasets counts N times | same as `Figure3c.csv.gz` |
 | `Figure3d.csv.gz` | ClinVar control (Benign/Likely benign/Pathogenic/Likely pathogenic and combined labels), gnomAD, unreported-SNV, and VUS counts | `data/output/maves/integrated_variant_effect_dataset.tsv.gz` alone |
+
+### `Figure3c` vs `Figure3c_measurements`
+
+Several genes have multiple non-meta-analysis datasets that assay largely
+the same variant library under different conditions or antibody tags -- e.g.
+F9's 5 `Popp_2025` datasets (one per epitope tag) all assay ~9,700 of the
+same variants; CBS's two `Sun_2020` selection conditions and CARD11's two
+`Meitlis_2020` conditions are similar. `Figure3c.csv.gz` counts each variant
+once across all of a gene's sibling datasets (a true count of distinct
+variants -- the default/current methodology); `Figure3c_measurements.csv.gz`
+counts it once *per dataset* that tested it, so the same variant tested by 5
+sibling datasets contributes 5x to the gene's total (a count of
+measurements, not distinct variants -- this matches the methodology behind
+the committed manuscript snapshot, `git show
+d4d7770:Main_Figures/Figure_3/Figure3c.csv.gz`, which predates this script).
+Both files record which scope produced them in a `variant_dedup_scope`
+column ("global"/"per-dataset"), which `curation_summary_figure3.Rmd` uses
+to pick each rendered bar chart's y-axis title ("Total unique variants" vs
+"Total Variant effect measurements") automatically.
 
 `Figure3a` and `Figure3c`'s IGVF flags, and `Figure3c`'s SGE/Vamp-seq/
 meta-analysis flags, are all joined from `Supplementary_Data_3.xlsx`'s
@@ -111,5 +131,5 @@ poetry run python -m src.build_figure3_data
 
 Optional flags: `--integrated-dataset`, `--curation-sheet`, `--gencc`,
 `--uniprot`, `--testing-registry`, `--figure3a-output`, `--figure3c-output`,
-`--figure3d-output` (the last three default under
-`data/intermediate/figures/figure_3/`).
+`--figure3c-measurements-output`, `--figure3d-output` (the last four default
+under `data/intermediate/figures/figure_3/`).

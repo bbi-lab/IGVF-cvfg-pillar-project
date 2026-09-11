@@ -8,6 +8,7 @@ from src.build_figure3_data import (
     add_clinvar_snapshot_column,
     build_figure3a_gene_summary,
     build_figure3c_assay_categories,
+    build_figure3c_variant_assay_combos,
     build_figure3d_counts,
     collapse_to_unique_variants,
     main,
@@ -111,6 +112,38 @@ def test_collapse_to_unique_variants_dedupes_repeated_genomic_rows():
         "Benign",
         "Uncertain significance",
     }
+
+
+def test_collapse_to_unique_variants_dataset_scoped_counts_once_per_dataset():
+    # The same RAD51C nucleotide variant (hg38_start=100, A>T) is tested by
+    # both RAD51C_A and RAD51C_B; the same PALB2 protein variant
+    # (p.Arg10Gly on NM_1) is tested by both PALB2_A and PALB2_B.
+    pp = add_clinvar_snapshot_column(
+        pd.DataFrame(
+            {
+                "Gene": ["RAD51C", "RAD51C", "PALB2", "PALB2"],
+                "Dataset": ["RAD51C_A", "RAD51C_B", "PALB2_A", "PALB2_B"],
+                "clinvar_sig_2018": ["Pathogenic"] * 4,
+                "clinvar_sig_2025": ["Pathogenic", "Pathogenic", "Pathogenic", "Pathogenic"],
+                "nucleotide_or_aa": ["nt", "nt", "aa", "aa"],
+                "hg38_start": [100, 100, np.nan, np.nan],
+                "ref_allele": ["A", "A", np.nan, np.nan],
+                "alt_allele": ["T", "T", np.nan, np.nan],
+                "gnomad_MAF": [np.nan, np.nan, np.nan, np.nan],
+                "aa_pos": [np.nan, np.nan, 10, 10],
+                "aa_ref": [np.nan, np.nan, "Arg", "Arg"],
+                "aa_alt": [np.nan, np.nan, "Gly", "Gly"],
+                "RefSeq Transcript ID": [np.nan, np.nan, "NM_1.2", "NM_1.2"],
+            }
+        )
+    )
+
+    global_unique = collapse_to_unique_variants(pp)
+    dataset_scoped_unique = collapse_to_unique_variants(pp, dataset_scoped=True)
+
+    assert len(global_unique) == 2
+    assert len(dataset_scoped_unique) == 4
+    assert set(dataset_scoped_unique["Dataset"]) == {"RAD51C_A", "RAD51C_B", "PALB2_A", "PALB2_B"}
 
 
 def test_build_figure3d_counts_includes_controls_gnomad_and_vus():
@@ -232,7 +265,42 @@ def test_build_figure3c_assay_categories_excludes_meta_analysis_and_tags_flags()
     assert figure3c.loc["PALB2_IGVF", "n_unique_IDs"] == 2
 
 
-def test_main_cli_writes_all_three_outputs(tmp_path):
+def test_build_figure3c_variant_assay_combos_flags_multi_assay_variants():
+    # The (hg38_start=500, A>G) variant is tested by both an "Other" dataset
+    # and an SGE dataset -- it should get its own "Other+SGE" combo rather
+    # than being folded into just one. The (600, C>T) variant is only tested
+    # by the SGE dataset. The meta-analysis dataset (excluded) also tests the
+    # first variant, but shouldn't affect its combo.
+    pp = pd.DataFrame(
+        {
+            "Gene": ["LDLRX", "LDLRX", "LDLRX", "LDLRX"],
+            "Dataset": ["LDLRX_Other", "LDLRX_SGE", "LDLRX_SGE", "LDLRX_Meta"],
+            "nucleotide_or_aa": ["nt", "nt", "nt", "nt"],
+            "hg38_start": [500, 500, 600, 500],
+            "ref_allele": ["A", "A", "C", "A"],
+            "alt_allele": ["G", "G", "T", "G"],
+            "aa_pos": [np.nan] * 4,
+            "aa_ref": [np.nan] * 4,
+            "aa_alt": [np.nan] * 4,
+            "RefSeq Transcript ID": [np.nan] * 4,
+        }
+    )
+    curation = pd.DataFrame(
+        {
+            "Dataset Name": ["LDLRX_Other", "LDLRX_SGE", "LDLRX_Meta"],
+            "Assay Name": ["Other", "SGE", "SGE"],
+            "Primary Score Set or Meta-analysis?": ["primary score set", "primary score set", "meta-analysis"],
+        }
+    )
+
+    combos = build_figure3c_variant_assay_combos(pp, curation).set_index(["Gene", "assay_combo"])["n_unique_IDs"]
+
+    assert combos[("LDLRX", "Other+SGE")] == 1
+    assert combos[("LDLRX", "SGE")] == 1
+    assert ("LDLRX", "Other") not in combos.index
+
+
+def test_main_cli_writes_all_four_outputs(tmp_path):
     integrated_dataset_path = tmp_path / "integrated.tsv.gz"
     with gzip.open(integrated_dataset_path, "wt") as f:
         _sample_integrated_dataset().to_csv(f, sep="\t", index=False)
@@ -282,6 +350,8 @@ def test_main_cli_writes_all_three_outputs(tmp_path):
 
     figure3a_output_path = tmp_path / "Figure3a.csv.gz"
     figure3c_output_path = tmp_path / "Figure3c.csv.gz"
+    figure3c_measurements_output_path = tmp_path / "Figure3c_measurements.csv.gz"
+    figure3c_assay_combos_output_path = tmp_path / "Figure3c_assay_combos.csv.gz"
     figure3d_output_path = tmp_path / "Figure3d.csv.gz"
 
     runner = CliRunner()
@@ -302,6 +372,10 @@ def test_main_cli_writes_all_three_outputs(tmp_path):
             str(figure3a_output_path),
             "--figure3c-output",
             str(figure3c_output_path),
+            "--figure3c-measurements-output",
+            str(figure3c_measurements_output_path),
+            "--figure3c-assay-combos-output",
+            str(figure3c_assay_combos_output_path),
             "--figure3d-output",
             str(figure3d_output_path),
         ],
@@ -310,13 +384,32 @@ def test_main_cli_writes_all_three_outputs(tmp_path):
     assert result.exit_code == 0, result.output
     assert figure3a_output_path.exists()
     assert figure3c_output_path.exists()
+    assert figure3c_measurements_output_path.exists()
+    assert figure3c_assay_combos_output_path.exists()
     assert figure3d_output_path.exists()
 
     figure3a = pd.read_csv(figure3a_output_path)
     assert {"Gene", "possible_SNVs", "gene_test_count", "IGVF_produced"} <= set(figure3a.columns)
 
+    expected_figure3c_columns = {
+        "Gene",
+        "Dataset",
+        "SGE",
+        "Vamp",
+        "IGVF",
+        "n_unique_IDs",
+        "variant_dedup_scope",
+    }
     figure3c = pd.read_csv(figure3c_output_path)
-    assert set(figure3c.columns) == {"Gene", "Dataset", "SGE", "Vamp", "IGVF", "n_unique_IDs"}
+    assert set(figure3c.columns) == expected_figure3c_columns
+    assert set(figure3c["variant_dedup_scope"]) == {"global"}
+
+    figure3c_measurements = pd.read_csv(figure3c_measurements_output_path)
+    assert set(figure3c_measurements.columns) == expected_figure3c_columns
+    assert set(figure3c_measurements["variant_dedup_scope"]) == {"per-dataset"}
+
+    figure3c_assay_combos = pd.read_csv(figure3c_assay_combos_output_path)
+    assert set(figure3c_assay_combos.columns) == {"Gene", "assay_combo", "n_unique_IDs"}
 
     figure3d = pd.read_csv(figure3d_output_path)
     assert set(figure3d.columns) == {"Group", "Count", "Count in gnomAD"}
