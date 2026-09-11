@@ -392,27 +392,57 @@ the "(unchanged)" light color rather than adding a third legend entry.
 **Real findings worth knowing before reading too much into an all-light(-and-
 unhatched) band**: whether upgrades can happen at all in a given band
 depends on the asymmetry between this pipeline's pathogenic (`>=6`) and
-benign (`<=-1`) resolution thresholds. In the "Functional/Predictive alone
-sufficient" bands specifically, the *other*, not-independently-
+benign (`<=-1`) resolution thresholds -- but only as a rough guide, not a
+guarantee, for the "Functional/Predictive alone sufficient" bands
+specifically. The naive argument is that the *other*, not-independently-
 sufficient source's own points are bounded on one side by definition --
 under `--direction benign`, "not independently sufficient" means that
-source's points are `>= 0` (i.e. they can only be zero or oppose the benign
-direction, never reinforce it), so combining can never push those two bands
-into a stronger class; only "Either alone sufficient" can show upgrades
-there. Under `--direction pathogenic`, the same bands *can* show upgrades,
-since "not independently sufficient" there allows the other source up to
-`+5` -- room to reinforce without crossing its own threshold. Confirmed on
-the real integrated dataset: `--direction benign --show-class-upgrade` shows
-real upgrades only in "Either alone sufficient" (roughly a third of that
-band, for all three predictors) and zero in the other two bands, for exactly
-this reason -- not a bug, a property of the fixed thresholds. That same run,
-though, *does* show real (if small -- well under 1% of each band)
-downgraded-but-still-resolved counts in both "Functional alone sufficient"
-and "Predictive alone sufficient" for all three predictors -- e.g. REVEL:
-175 of 35,930 functional-alone variants, 21 of 4,783 predictor-alone
-variants -- confirming the
-erosion case isn't just theoretical, and was invisible before this flag
-existed.
+source's points are `>= 0` -- so summing it with the already-sufficient
+source's points could only weaken or hold the class, never strengthen it.
+That argument implicitly assumes "combined" means "this same row's
+functional points plus this same row's predictor points," which is exactly
+what each arm's *independent* per-DNA-variant dedup (see `build_arm` above)
+does not guarantee: the combined arm picks whichever underlying assay/
+annotation row maximizes `abs(Combined_points)` for that variant, which can
+be a *different* row than the one the functional-only (or predictor-only)
+arm independently picked as its own best. When a variant has more than one
+functional measurement, the row that wins "Functional alone sufficient"
+(largest `abs(Functional_points)` on its own) need not be the row that
+combines best with a fixed predictor score -- so a small number of
+variants can still show a real upgrade in these bands. Confirmed on the
+real integrated dataset (default `vus`+`unobserved` scope): one concrete
+example is CHEK2 22:28689191 G>C -- the functional-only arm's winning row
+has `Functional_points = +5` (pathogenic-leaning, not benign-resolving on
+its own), REVEL's own points are `-3` (Likely Benign, tier 1), and the
+combined arm's own winning row (a *different* functional measurement for
+the same variant) combines to `Combined_points = -7` (Benign, tier 2) -- an
+upgrade, even though naive addition of the two "winning" rows shown above
+(`+5` and `-3`) would suggest otherwise.
+
+Counts on the current checkpoint, `--direction benign --show-class-upgrade`
+(vus+unobserved scope, summed): "Either alone sufficient" shows the bulk of
+upgrades, as expected (REVEL 8,548 of 26,173; AlphaMissense 7,085 of 25,518;
+MutPred2 7,804 of 26,516 -- roughly a third of each). "Functional alone
+sufficient" shows zero upgrades for all three predictors in this dataset
+(REVEL 0 of 37,473; AlphaMissense 0 of 39,186; MutPred2 0 of 37,316) --
+consistent with the naive bound, though not guaranteed to hold in general by
+the mechanism above. "Predictive alone sufficient" does show a handful of
+real upgrades from exactly that per-arm-dedup mechanism -- small, but
+nonzero: REVEL 2 of 4,888, AlphaMissense 6 of 6,377, MutPred2 6 of 5,812.
+Under `--direction pathogenic`, "Predictive alone sufficient" and "Either
+alone sufficient" are entirely empty for all three predictors -- no variant
+is ever categorized into either band, since no predictor alone reaches the
+Pathogenic/Likely Pathogenic threshold in this dataset (see the note on this
+asymmetry elsewhere in this doc). All of `--direction pathogenic`'s upgrades
+(and there are many -- REVEL 1,718 of 4,554 functional-alone variants
+combining `vus`+`unobserved`) show up in "Functional alone sufficient"
+itself. All three predictors also show real (if small -- well under 1% of
+each band) downgraded-but-still-
+resolved counts in both "Functional alone sufficient" and "Predictive alone
+sufficient" under `--direction benign` -- e.g. REVEL: 178 of 37,473
+functional-alone variants, 22 of 4,888 predictor-alone variants --
+confirming the erosion case isn't just theoretical, and was invisible
+before this flag existed.
 
 ## Side-by-side comparison chart (`--plot-comparison`)
 
