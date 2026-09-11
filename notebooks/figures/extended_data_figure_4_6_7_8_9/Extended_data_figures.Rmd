@@ -1515,6 +1515,10 @@ library(ggplot2)
 summ_gene_pct <- function(df, points_col, predictor_label) {
   df %>%
     filter(!is.na(Gene), !is.na(.data[[points_col]])) %>%
+    # The one multi-gene dataset (CALM1_CALM2_CALM3_Weile_2017) stores its
+    # Gene column as "CALM1, CALM2, CALM3"; displayed as "CALM1,2,3" instead,
+    # matching Figure 3's convention for the same dataset.
+    mutate(Gene = if_else(Gene == "CALM1, CALM2, CALM3", "CALM1,2,3", Gene)) %>%
     group_by(Gene) %>%
     summarize(
       n_total  = n(),
@@ -1555,30 +1559,26 @@ gene_order <- plot_df %>%
 plot_df <- plot_df %>%
   mutate(Gene = factor(Gene, levels = gene_order))
 
-# --- zoom x-axis to your data range ---
-x_min <- floor(min(plot_df$pct_vus_remaining, na.rm = TRUE) / 5) * 5
-x_max <- ceiling(max(plot_df$pct_vus_remaining, na.rm = TRUE) / 5) * 5
+# Calibrated (exact print-size) rendering -- see
+# src/lib/figures/vus_rank_plot_calibrated.R for the layout logic. Sourced
+# into its own env (matching the convention for every other calibrated lib
+# in this document) so its constants can't collide with another one sourced
+# elsewhere in this document.
+.vus_rank_lib <- new.env(parent = globalenv())
+source("../../../src/lib/figures/vus_rank_plot_calibrated.R", local = .vus_rank_lib)
+plot_vus_rank_calibrated <- .vus_rank_lib$plot_vus_rank_calibrated
 
-xy = ggplot(plot_df, aes(x = pct_vus_remaining, y = Gene)) +
-  geom_segment(aes(x = x_min, xend = x_max, yend = Gene),
-               linewidth = 0.35, color = "grey90") +
-  geom_point(size = 2) +
-  facet_grid(. ~ Predictor) +
-  scale_x_continuous(
-    limits = c(x_min, x_max),
-    breaks = seq(x_min, x_max, by = 10),
-    expand = c(0.01, 0.01)
-  ) +
-  labs(x = "% VUS remaining", y = NULL) +
-  theme_classic() +
-  theme(
-    strip.background = element_blank(),
-    strip.text = element_text(face = "bold"),
-    axis.text.y = element_text(size = 9),
-    axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)
-  )
+# 3.05in W x 4.1in H total, matching the published figure.
+rank_chart <- plot_vus_rank_calibrated(plot_df)
 
-ggsave('../../../data/output/figures/extended_data_figure_8/rank_based_plot.png',xy, dpi = 300, device = 'png', bg = 'transparent', create.dir = TRUE)
+rank_chart$plot
+
+ggsave(
+  '../../../data/output/figures/extended_data_figure_8/rank_based_plot_calibrated.pdf',
+  rank_chart$plot,
+  width = rank_chart$width_mm, height = rank_chart$height_mm, units = 'mm',
+  device = cairo_pdf, create.dir = TRUE
+)
 
 ```
 
@@ -1593,6 +1593,10 @@ library(ggplot2)
 make_heat_df <- function(df, gene_col = "Gene", points_col, predictor_label) {
   df %>%
     filter(!is.na(.data[[gene_col]]), !is.na(.data[[points_col]])) %>%
+    # The one multi-gene dataset (CALM1_CALM2_CALM3_Weile_2017) stores its
+    # Gene column as "CALM1, CALM2, CALM3"; displayed as "CALM1,2,3" instead,
+    # matching Figure 3's convention for the same dataset.
+    mutate(!!gene_col := if_else(.data[[gene_col]] == "CALM1, CALM2, CALM3", "CALM1,2,3", .data[[gene_col]])) %>%
     count(.data[[gene_col]], .data[[points_col]], name = "n") %>%
     group_by(.data[[gene_col]]) %>%
     mutate(prop = n / sum(n)) %>%
@@ -1625,22 +1629,31 @@ heat_mp2 <- make_heat_df(
 heat_df_all <- bind_rows(heat_revel, heat_am, heat_mp2) %>%
   mutate(Predictor = factor(Predictor, levels = c("REVEL", "AM", "MP2")))
 
-xx = ggplot(heat_df_all, aes(x = Points, y = Gene, fill = prop)) +
-  geom_tile(color = "white", linewidth = 0.2) +
-  facet_grid(. ~ Predictor) +
-  scale_fill_viridis_c(name = "Proportion") +
-  labs(
-    x = "Total points",
-    y = "Gene"
-  ) +
-  theme_classic() +
-  theme(
-    axis.text.x = element_text(angle = 45, hjust = 1),
-    axis.text.y = element_text(size = 8),
-    strip.text = element_text(face = "bold")
-  )
+# Calibrated (exact print-size) rendering -- see
+# src/lib/figures/vus_points_heatmap_calibrated.R for the layout logic.
+# Sourced into its own env (matching the convention for every other
+# calibrated lib in this document) so its constants can't collide with
+# another one sourced elsewhere in this document.
+.vus_heatmap_lib <- new.env(parent = globalenv())
+source("../../../src/lib/figures/vus_points_heatmap_calibrated.R", local = .vus_heatmap_lib)
+plot_vus_heatmap_calibrated <- .vus_heatmap_lib$plot_vus_heatmap_calibrated
 
-ggsave('../../../data/output/figures/extended_data_figure_8/points_heatmap.png',xx, dpi = 300, device = 'png', bg = 'transparent', create.dir = TRUE)
+# 3.5in W x 4.1in H total, matching the published figure.
+# target_bottom_chrome_mm matches this plot's panel to the rank plot's own
+# (taller, due to its longer wrapped title) bottom chrome, so the two
+# figures' y-axis tick marks -- 40 genes in each, just in a different order
+# -- land at the same vertical position despite being separate ggplot
+# objects with different titles/legends.
+heatmap_chart <- plot_vus_heatmap_calibrated(heat_df_all, target_bottom_chrome_mm = rank_chart$bottom_chrome_mm)
+
+heatmap_chart$plot
+
+ggsave(
+  '../../../data/output/figures/extended_data_figure_8/points_heatmap_calibrated.pdf',
+  heatmap_chart$plot,
+  width = heatmap_chart$width_mm, height = heatmap_chart$height_mm, units = 'mm',
+  device = cairo_pdf, create.dir = TRUE
+)
 
 
 
