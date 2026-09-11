@@ -18,6 +18,9 @@
 point_in_mm <- 0.3527778
 FONT_FAMILY <- "Arial"
 LABEL_PT <- 7
+# Slightly smaller than LABEL_PT (axis/legend text) -- kept as its own
+# constant since the two are tuned independently.
+GENE_LABEL_PT <- 6
 
 GAP_MM <- 1.2
 TICK_LEN_MM <- 0.8
@@ -257,6 +260,32 @@ plot_bubble_calibrated <- function(gene_df, acmg_sf_genes, label_genes,
   x_range <- c(-left_margin_mm, max(chart_width_mm + right_margin_mm, legend_right_edge))
   y_range <- c(-bottom_margin_mm, chart_height_mm + top_margin_mm)
 
+  # A few labels sit in dense clusters where the shared default nudge
+  # (rightward none, upward 6mm -- tuned for the common case) pulls them
+  # into a neighbor's own label/callout line, making it hard to tell which
+  # line belongs to which bubble. Each gets a one-off override, chosen to
+  # send it toward the nearest open space instead:
+  #  - BARD1 sits among KCNH2/JAG1/G6PD/F9; the shared upward nudge pulled
+  #    it up into that cluster, crossing KCNH2's own line. Nudged right.
+  #  - GCK's bubble sits under 1mm below G6PD's own bubble (nearly
+  #    touching), so both labels competed for the same patch of space
+  #    above. Nudged down instead, into the open space below.
+  #  - TARDBP sits beside F9/RHO/DDX3X; nudged down-left, away from that
+  #    cluster, into open space below-left of its own bubble.
+  label_overrides <- tribble(
+    ~gene_symbol, ~nudge_x_mm, ~nudge_y_mm,
+    "BARD1", 6, 6,
+    "GCK", 0, -6,
+    "TARDBP", -6, -6
+  )
+  label_df <- gene_df %>%
+    filter(has_label) %>%
+    left_join(label_overrides, by = "gene_symbol") %>%
+    mutate(
+      nudge_x_mm = coalesce(nudge_x_mm, 0),
+      nudge_y_mm = coalesce(nudge_y_mm, 6)
+    )
+
   p <- ggplot() +
     # Axis lines (bottom + left only, matching theme_classic()'s look).
     annotate("segment", x = 0, xend = 0, y = 0, yend = chart_height_mm, linewidth = AXIS_LWD, colour = "black") +
@@ -291,9 +320,9 @@ plot_bubble_calibrated <- function(gene_df, acmg_sf_genes, label_genes,
     ) +
     scale_size_identity() +
     geom_text_repel(
-      data = gene_df %>% filter(has_label),
+      data = label_df,
       aes(x = x_mm, y = y_mm, label = gene_symbol),
-      size = LABEL_PT * point_in_mm, family = FONT_FAMILY, fontface = "italic",
+      size = GENE_LABEL_PT * point_in_mm, family = FONT_FAMILY, fontface = "italic",
       # point.padding turned out not to be an effective lever here -- it
       # only reserves space around each point's (x, y) coordinate, not its
       # actual rendered bubble radius, so raising it (tried up to 4.5mm)
@@ -302,7 +331,7 @@ plot_bubble_calibrated <- function(gene_df, acmg_sf_genes, label_genes,
       # visible gap -- and therefore a callout line, since min.segment.length
       # is 0 -- for virtually every label rather than only the ones that
       # would otherwise collide with something.
-      nudge_y = 6, box.padding = unit(0.6, "mm"), point.padding = unit(0.5, "mm"),
+      nudge_x = label_df$nudge_x_mm, nudge_y = label_df$nudge_y_mm, box.padding = unit(0.6, "mm"), point.padding = unit(0.5, "mm"),
       force = 3, force_pull = 0.5, max.overlaps = Inf,
       segment.size = 0.15, segment.color = "grey40", min.segment.length = 0
     ) +
