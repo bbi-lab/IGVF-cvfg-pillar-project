@@ -276,7 +276,7 @@ poetry run jupyter nbconvert --to notebook --execute \
   notebooks/figures/figure_2/PP_ProcessBigDataFrame.ipynb
 
 # 2. Panel notebooks (independent of each other; all read step 1's output)
-for nb in PP_ClinVarPrecisionRecall PP_Fig2_Heatmaps PP_ResolutionOverview PP_SeqFunctionMap PP_StackedHistograms; do
+for nb in PP_ClinVarPrecisionRecall PP_Fig2_Heatmaps PP_ResolutionOverview PP_StackedHistograms; do
   poetry run jupyter nbconvert --to notebook --execute \
     --ExecutePreprocessor.kernel_name=igvf-cvfg-pillar-project \
     --ExecutePreprocessor.timeout=600 \
