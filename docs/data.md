@@ -25,6 +25,16 @@ manual.
 | `data/input/reference/extended_ensembl_consequence.csv.gz` | CVFG-specific VEP-term-to-SO-summary-term mapping, read by `annotate_simplified_consequence` (Step 17). |
 | `data/input/predictors/clustering_variants_revel_training_overlap.csv.gz`, `data/input/predictors/mp2_actual_training_data.txt.gz`, `data/input/predictors/supplementary_data_3_gene_entrez_ids.tsv` | Upstream training-variant sources consumed by `build_training_variant_files` (a preparatory step Step 13 runs automatically) — see [`docs/build_training_variant_files.md`](build_training_variant_files.md). |
 | `data/filtering/*.tsv` | Per-dataset variant-filtering annotations (`BAP1_Waters_2024.tsv`, `CHEK2_Gebbia_2024.tsv`, `DDX3X_Radford_2023.tsv`, `OTC_Lo_2023.tsv`, `RAD51C_Olvera-León_2024.tsv`), read by `flag_variants` (`--filtering-dir`, default `data/filtering`). |
+| `data/input/genes/gencc-submissions.csv.gz` | GenCC gene-disease validity submissions, downloaded 2026-09-10 from `https://thegencc.org/download/action/submissions-export-csv` (legacy UUID-based export; CC0 1.0 Public Domain, attribution requested). ⚠️ GenCC is discontinuing this legacy format on 2026-09-30 in favor of an SGC-ID-based export at `?format=new` — re-fetching after that date needs `build_figure3_data.py`'s GenCC-column handling updated to match. Read by `build_figure3_data` (Figure 3a). |
+| `data/input/genes/uniprotkb_9606_reviewed.tsv.gz` | Reviewed (Swiss-Prot) human proteome, downloaded 2026-09-10 from UniProt's REST API (`rest.uniprot.org/uniprotkb/stream`, `reviewed:true AND organism_id:9606`, CC BY 4.0 — attribution required). Read by `build_figure3_data` (Figure 3a, protein length → possible SNVs). |
+| `data/input/genes/test_condition_gene.txt.gz` | NCBI Genetic Testing Registry's public bulk export, downloaded 2026-09-10 from `https://ftp.ncbi.nlm.nih.gov/pub/GTR/data/test_condition_gene.txt` (US government work, public domain, attribution requested). Read by `build_figure3_data` (Figure 3a, clinical test counts per gene). |
+
+The three `data/input/genes/` files above are periodic snapshots, not
+one-time downloads — see
+[`docs/build_figure3_data.md`](build_figure3_data.md#refreshing-these-files)
+for the exact commands to refresh them, and
+[`README.md`](../README.md#third-party-data--licenses) for the attribution
+their licenses require.
 
 `data/input/predictors/` also holds a handful of other files
 (`MutPred2_scores_1.csv.gz`, `MutPred2_scores_2.csv.gz`,

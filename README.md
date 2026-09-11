@@ -291,8 +291,20 @@ docker compose run --rm -w /usr/src/app/notebooks/figures/figure_2 \
 
 #### Figure 3
 
-Not yet documented — see `notebooks/figures/figure_3/curation_summary_figure3.Rmd`
-and its `Figure3a/c/d.csv.gz` inputs.
+```bash
+# Rebuild Figure3a/c/d.csv.gz (gitignored intermediates, not committed) --
+# see docs/build_figure3_data.md.
+poetry run python -m src.build_figure3_data
+
+# Writes executed_curation_summary_figure3.html next to the .Rmd (gitignored)
+# and PNGs/an SVG to data/output/figures/figure_3/.
+docker compose run --rm -w /usr/src/app/notebooks/figures/figure_3 \
+  r-figures -e 'rmarkdown::render("curation_summary_figure3.Rmd", output_file = "executed_curation_summary_figure3.html")'
+```
+
+See [`docs/figures.md`](docs/figures.md#figure-3) for what each panel shows
+and [`docs/build_figure3_data.md`](docs/build_figure3_data.md) for the data
+pipeline behind it.
 
 #### Figure 4
 
@@ -411,6 +423,32 @@ Files included in this GitHub repository are:
 - Analysis scripts and notebooks
 - Figure-generation scripts and notebooks
 - Small supporting inputs
+
+## Third-Party Data & Licenses
+
+`data/input/genes/` bundles three external gene-level reference files used to
+build Figure 3's bubble plot (see [`docs/data.md`](docs/data.md) for exact
+download dates/URLs and [`docs/build_figure3_data.md`](docs/build_figure3_data.md)
+for how they're used and how to refresh them):
+
+- **GenCC** gene-disease validity submissions
+  (`data/input/genes/gencc-submissions.csv.gz`) — [CC0 1.0 Universal Public
+  Domain Dedication](https://creativecommons.org/publicdomain/zero/1.0/);
+  GenCC requests attribution to GenCC and its contributing sources.
+- **UniProtKB/Swiss-Prot** reviewed human proteome
+  (`data/input/genes/uniprotkb_9606_reviewed.tsv.gz`) — [CC BY
+  4.0](https://creativecommons.org/licenses/by/4.0/). Attribution: this work
+  uses data from UniProt, which is distributed under a Creative Commons
+  Attribution 4.0 International License.
+- **NCBI Genetic Testing Registry (GTR)** test/condition/gene export
+  (`data/input/genes/test_condition_gene.txt.gz`) — public domain (US
+  government work); NLM requests attribution to GTR as a data source.
+
+This section covers only the files under `data/input/genes/`. Other
+third-party data this pipeline reads (ClinVar, gnomAD, REVEL, AlphaMissense,
+MutPred2, MaveDB, MANE, Ensembl, etc.) should be used and cited per each
+source's own terms; consult the upstream provider for current license terms
+before redistributing this repository's derived outputs.
 
 ## Software Requirements
 

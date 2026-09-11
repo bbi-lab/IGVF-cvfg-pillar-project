@@ -97,8 +97,41 @@ docker compose run --rm -w /usr/src/app/notebooks/figures/figure_2 \
 
 ## Figure 3
 
-Directory: `notebooks/figures/figure_3/`. Not yet documented --
-`curation_summary_figure3.Rmd` plus its `Figure3a/c/d.csv.gz` inputs.
+Directory: `notebooks/figures/figure_3/`. `curation_summary_figure3.Rmd` --
+sunburst (disease -> assay type -> model system -> gene), a variant-effect-
+measurements bar chart + IGVF-share pie chart (labeled "Figure 2C" in the
+source, a leftover from an earlier figure numbering), a ClinVar-control/
+gnomAD/VUS Euler diagram ("Figure 2D"), and a clinical-tests-vs-possible-SNVs
+bubble plot with ACMG secondary-findings genes highlighted. Needs the
+`r-figures` Docker service, like Figure 5/6 and Extended Data Figures below --
+its sunburst panel's static SVG export additionally needs the Python
+`kaleido`/`plotly` packages `Dockerfile.r` provisions via `reticulate`.
+
+Reads four inputs, all relative to the `.Rmd`'s own directory:
+
+- **Sunburst**: derived inline (no cached CSV) from
+  `data/input/maves/Supplementary_Data_3.xlsx`'s `Curation` sheet.
+- **`Figure3a.csv.gz`** / **`Figure3c.csv.gz`** / **`Figure3d.csv.gz`**:
+  gitignored, rebuilt into `data/intermediate/figures/figure_3/` with
+  `poetry run python -m src.build_figure3_data` -- see
+  `docs/build_figure3_data.md`. Not committed -- run that command before
+  rendering the `.Rmd` for the first time in a checkout. `Figure3a` additionally
+  needs the three reference files under `data/input/genes/` (GenCC, UniProt,
+  NCBI GTR -- see `docs/data.md`), which *are* committed.
+
+### Steps
+
+```bash
+# Required before the first render in a checkout (Figure3a/c/d.csv.gz are
+# gitignored intermediates, not committed) and any time you want to refresh
+# them against the current pipeline output.
+poetry run python -m src.build_figure3_data
+
+# Writes executed_curation_summary_figure3.html next to the .Rmd (gitignored)
+# and PNGs/an SVG to data/output/figures/figure_3/.
+docker compose run --rm -w /usr/src/app/notebooks/figures/figure_3 \
+  r-figures -e 'rmarkdown::render("curation_summary_figure3.Rmd", output_file = "executed_curation_summary_figure3.html")'
+```
 
 ## Figure 4
 

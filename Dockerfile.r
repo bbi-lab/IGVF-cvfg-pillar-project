@@ -15,7 +15,9 @@ FROM rocker/r-ver:4.4.2
 # System libraries needed to build tidyverse/ggplot2's compiled deps
 # (ragg, textshaping, systemfonts, xml2, curl, ssl) plus cairo (for
 # grDevices::cairo_pdf) and pandoc (for rmarkdown::render() on the .Rmd
-# figure scripts). cabextract + ttf-mscorefonts-installer provide real Arial,
+# figure scripts), plus git (reticulate::install_python() below shells out to
+# git to bootstrap its managed pyenv build). cabextract +
+# ttf-mscorefonts-installer provide real Arial,
 # matching the scripts' `family = 'Arial'` theme settings (ggplot2 theme
 # text= / element_geom()) -- the figures were designed/reviewed on macOS,
 # where Arial ships as a system font, rather than a metric-compatible
@@ -27,6 +29,7 @@ RUN echo "ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula sele
        ttf-mscorefonts-installer \
        fontconfig \
        pandoc \
+       git \
        libcairo2-dev \
        libfontconfig1-dev \
        libfreetype6-dev \
@@ -83,6 +86,19 @@ RUN install2.r --error --skipinstalled --repos https://p3m.dev/cran/2025-10-15 \
 # ggsankey has no CRAN release; install from GitHub (per
 # notebooks/figures/extended_data_figure_4_6_7_8_9/README_Extended_data_figures.md).
 RUN Rscript -e 'remotes::install_github("davidsjoberg/ggsankey")'
+
+# figure_3/curation_summary_figure3.Rmd's sunburst panel calls plotly's
+# save_image() for static SVG export, which shells out to the Python
+# `kaleido` package via reticulate rather than anything in the R plotly
+# package itself. Provision reticulate's managed Python + kaleido/plotly at
+# build time so that export works offline in every container run, instead of
+# reticulate lazily fetching an ephemeral Python (and failing without
+# network) the first time save_image() is called. Pinned to kaleido's
+# pre-v1 release: v1 replaced the classic Chromium-subprocess backend with a
+# "choreographer" one that R's plotly::save_image()/kaleido() (as of plotly
+# 4.x on this image) doesn't yet know how to drive.
+RUN Rscript -e 'reticulate::install_python(version = "3.11:latest")' \
+    && Rscript -e 'reticulate::virtualenv_create("r-reticulate", python_version = "3.11", packages = c("plotly", "kaleido==0.2.1"))'
 
 # Populate extrafont's font database at build time (font_import() scans
 # system TTFs and builds metrics -- a slow, one-time step) so containers start

@@ -7,6 +7,17 @@ output: html_document
 
 ```{r}
 
+# Output/intermediate directories, relative to this .Rmd's own location --
+# matches the convention in
+# notebooks/figures/extended_data_figure_4_6_7_8_9/Extended_data_figures.Rmd.
+OUT_DIR = "../../../data/output/figures/figure_3"
+# Figure3c.csv.gz/Figure3d.csv.gz live here, rebuilt via
+# `poetry run python -m src.build_figure3_data` -- see docs/build_figure3_data.md.
+INTERMEDIATE_DIR = "../../../data/intermediate/figures/figure_3"
+```
+
+```{r}
+
 #sunburst plot to show assay type, model system, and gene combinations
 
 library(plotly)
@@ -15,6 +26,7 @@ library(dplyr)
 library(tidyr)
 library(reticulate)
 library(ggrepel)
+library(readxl)
 
 npg_colors_extended <- c(
   "#E64B35FF", # red-orange
@@ -43,7 +55,26 @@ npg_colors_extended <- c(
 
 npg_colors = c("#E64B35FF","#4DBBD5FF", "#00A087FF", "#3C5488FF", "#F39B7FFF", "#8491B4FF" ,"#91D1C2FF", "#DC0000FF", "#7E6148FF", "#B09C85FF")
 
-curation = read.csv("~/Downloads/MAVE_curation_v3_figures.csv")
+# Derived from data/input/maves/Supplementary_Data_3.xlsx's "Curation" sheet
+# (one row per MAVE dataset) -- the MAVE_curation_v3_figures.csv this chunk
+# originally read was never checked into the repo. Column mapping:
+# "Dataset Name" -> Dataset_tag, "Broad Disease Category" -> Disease,
+# "Assay Type" -> Assay.Type, "Model System" -> Model_system, "Gene" ->
+# Gene..HGNC.symbol. (split on ", " for the one multi-gene dataset,
+# CALM1_CALM2_CALM3_Weile_2017, into one row per gene).
+curation <- read_excel(
+  "../../../data/input/maves/Supplementary_Data_3.xlsx",
+  sheet = "Curation"
+) %>%
+  filter(!is.na(`Dataset Name`)) %>%
+  separate_rows(Gene, sep = ",\\s*") %>%
+  transmute(
+    Dataset_tag = `Dataset Name`,
+    Disease = `Broad Disease Category`,
+    Assay.Type = `Assay Type`,
+    Model_system = `Model System`,
+    Gene..HGNC.symbol. = Gene
+  )
 
 pillar_project_datasets = c('BRCA1_Findlay_2018', 'BRCA2_Hu_2024', 'VHL_Buckley_2024',
        'JAG1_Gilbert_2024', 'BRCA2_Sahu_2023_exon13_SGE',
@@ -173,14 +204,17 @@ fig
 
 reticulate::py_module_available("plotly")
 
-save_image(fig, "/Users/malvikatejura/Downloads/sunburst_updated_npg_colors.svg", width = 2000, height = 1600, scale = 2)
+dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
+save_image(fig, file.path(OUT_DIR, "sunburst_updated_npg_colors.svg"), width = 2000, height = 1600, scale = 2)
 
 ```
 
 ```{r}
-#Figure 2C, variant effect measurements 
+#Figure 2C, variant effect measurements
+# Rebuild via `poetry run python -m src.build_figure3_data` -- see
+# docs/build_figure3_data.md.
 
-tested = read.csv("~/Downloads/var_effect_measurements_dataset.csv")
+tested = read.csv(file.path(INTERMEDIATE_DIR, "Figure3c.csv.gz"))
 
 df2 <- tested %>%
   mutate(
@@ -223,7 +257,7 @@ y = ggplot(summary_df, aes(x = Gene, y = n_variants, fill = assay_type)) +
 
 y
 
-ggsave('~/Downloads/barplot_variants_npg_colors.png',y, dpi = 300, device = 'png', height = 4, width = 6)
+ggsave(file.path(OUT_DIR, "barplot_variants_npg_colors.png"), y, dpi = 300, device = 'png', height = 4, width = 6, create.dir = TRUE)
 
 #2C pie chart
 
@@ -265,42 +299,44 @@ IGVF_pie = ggplot(igvf_summary, aes(x = "", y = n_variants, fill = IGVF)) +
 
 IGVF_pie
 
-ggsave('~/Downloads/IGVF_pie_chart.png',IGVF_pie, dpi = 300, device = 'png', height = 4, width = 4)
+ggsave(file.path(OUT_DIR, "IGVF_pie_chart.png"), IGVF_pie, dpi = 300, device = 'png', height = 4, width = 4, create.dir = TRUE)
 
 ```
 
 ```{r}
 
 #venn diagram Figure 2D
+# Rebuild via `poetry run python -m src.build_figure3_data` -- see
+# docs/build_figure3_data.md.
 
-venn = read.csv("~/Downloads/venn_counts_122225.csv")
+venn = read.csv(file.path(INTERMEDIATE_DIR, "Figure3d.csv.gz"))
 
 # install.packages("eulerr")
 library(eulerr)
 
 # Collapse counts
-B <- venn$count[venn$clnsig_group == "Benign"] +
-     venn$count[venn$clnsig_group == "Likely benign"] +
-     venn$count[venn$clnsig_group == "Benign/Likely benign"]
+B <- venn$Count[venn$Group == "Benign"] +
+     venn$Count[venn$Group == "Likely benign"] +
+     venn$Count[venn$Group == "Benign/Likely benign"]
 
-P <- venn$count[venn$clnsig_group == "Pathogenic"] +
-     venn$count[venn$clnsig_group == "Likely pathogenic"] +
-     venn$count[venn$clnsig_group == "Pathogenic/Likely pathogenic"]
+P <- venn$Count[venn$Group == "Pathogenic"] +
+     venn$Count[venn$Group == "Likely pathogenic"] +
+     venn$Count[venn$Group == "Pathogenic/Likely pathogenic"]
 
-G <- venn$count[venn$clnsig_group == "gnomad_total"]
-D <- venn$count[venn$clnsig_group == "unseen_SNV"]
+G <- venn$Count[venn$Group == "gnomAD"]
+D <- venn$Count[venn$Group == "Unreported_SNVs"]
 
-BG = venn$gnomad[venn$clnsig_group == "Benign"] +
-          venn$gnomad[venn$clnsig_group == "Likely benign"] +
-          venn$gnomad[venn$clnsig_group == "Benign/Likely benign"]
+BG = venn$Count.in.gnomAD[venn$Group == "Benign"] +
+          venn$Count.in.gnomAD[venn$Group == "Likely benign"] +
+          venn$Count.in.gnomAD[venn$Group == "Benign/Likely benign"]
 
-PG = venn$gnomad[venn$clnsig_group == "Pathogenic"] +
-          venn$gnomad[venn$clnsig_group == "Likely pathogenic"] +
-          venn$gnomad[venn$clnsig_group == "Pathogenic/Likely pathogenic"]
+PG = venn$Count.in.gnomAD[venn$Group == "Pathogenic"] +
+          venn$Count.in.gnomAD[venn$Group == "Likely pathogenic"] +
+          venn$Count.in.gnomAD[venn$Group == "Pathogenic/Likely pathogenic"]
 
-V = venn$count[venn$clnsig_group == "VUS total"]
+V = venn$Count[venn$Group == "VUS total"]
 
-VG = venn$gnomad[venn$clnsig_group == "VUS total"]
+VG = venn$Count.in.gnomAD[venn$Group == "VUS total"]
 
 B_new = B - BG
 P_new = P - PG
@@ -361,13 +397,15 @@ y
 
 
 
-ggsave('~/Downloads/venn_variants_updated.png',x, dpi = 300, device = 'png', height = 4, width = 4, bg =  "transparent")
+ggsave(file.path(OUT_DIR, "venn_variants_updated.png"), x, dpi = 300, device = 'png', height = 4, width = 4, bg =  "transparent", create.dir = TRUE)
 
 ```
 
 ```{r}
 
-data = read.csv("~/Downloads/curation_summary_12172025.csv")
+# Rebuild via `poetry run python -m src.build_figure3_data` -- see
+# docs/build_figure3_data.md.
+data = read.csv(file.path(INTERMEDIATE_DIR, "Figure3a.csv.gz"))
 
 data_2 <- data[!duplicated(data$Gene), ]
 
@@ -453,6 +491,6 @@ x <- ggplot(filtered_data,
 
 x
 
-ggsave('~/Downloads/bubble_plot_only_pp_no_legend.png',x, dpi = 300, device = 'png', height = 5, width = 6)
+ggsave(file.path(OUT_DIR, "bubble_plot_only_pp_no_legend.png"), x, dpi = 300, device = 'png', height = 5, width = 6, create.dir = TRUE)
 
 ```
