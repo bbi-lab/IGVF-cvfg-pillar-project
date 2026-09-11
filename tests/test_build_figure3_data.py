@@ -5,6 +5,9 @@ import pandas as pd
 from click.testing import CliRunner
 
 from src.build_figure3_data import (
+    IGVF_CATEGORY_ALL,
+    IGVF_CATEGORY_MIXED,
+    IGVF_CATEGORY_OTHER,
     add_clinvar_snapshot_column,
     build_figure3a_gene_summary,
     build_figure3c_assay_categories,
@@ -208,16 +211,43 @@ def test_build_figure3a_gene_summary_joins_gencc_uniprot_and_testing_registry():
     assert rad51c_rows["possible_SNVs"].iloc[0] == 376 * 9
     # Only GTR1 is Clinical+gene for RAD51C (GTR2 is a condition row).
     assert rad51c_rows["gene_test_count"].iloc[0] == 1
-    assert rad51c_rows["IGVF_produced"].iloc[0] == "No"
+    assert rad51c_rows["IGVF_produced"].iloc[0] == IGVF_CATEGORY_OTHER
 
     palb2_rows = figure3a.loc[figure3a["Gene"] == "PALB2"]
     assert palb2_rows["possible_SNVs"].iloc[0] == 1186 * 9
     # Only GTR4 is Clinical+gene for PALB2 (GTR3 is Research, excluded).
     assert palb2_rows["gene_test_count"].iloc[0] == 1
-    assert palb2_rows["IGVF_produced"].iloc[0] == "Yes"
+    assert palb2_rows["IGVF_produced"].iloc[0] == IGVF_CATEGORY_ALL
 
     assert "Gene Names (primary)" not in figure3a.columns
     assert "GeneSymbol" not in figure3a.columns
+
+
+def test_build_figure3a_gene_summary_flags_mixed_igvf_status():
+    # BRCA2 has one IGVF-produced and one community dataset -- a gene with
+    # *some* but not *all* IGVF-produced datasets should be flagged as
+    # mixed, not folded into either extreme.
+    pp_unique = pd.DataFrame(
+        {
+            "Gene": ["BRCA1", "BRCA2", "BRCA2"],
+            "clnsig_group_18_25": ["Pathogenic", "Pathogenic", "Benign"],
+        }
+    )
+    curation = pd.DataFrame(
+        {
+            "Gene": ["BRCA1", "BRCA2", "BRCA2"],
+            "IGVF Produced?": ["Yes", "Yes", "No"],
+        }
+    )
+    empty_gencc = pd.DataFrame(columns=["gene_symbol", "classification_title", "disease_curie"])
+    empty_uniprot = pd.DataFrame(columns=["Gene Names (primary)", "Length"])
+    empty_registry = pd.DataFrame(columns=TESTING_REGISTRY_COLUMNS)
+
+    figure3a = build_figure3a_gene_summary(pp_unique, curation, empty_gencc, empty_uniprot, empty_registry)
+    igvf_status = figure3a.set_index("Gene")["IGVF_produced"]
+
+    assert igvf_status["BRCA1"] == IGVF_CATEGORY_ALL
+    assert igvf_status["BRCA2"] == IGVF_CATEGORY_MIXED
 
 
 def test_build_figure3a_gene_summary_collapses_combined_gene_label():

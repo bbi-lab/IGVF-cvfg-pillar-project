@@ -23,7 +23,11 @@ GAP_MM <- 1.2
 TICK_LEN_MM <- 0.8
 AXIS_LWD <- 0.5 * point_in_mm
 
-IGVF_COLORS <- c("Yes" = "#176082", "No" = "grey")
+IGVF_COLORS <- c(
+  "IGVF-produced" = "#176082",
+  "IGVF-produced and community data" = "#7B9EAC",
+  "Other" = "grey"
+)
 ACMG_STROKE_COLOR <- "red3"
 
 text_width_mm <- function(label, pt = LABEL_PT, family = FONT_FAMILY, fontface = "plain") {
@@ -48,8 +52,9 @@ size_mm_for_value <- function(value, data_range, mm_range) {
 }
 
 # gene_df: one row per gene, with gene_test_count (x), possible_SNVs (y),
-# Uncertain.significance (VUS count -> point size), IGVF_produced ("Yes"/
-# "No" -> fill color), and gene_symbol (ACMG-membership + point labels).
+# Uncertain.significance (VUS count -> point size), IGVF_produced (one of
+# IGVF_COLORS' names -> fill color), and gene_symbol (ACMG-membership +
+# point labels).
 # size_legend_values are the two example VUS counts shown in the size
 # legend (500/1,000 in the published figure) -- not derived from the data,
 # since they're meant as fixed, easy-to-read reference points rather than
@@ -110,30 +115,30 @@ plot_bubble_calibrated <- function(gene_df, acmg_sf_genes, label_genes,
   x_title_h <- text_height_mm(x_title, LABEL_PT)
   y_title_h <- text_height_mm(y_title, LABEL_PT) # rotated: rendered width = text height
 
-  # ---- Legend (one row, three groups: IGVF color, ACMG ring, VUS size) ----
-  # "IGVF-produced" wraps at its own hyphen (2 lines) so the size-legend
-  # title can stay on 1 line instead; group_gap_mm is also tightened so the
-  # 3 groups sit closer together, leaving more room for that 1-line title.
-  IGVF_LABEL_LINES <- c("IGVF-", "produced")
+  # ---- Legend: a left column (3 stacked, single-line rows -- the two
+  # IGVF-status colors plus the ACMG ring, none word-wrapped) beside the
+  # VUS-size group. ----
+  LEFT_COLUMN_LABELS <- c(
+    "IGVF-produced",
+    "IGVF-produced and community data",
+    "ACMG secondary finding gene"
+  )
   SIZE_TITLE <- "Number of VUS (SNVs) in ClinVar"
   LEGEND_LINEHEIGHT <- 0.9
 
   swatch_mm <- text_height_mm("Mg", LABEL_PT)
   legend_line_h <- text_height_mm("Mg", LABEL_PT) * 1.05
-  # IGVF and ACMG legend entries both wrap to 2 lines; reserve enough
-  # vertical room in the shared top text row for that rather than assuming
-  # every entry there is single-line (the now-1-line size title included).
-  top_row_h <- legend_line_h * (1 + LEGEND_LINEHEIGHT)
+  left_col_row_gap_mm <- GAP_MM * 0.6
+  left_col_row_h <- max(swatch_mm, legend_line_h)
+  left_col_h <- 3 * left_col_row_h + 2 * left_col_row_gap_mm
 
-  igvf_label_w <- max(text_width_mm(IGVF_LABEL_LINES, LABEL_PT))
-  acmg_label_w <- max(text_width_mm(c("ACMG secondary", "finding gene"), LABEL_PT))
+  left_col_label_w <- max(text_width_mm(LEFT_COLUMN_LABELS, LABEL_PT))
+  left_col_w <- swatch_mm + GAP_MM / 2 + left_col_label_w
   size_title_w <- text_width_mm(SIZE_TITLE, LABEL_PT)
   size_circle_mm <- size_mm_for_value(size_legend_values, size_data_range, size_range_mm)
   size_value_labels <- format(size_legend_values, big.mark = ",", trim = TRUE)
   size_value_w <- text_width_mm(size_value_labels, LABEL_PT)
 
-  igvf_group_w <- swatch_mm + GAP_MM / 2 + igvf_label_w
-  acmg_group_w <- swatch_mm + GAP_MM / 2 + acmg_label_w
   # Chained left-to-right: circle 1, its own value label, then circle 2 and
   # its value label -- circle 2 must clear circle 1's *label text*, not just
   # circle 1 itself, or the two would overlap whenever the label is wider
@@ -148,7 +153,6 @@ plot_bubble_calibrated <- function(gene_df, acmg_sf_genes, label_genes,
   size_group_w <- max(size_title_w, size_circles_w)
 
   group_gap_mm <- GAP_MM * 1.5
-  legend_total_w <- igvf_group_w + group_gap_mm + acmg_group_w + group_gap_mm + size_group_w
 
   # ---- Margins built outward from the fixed chart_width_mm/chart_height_mm
   # (the plot area itself) -- the opposite direction from solving a panel
@@ -182,43 +186,47 @@ plot_bubble_calibrated <- function(gene_df, acmg_sf_genes, label_genes,
 
   # ---- Legend item positions (row spans the chart's own width, left-aligned
   # under the y-axis line so it lines up with the panel like the reference).
-  # All 3 top-row entries (IGVF-produced, ACMG, and the size-legend's own
-  # title) are top-anchored (vjust = 1) at the same legend_top_y, so their
-  # first lines align exactly regardless of how many lines each wraps to --
-  # simpler and more robust than computing each one's own line-1 center from
-  # font metrics. The swatch/ACMG ring (not text, so no vjust) are centered
-  # on that shared first line instead, at legend_line1_center_y. ----
+  # The left column's 3 rows and the size-legend's own title are all
+  # top-anchored at the same legend_top_y -- the column's rows via their own
+  # row-center math below, the (single-line) size title via vjust = 1. ----
   legend_top_y <- x_title_y - x_title_h / 2 - GAP_MM * 1.5
-  legend_line1_center_y <- legend_top_y - legend_line_h / 2
+
+  left_col_row1_y <- legend_top_y - left_col_row_h / 2
+  left_col_row2_y <- left_col_row1_y - left_col_row_h - left_col_row_gap_mm
+  left_col_row3_y <- left_col_row2_y - left_col_row_h - left_col_row_gap_mm
+  left_col_row_y <- c(left_col_row1_y, left_col_row2_y, left_col_row3_y)
 
   # The size-legend's example circles sit half as far below the (1-line)
   # size title as the row's own text-block height would otherwise put them
   # -- i.e. half of the gap between the size title's actual bottom edge and
-  # where the circles would land using the same GAP_MM/2 spacing the other
-  # (2-line-tall) rows use below their own bottom edge.
+  # where the circles would land using the same GAP_MM/2 spacing a 2-line-
+  # tall row would use below its own bottom edge (this figure's rows are
+  # all single-line now, but the halved gap was tuned by eye against that
+  # reference and is kept as-is rather than re-tuned).
   size_title_bottom <- legend_top_y - legend_line_h
-  old_circle_top_edge <- (legend_top_y - top_row_h) - GAP_MM / 2
-  default_gap_below_size_title <- size_title_bottom - old_circle_top_edge
+  default_gap_below_size_title <- legend_line_h * LEGEND_LINEHEIGHT + GAP_MM / 2
   circles_gap <- default_gap_below_size_title / 2
   legend_circle_row_y <- size_title_bottom - circles_gap - max(size_circle_mm) / 2
 
-  igvf_x0 <- 0
-  acmg_x0 <- igvf_x0 + igvf_group_w + group_gap_mm
-  size_x0 <- acmg_x0 + acmg_group_w + group_gap_mm
+  # Aligned with the y-axis tick labels' own left edge (not the axis line
+  # itself, x = 0) so the legend block doesn't look indented relative to
+  # them.
+  left_col_x0 <- y_tick_left_x
+  size_x0 <- left_col_x0 + left_col_w + group_gap_mm
 
   legend_swatches <- tibble(
-    kind = "igvf",
-    xmin = igvf_x0, xmax = igvf_x0 + swatch_mm,
-    ymin = legend_line1_center_y - swatch_mm / 2, ymax = legend_line1_center_y + swatch_mm / 2,
-    fill = IGVF_COLORS[["Yes"]]
+    kind = c("igvf_all", "igvf_mixed"),
+    xmin = left_col_x0, xmax = left_col_x0 + swatch_mm,
+    ymin = left_col_row_y[1:2] - swatch_mm / 2, ymax = left_col_row_y[1:2] + swatch_mm / 2,
+    fill = IGVF_COLORS[c("IGVF-produced", "IGVF-produced and community data")]
   )
   legend_labels <- tibble(
-    x = c(igvf_x0 + swatch_mm + GAP_MM / 2, acmg_x0 + swatch_mm + GAP_MM / 2),
-    y = legend_top_y,
-    label = c(paste(IGVF_LABEL_LINES, collapse = "\n"), "ACMG secondary\nfinding gene")
+    x = left_col_x0 + swatch_mm + GAP_MM / 2,
+    y = left_col_row_y,
+    label = LEFT_COLUMN_LABELS
   )
   legend_acmg_ring <- tibble(
-    x = acmg_x0 + swatch_mm / 2, y = legend_line1_center_y, size_mm = swatch_mm * 0.85
+    x = left_col_x0 + swatch_mm / 2, y = left_col_row_y[3], size_mm = swatch_mm * 0.85
   )
   legend_size_title <- tibble(x = size_x0, y = legend_top_y, label = SIZE_TITLE)
   legend_size_circles <- tibble(
@@ -230,11 +238,15 @@ plot_bubble_calibrated <- function(gene_df, acmg_sf_genes, label_genes,
   )
 
   # Bottom margin: distance from the x-axis line (y=0) down to the legend
-  # block's own bottom edge -- whichever sits lower, the IGVF/ACMG 2-line
-  # labels or the size-legend's circles (now pulled up closer to the size
-  # title, so this is no longer always the circles).
-  legend_bottom_edge <- min(legend_top_y - top_row_h, legend_circle_row_y - max(size_circle_mm) / 2)
-  bottom_margin_mm <- 0 - legend_bottom_edge
+  # block's own bottom edge -- whichever sits lower, the left column's 3rd
+  # row (e.g. "ACMG secondary finding gene", vjust = 0.5 centered) or the
+  # size-legend's circles. text_height_mm()'s grobHeight-based measurement
+  # doesn't reliably reserve room for descenders, so add a little extra
+  # margin below rather than leaving the "g" in "finding"/"gene" sitting
+  # with zero clearance above the canvas edge.
+  bottom_pad_mm <- 1
+  legend_bottom_edge <- min(legend_top_y - left_col_h, legend_circle_row_y - max(size_circle_mm) / 2)
+  bottom_margin_mm <- (0 - legend_bottom_edge) + bottom_pad_mm
 
   # ---- Canvas -- width is chart_width_mm + right_margin_mm, unless the
   # legend (which sits below the chart, in the same horizontal band as the
@@ -305,8 +317,7 @@ plot_bubble_calibrated <- function(gene_df, acmg_sf_genes, label_genes,
     ) +
     geom_text(
       data = legend_labels, inherit.aes = FALSE, aes(x = x, y = y, label = label),
-      size = LABEL_PT * point_in_mm, family = FONT_FAMILY, colour = "black", hjust = 0, vjust = 1,
-      lineheight = LEGEND_LINEHEIGHT
+      size = LABEL_PT * point_in_mm, family = FONT_FAMILY, colour = "black", hjust = 0, vjust = 0.5
     ) +
     geom_text(
       data = legend_size_title, inherit.aes = FALSE, aes(x = x, y = y, label = label),

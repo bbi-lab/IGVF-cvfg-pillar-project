@@ -39,10 +39,16 @@ curation sheet (confirmed: the curation sheet's `Assay Name`/`IGVF Produced?`/
 exactly for every previously-known dataset). Meta-analysis datasets
 (`Primary Score Set or Meta-analysis?` == "meta-analysis") are excluded, same
 as the original notebook, to avoid double-counting variants already covered
-by their primary score sets. Figure3a's gene-level IGVF flag is joined the
-same way (curation sheet's `IGVF Produced?`, grouped up to one flag per gene)
-rather than the original notebook's separate hardcoded 10-gene set --
-confirmed both approaches produce the identical 10 genes.
+by their primary score sets. Figure3a's gene-level IGVF status is joined the
+same way (curation sheet's `IGVF Produced?`, grouped up to one status per
+gene) rather than the original notebook's separate hardcoded 10-gene set --
+confirmed both approaches produce the identical 10 genes for the
+IGVF_CATEGORY_ALL/IGVF_CATEGORY_MIXED cases combined. It's a 3-way status,
+not a boolean: a gene whose datasets are *all* IGVF-produced is
+IGVF_CATEGORY_ALL, one with a mix of IGVF-produced and community datasets is
+IGVF_CATEGORY_MIXED, and one with no IGVF-produced datasets is
+IGVF_CATEGORY_OTHER -- the bubble plot renders these as 2 shades of blue
+plus grey rather than collapsing "mixed" into either extreme.
 
 Figure3c is written twice, at two different variant-counting scopes (this
 choice only affects Figure3c -- Figure3a/3d always dedupe globally, since
@@ -123,6 +129,14 @@ DEFAULT_FIGURE3D_OUTPUT = FIGURE_3_INTERMEDIATE_DIR / "Figure3d.csv.gz"
 GENE_NAME_OVERRIDES = {"CALM1, CALM2, CALM3": "CALM1"}
 
 GENCC_VALIDITY_CLASSIFICATIONS = ["Definitive", "Strong", "Moderate"]
+
+# Figure3a's gene-level IGVF status: a gene whose datasets are *all*
+# IGVF-produced gets IGVF_CATEGORY_ALL, a gene with a mix of IGVF-produced
+# and community datasets gets IGVF_CATEGORY_MIXED, and a gene with no
+# IGVF-produced datasets at all gets IGVF_CATEGORY_OTHER.
+IGVF_CATEGORY_ALL = "IGVF-produced"
+IGVF_CATEGORY_MIXED = "IGVF-produced and community data"
+IGVF_CATEGORY_OTHER = "Other"
 
 SIMPLIFIED_SIGNIFICANCE = {
     "pathogenic": "Pathogenic",
@@ -370,8 +384,17 @@ def build_figure3a_gene_summary(
     testing_registry_counts = testing_registry_gene.groupby("GeneSymbol").size().rename("gene_test_count").reset_index()
     gene_summary = gene_summary.merge(testing_registry_counts, left_on="Gene", right_on="GeneSymbol", how="left")
 
-    igvf_genes = set(curation.loc[curation["IGVF Produced?"].astype("string").str.strip().eq("Yes"), "Gene"])
-    gene_summary["IGVF_produced"] = np.where(gene_summary["Gene"].isin(igvf_genes), "Yes", "No")
+    is_igvf_dataset = curation["IGVF Produced?"].astype("string").str.strip().eq("Yes")
+    gene_igvf_stats = is_igvf_dataset.groupby(curation["Gene"]).agg(["all", "any"])
+    gene_igvf_category = pd.Series(
+        np.select(
+            [gene_igvf_stats["all"], gene_igvf_stats["any"]],
+            [IGVF_CATEGORY_ALL, IGVF_CATEGORY_MIXED],
+            default=IGVF_CATEGORY_OTHER,
+        ),
+        index=gene_igvf_stats.index,
+    )
+    gene_summary["IGVF_produced"] = gene_summary["Gene"].map(gene_igvf_category).fillna(IGVF_CATEGORY_OTHER)
 
     return gene_summary.drop(columns=["Gene Names (primary)", "GeneSymbol"], errors="ignore")
 
