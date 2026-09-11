@@ -5,7 +5,7 @@ How to (re)generate each manuscript figure from `notebooks/figures/`.
 ## Figure 2
 
 Directory: `notebooks/figures/figure_2/`. Six scripts: one prep notebook everything
-else depends on, five independent Python panel notebooks, and one standalone
+else depends on, four independent Python panel notebooks, and one standalone
 R script. The Python notebooks only need the Poetry environment (`pandas`,
 `altair`, `matplotlib`, `vl-convert-python`) -- no Docker/R involved until
 `Figure_2i.R`.
@@ -15,11 +15,17 @@ R script. The Python notebooks only need the Poetry environment (`pandas`,
 Reads `data/output/maves/integrated_variant_effect_dataset.tsv.gz` (the
 integrated MAVE dataset produced upstream of this figure) and splits out the
 SGE genes (`BARD1, PALB2, BRCA2, RAD51D, XRCC2, CTCF, SFPQ`) and VAMP-seq
-genes (`G6PD, TSC2, F9`; `F9` keeps only its heavy-chain-antibody dataset)
-into three xlsx files under `data/intermediate/figures/figure_2/`:
-`SGEsubset.xlsx`, `VAMPseqsubset_wDups.xlsx`, and `CAVAseqsubset.xlsx` (the
-concatenation of the first two -- not currently read by anything else in
-this directory). Every panel notebook below reads the first two of these.
+genes (`G6PD, TSC2, F9`) into three xlsx files under
+`data/intermediate/figures/figure_2/`: `SGEsubset.xlsx`,
+`VAMPseqsubset_wDups.xlsx`, and `CAVAseqsubset.xlsx` (the concatenation of
+the first two -- not currently read by anything else in this directory).
+The VAMP-seq subset keeps every `F9` antibody dataset and both `TSC2`
+domains unfiltered -- each panel notebook below does its own per-gene
+selection downstream (e.g. `PP_StackedHistograms.ipynb` and
+`PP_ResolutionOverview.ipynb` split `TSC2` into RapGAP/Tuberin by
+amino-acid position, since `Dataset` no longer distinguishes them, and skip
+the non-heavy-chain `F9` antibody datasets). Every panel notebook below
+reads the first two of these xlsx files.
 
 ```bash
 poetry run jupyter nbconvert --to notebook --execute \
@@ -36,11 +42,10 @@ poetry run jupyter nbconvert --to notebook --execute \
   `data/output/figures/figure_2/PillarProject_PRvsClinVar_wErrorBar_grey.svg`.
 - `PP_Fig2_Heatmaps.ipynb` -- three charts in the figure's center column,
   despite its own docstring claiming "all" heatmaps: a RAD51D SGE
-  amino-acid-position heatmap, a RAD51D SGE genomic-position map (a second,
-  differently-rendered take on the same region `PP_SeqFunctionMap.ipynb`
-  covers), and a G6PD VAMP-seq amino-acid-position heatmap. Each was only
-  ever `.display()`ed inline -- no `.save()` call existed for any of them,
-  so running the notebook wrote nothing to disk (hence its ~40 MB file size,
+  amino-acid-position heatmap, a RAD51D SGE genomic-position map, and a
+  G6PD VAMP-seq amino-acid-position heatmap. Each was only ever
+  `.display()`ed inline -- no `.save()` call existed for any of them, so
+  running the notebook wrote nothing to disk (hence its ~40 MB file size,
   all from embedded cell output). `.save()` calls have been added after each
   `.display()`, writing `RAD51D_sge_aa_heatmap.svg`,
   `RAD51D_sge_genomic_map.svg`, and `G6PD_vampseq_aa_heatmap.svg` to
@@ -48,15 +53,13 @@ poetry run jupyter nbconvert --to notebook --execute \
 - `PP_ResolutionOverview.ipynb` -- the VAMP-seq vs. SGE genomic-position and
   amino-acid-change coverage bar chart. Saves
   `data/output/figures/figure_2/vampseq_sge_bars.svg`.
-- `PP_SeqFunctionMap.ipynb` -- the RAD51D sequence-function map. Saves
-  `data/output/figures/figure_2/RAD51D_X9_draft_SeqFunc_map_extended.svg`.
 - `PP_StackedHistograms.ipynb` -- stacked score histograms (with a ClinVar
   density overlay) for both assays, plus per-gene SGE insets. Saves two SVGs
   under `data/output/figures/figure_2/Histogram_wStripplot/` and one
   `data/output/figures/figure_2/sge_histogram_inset_<gene>.svg` per SGE gene.
 
 ```bash
-for nb in PP_ClinVarPrecisionRecall PP_Fig2_Heatmaps PP_ResolutionOverview PP_SeqFunctionMap PP_StackedHistograms; do
+for nb in PP_ClinVarPrecisionRecall PP_Fig2_Heatmaps PP_ResolutionOverview PP_StackedHistograms; do
   poetry run jupyter nbconvert --to notebook --execute \
     --ExecutePreprocessor.kernel_name=igvf-cvfg-pillar-project \
     --ExecutePreprocessor.timeout=600 \

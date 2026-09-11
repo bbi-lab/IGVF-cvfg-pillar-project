@@ -124,6 +124,35 @@ numbered step for debugging — see
 [`docs/variant_annotation_pipeline.md`](docs/variant_annotation_pipeline.md)
 for the full step list and every per-step doc it links to.
 
+### Adding ExCALIBR evidence columns (Supplementary Data 1)
+
+A separate, manual step folds in per-variant ExCALIBR likelihood-ratio
+evidence — `excalibr_prior`, `excalibr_posterior`, `excalibr_lr_plus`,
+`excalibr_points`, `excalibr_acmg_evidence_code`, `excalibr_filter_reason`,
+`excalibr_clinvar_release` — onto the integrated dataset above. Publishing
+the raw prior/posterior/likelihood-ratio values (not just the points ExCALIBR
+resolved them to) lets anyone recompute ACMG evidence strength under a prior
+probability of their own choosing, rather than being limited to the one this
+pipeline's own classification used.
+
+This step isn't part of `scripts/run_variant_annotation_pipeline.sh` because
+its input — the ExCALIBR calibration run's own copy of the integrated
+dataset, `data/input/maves/dataframe_with_points.csv.gz` — isn't produced
+until after that pipeline run and the exCALIBR calibration step in
+[Section 2](#2-data-analysis--variant-classification-and-table-preparation)
+below. Once both `data/output/maves/integrated_variant_effect_dataset.tsv.gz`
+(above) and `data/input/maves/dataframe_with_points.csv.gz` exist, run:
+
+```bash
+poetry run python -m src.add_excalibr_columns
+```
+
+This writes
+`data/output/maves/integrated_variant_effect_dataset_with_excalibr.tsv.gz`
+and copies it to `data/output/supplementary_data/Supplementary_Data_1.tsv.gz`
+— the version of Supplementary Data 1 actually distributed with the paper.
+See [`docs/add_excalibr_columns.md`](docs/add_excalibr_columns.md).
+
 ---
 
 ## 2. Data analysis / variant classification and table preparation
