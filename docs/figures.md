@@ -302,15 +302,20 @@ Saves `data/output/figures/extended_data_figure_2.pdf`.
 
 `Extended_Data_Figure_5.ipynb` -- a Python notebook (unlike everything else
 in this directory), not R. Flags genes with excess ClinVar pathogenic/benign
-discordance against REVEL gene-specific calls: computes each gene's
-leave-one-out background discordance rate, tests observed vs. expected with a
-binomial test + BH FDR correction, and scatter-plots discordance rate vs.
-variant count, colored by significance.
+discordance against each predictor's gene-specific calls (REVEL, AlphaMissense,
+MutPred2): computes each gene's leave-one-out background discordance rate,
+tests observed vs. expected with a binomial test + BH FDR correction, and
+scatter-plots discordance rate vs. variant count, colored by significance --
+one plot per predictor.
 
-Reads `data/output/predictor_calibration/gene_specific/controls_REVEL_GeneSpecific.csv`,
+Reads `data/output/predictor_calibration/gene_specific/controls_{REVEL,AM,MP2}_GeneSpecific.csv`,
 written by `notebooks/analysis/Variant_Classification_analysis.ipynb` -- see
 `notebooks/analysis/README_Variant_Classification_analysis.md` for how to
-produce it. No R/Docker dependency here; it only needs the Poetry environment
+produce them. The three files share the same column shape (`Class_REVEL`/
+`Class_AM`/`Class_MP2` all present in each) but not the same row set -- each
+drops the variants missing that predictor's own score -- so the notebook reads
+each predictor's own file rather than reusing REVEL's with a different column
+name. No R/Docker dependency here; it only needs the Poetry environment
 (`pandas`, `numpy`, `scipy`, `statsmodels`, `matplotlib`).
 
 ```bash
@@ -334,9 +339,9 @@ The notebook resolves its own `PROJECT_ROOT` as `../../..` relative to the
 kernel's working directory; `nbconvert` sets that to the notebook's own
 directory (`notebooks/figures/extended_data_figure_5/`) automatically, so
 `PROJECT_ROOT` lands on the repo root without needing to set the env var it
-also supports. Writes
-`clinvar_discordance_per_gene.png` to
-`data/output/figures/extended_data_figure_5/`, plus a side-effect
+also supports. Writes `clinvar_discordance_per_gene_REVEL.png`,
+`clinvar_discordance_per_gene_AM.png`, and `clinvar_discordance_per_gene_MP2.png`
+to `data/output/figures/extended_data_figure_5/`, plus a side-effect
 `executed_extended_data_figure_5.ipynb` (nbconvert's copy of the notebook
 with outputs attached) in `notebooks/figures/extended_data_figure_5/` --
 gitignored, so no need to delete it.
