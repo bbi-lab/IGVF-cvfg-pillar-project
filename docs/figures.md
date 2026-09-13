@@ -19,13 +19,15 @@ genes (`G6PD, TSC2, F9`) into three xlsx files under
 `data/intermediate/figures/figure_2/`: `SGEsubset.xlsx`,
 `VAMPseqsubset_wDups.xlsx`, and `CAVAseqsubset.xlsx` (the concatenation of
 the first two -- not currently read by anything else in this directory).
-The VAMP-seq subset keeps every `F9` antibody dataset and both `TSC2`
-domains unfiltered -- each panel notebook below does its own per-gene
-selection downstream (e.g. `PP_StackedHistograms.ipynb` and
-`PP_ResolutionOverview.ipynb` split `TSC2` into RapGAP/Tuberin by
-amino-acid position, since `Dataset` no longer distinguishes them, and skip
-the non-heavy-chain `F9` antibody datasets). Every panel notebook below
-reads the first two of these xlsx files.
+`F9` has six parallel VAMP-seq screens in the integrated dataset (heavy
+chain, light chain, strep, two carboxy-motif screens, and a computational
+model); only the heavy-chain-antibody dataset is kept, matching what the
+panel notebooks below expect (`PP_StackedHistograms.ipynb`'s VAMP-seq panel
+title literally reads "F9 (Heavy-Chain Ab)"). `TSC2` is kept unfiltered --
+both its RapGAP and Tuberin domains are needed downstream, and
+`PP_StackedHistograms.ipynb`/`PP_ResolutionOverview.ipynb` split them
+themselves by amino-acid position, since `Dataset` no longer distinguishes
+them. Every panel notebook below reads the first two of these xlsx files.
 
 ```bash
 poetry run jupyter nbconvert --to notebook --execute \
@@ -434,6 +436,37 @@ page edge. Fixed by widening `x_range` to also cover the title's/x-label's
 own text width when it exceeds the matrix's; a no-op for every existing
 (larger) calibrated confusion matrix in this project.
 
+### Extended Data Figure 4alt
+
+An alternate version of Extended Data Figure 4 (AlphaMissense/MutPred2 x
+ClinVar controls/ClinGen Evidence Repository, via ExCALIBR/GeneSpecific
+calibration), built as a new, isolated chunk right after the Extended Data
+Figure 4 missense chunk in `Extended_data_figures.Rmd` -- doesn't touch or
+reuse any object from that block or the original Ext. Data Fig 4 block.
+Adds REVEL/GeneSpecific as a third predictor (Ext. Data Fig 4 itself, and
+the Fig 4 missense chunk above, only ever loaded AM/MP2 GeneSpecific
+sheets, even though `Supplementary_Data_5.xlsx`'s
+`controls_REVEL_GeneSpecific`/`ClinGen_Repo_REVEL_GeneSpecific` sheets have
+the identical column shape -- `Class_REVEL`/
+`Points_REVEL_GeneSpecific_GenomeWide` -- as the AM/MP2 sheets, and were
+never read anywhere else in this document), and adds a missense-only
+variant of every panel (`simplified_consequence == "missense_variant"`,
+same column/idea as `Figure5_6.Rmd`'s own `consequence_filter` param and
+Ext. Data Figure 6alt), exactly mirroring Ext. Data Figure 6alt's own
+REVEL/AM/MP2 x All/Missense structure but for ExCALIBR/GeneSpecific instead
+of OddsPath/Universal calibration: 3 predictors x 2 consequence scopes x 2
+truth sources (ClinVar controls / ClinGen Evidence Repository) x {sankey,
+confusion matrix} = 24 PDFs. Every chart is shrunk 50% linearly from Ext.
+Data Fig 4's own calibrated core dimensions (sankey 37x64mm -> 18.5x32mm,
+confusion matrix 31x27mm -> 15.5x13.5mm) with unchanged font sizes, same
+reasoning as Ext. Data Figure 6alt/Fig 4 missense. Sankey node labels are
+abbreviated to P/LP/VUS/LB/B (`label_overrides`), including ClinGen's own
+"No Classification" bucket, mapped to "VUS" like "Uncertain".
+
+Writes 24 PDFs to `data/output/figures/extended_data_figure_4alt/`, named
+like `sankey_clinvar_ExOP_REVEL_GeneSpecific_missense_calibrated.pdf` /
+`cm_clingen_ExOP_MP2_GeneSpecific_all_calibrated.pdf`.
+
 ### Extended Data Figure 7alt (`src/make_extended_data_figure_7alt.py`)
 
 A candidate replacement for Extended Data Figure 7: a single calibrated
@@ -476,9 +509,10 @@ by default) directly -- no R/Docker required, and no dependency on
 Supplementary Data 5/6.
 
 The figure itself is `save_calibrated_ablation_figure`'s hand-calibrated
-layout: a fixed three-row grid (comparison charts for `vus`/`gnomad`/
-`unobserved`/`clinvar_control`/`clingen_control`, plus a concordance panel
-for each of the two control scopes), independent of `--scope`. Two versions
+layout: a fixed two-row grid -- row 1 has comparison charts for `vus` and
+`clinvar_control`; row 2 has the ablation legend (stacked vertically, with a
+full-sentence label for each "upgraded" swatch) alongside `clinvar_control`'s
+own concordance panel -- independent of `--scope`. Two versions
 are generated -- all variants, and missense-only (`--consequence missense_
 only`, strictly `condensed_consequence == "missense_variant"` excluding
 start-loss, see `is_missense_only`) -- as separate files rather than
