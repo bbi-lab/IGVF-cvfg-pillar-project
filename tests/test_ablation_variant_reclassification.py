@@ -1307,11 +1307,11 @@ def test_save_ablation_document_with_concordance_chart_writes_a_file(tmp_path):
 
 
 def test_save_calibrated_ablation_figure_writes_a_file(tmp_path):
-    """Smoke test for Extended Data Figure 10's final layout -- exercises all
-    three row shapes (comparison-only, comparison-only, comparison+
-    concordance x2) against `_document_checkpoint_frame`'s one variant per
-    scope, same fixture `test_save_ablation_document_with_concordance_chart_
-    writes_a_file` above uses.
+    """Smoke test for Extended Data Figure 10's final layout -- exercises both
+    row shapes (comparison-only, legend+concordance) against
+    `_document_checkpoint_frame`'s one variant per scope, same fixture
+    `test_save_ablation_document_with_concordance_chart_writes_a_file` above
+    uses.
     """
     out = add_ablation_points_columns(_document_checkpoint_frame())
 

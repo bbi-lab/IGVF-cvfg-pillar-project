@@ -2808,12 +2808,11 @@ def save_ablation_document_grid(
 # A hand-calibrated alternative to `save_ablation_document`/`save_ablation_
 # document_grid` above: a single flat GridSpec figure (not nested subfigures
 # -- that's what avoids the content-overflow bug the document renderers'
-# subfigure-per-block approach can hit), fixed at five scopes (`vus`,
-# `gnomad`, `unobserved`, `clinvar_control`, `clingen_control` -- regardless
-# of `--scope`/`--document-scope`, which affect every other output of this
-# module) and three rows: two comparison-only scopes, two control scopes'
-# comparisons, then the fifth scope's comparison plus both controls' own
-# concordance panels. Every constant/helper below is private to this one
+# subfigure-per-block approach can hit), fixed at two scopes (`vus`,
+# `clinvar_control` -- regardless of `--scope`/`--document-scope`, which
+# affect every other output of this module) and two rows: both scopes'
+# comparison charts, then a legend block plus `clinvar_control`'s own
+# concordance panel. Every constant/helper below is private to this one
 # figure (`_CALIBRATED_*`/`_calibrated_*`) -- e.g. `_calibrated_fmt_count`'s
 # "1.5k"-style abbreviation and `_calibrated_draw_stacked_segment`'s tighter
 # label placement are tuned for this figure's much narrower per-chart
@@ -2823,23 +2822,28 @@ _CALIBRATED_PREDICTOR_ABBR = {"REVEL": "REVEL", "AlphaMissense": "AM", "MutPred2
 _CALIBRATED_ARM_ABBR = {"functional": "Fxn", "predictor": "Pred", "combined": "Comb"}
 _CALIBRATED_SCOPE_TITLE = {
     "vus": "ClinVar VUS",
-    "gnomad": "gnomAD",
-    "unobserved": "Unobserved",
     "clinvar_control": "ClinVar controls",
-    "clingen_control": "ClinGen controls",
 }
-# Concordance blocks get their own, more specific group title instead of
+# The concordance block gets its own, more specific group title instead of
 # reusing _CALIBRATED_SCOPE_TITLE verbatim -- "ClinVar controls" alone
 # doesn't say what the block below it actually shows. Wrapped onto two
-# lines: as one line each is wider than the single narrow axes column it's
+# lines: as one line it's wider than the single narrow axes column it's
 # centered above and was confirmed clipping at the figure's right edge.
 _CALIBRATED_CONCORDANCE_TITLE = {
     "clinvar_control": "ClinVar control\nconcordance",
-    "clingen_control": "ClinGen control\nconcordance",
 }
 _CALIBRATED_LEGEND_LABEL = {
     SYNERGY_LABEL: "Neither alone",
     CONFLICT_LABEL: "Lost to combining",
+}
+# Full-sentence labels for each category's "upgraded" (dark) swatch, used
+# now that the ablation legend is a single stacked column with room for a
+# full sentence rather than 3-across columns sharing the terse "Upgraded"
+# with an implied subject -- see `_calibrated_legend_handles`.
+_CALIBRATED_UPGRADE_LABEL = {
+    FUNCTIONAL_ALONE_LABEL: "Functional alone suffices, but predictive data yields upgraded evidence",
+    PREDICTOR_ALONE_LABEL: "Predictive alone suffices, but functional data yields upgraded evidence",
+    BOTH_ALONE_LABEL: "Either alone suffices, but both together yield upgraded evidence",
 }
 
 
@@ -3245,45 +3249,54 @@ def _calibrated_draw_concordance_subpanel(ax, concordance_data, predictors):
 
 
 def _calibrated_legend_handles():
-    """Handles for `save_calibrated_ablation_figure`'s single, three-row
-    legend -- ordered so matplotlib's column-major `ncol=4` fill produces
-    exactly this grid, with a blank spacer filling "Either alone"'s
-    otherwise-empty third slot (it has no "neither"/"lost" counterpart of
-    its own, unlike "Functional" and "Predictive") rather than leaving a
-    ragged column, and the concordance color key as its own unrelated 4th
-    column (gray/red/blue, matching the concordance charts' own stacking
-    order) rather than reading as a "5th category" of the comparison
-    charts' own scheme:
+    """Handles for `save_calibrated_ablation_figure`'s ablation legend -- a
+    single vertically-stacked column (`ncol=1`), grouped by category:
 
-        Functional alone sufficient   Predictive alone sufficient   Either alone sufficient   Unresolved
-        Upgraded                      Upgraded                      Upgraded                  Discordant
-        Neither alone                 Lost to combining             [blank]                   Concordant
+        Functional alone sufficient
+        Functional alone suffices, but predictive data yields upgraded evidence
+        Neither alone
+        Predictive alone sufficient
+        Predictive alone suffices, but functional data yields upgraded evidence
+        Lost to combining
+        Either alone sufficient
+        Either alone suffices, but both together yield upgraded evidence
 
     The light swatch of each pair gets the category's own full label with no
-    qualifier -- readers only ever need the short "Upgraded" label on the
-    dark swatch to tell the pair apart, since "the other one" is implicitly
-    the un-upgraded baseline; spelling that out as "(unchanged)" on every
-    light swatch, tried first, was redundant once "Upgraded" already implies
-    it.
+    qualifier; the dark ("upgraded") swatch gets its own full-sentence label
+    (`_CALIBRATED_UPGRADE_LABEL`) spelling out which side is the one that
+    suffices alone and which side supplies the upgrade -- unlike the old
+    3-across grid, a single stacked column has no adjacent "Functional alone
+    sufficient" light swatch directly above it for a terse "Upgraded" to
+    implicitly refer back to, so the label has to be self-contained.
+
+    The concordance color key is a separate legend (`_calibrated_
+    concordance_legend_handles`), positioned under the concordance panel
+    instead of appended here.
     """
     func, pred, either, neither = SYNERGY_CATEGORY_ORDER
 
     def upgrade_pair(category):
         return [
             Patch(color=CLASS_UPGRADE_LIGHT_COLORS[category], label=category),
-            Patch(color=SYNERGY_CATEGORY_COLORS[category], label=CLASS_UPGRADED.capitalize()),
+            Patch(color=SYNERGY_CATEGORY_COLORS[category], label=_CALIBRATED_UPGRADE_LABEL[category]),
         ]
-
-    blank = Patch(facecolor="none", edgecolor="none", label=" ")
-    concordance_order = list(reversed(CONCORDANCE_STATUS_ORDER))  # gray (Unresolved), red (Discordant), blue (Concordant)
-    concordance_handles = [Patch(color=CONCORDANCE_STATUS_COLORS[s], label=s.capitalize()) for s in concordance_order]
 
     return (
         upgrade_pair(func) + [Patch(color=SYNERGY_CATEGORY_COLORS[neither], label=_CALIBRATED_LEGEND_LABEL[neither])]
         + upgrade_pair(pred) + [Patch(color=CONFLICT_COLOR, label=_CALIBRATED_LEGEND_LABEL[CONFLICT_LABEL])]
-        + upgrade_pair(either) + [blank]
-        + concordance_handles
+        + upgrade_pair(either)
     )
+
+
+def _calibrated_concordance_legend_handles():
+    """Handles for the concordance color key (gray Unresolved, red
+    Discordant, blue Concordant -- matching the concordance charts' own
+    stacking order), positioned under the concordance panel in `save_
+    calibrated_ablation_figure` rather than as a column of the ablation
+    legend (see `_calibrated_legend_handles`).
+    """
+    concordance_order = list(reversed(CONCORDANCE_STATUS_ORDER))  # gray (Unresolved), red (Discordant), blue (Concordant)
+    return [Patch(color=CONCORDANCE_STATUS_COLORS[s], label=s.capitalize()) for s in concordance_order]
 
 
 def _calibrated_add_group_title(fig, axes, label, pad=0.012, fontsize=7.5):
@@ -3327,87 +3340,113 @@ def _calibrated_add_concordance_key(fig, axes, pad=0.006, fontsize=5.5):
 def save_calibrated_ablation_figure(df, predictors, output_path):
     """Render Extended Data Figure 10's final, hand-calibrated layout to
     `output_path` (format inferred from the extension, e.g. .png/.svg/.pdf):
-    four chart slots per row, packed two ways across three rows (12 slots
-    total = 3 scopes x 2 [P/LP, B/LB] + 2 control scopes x 3 [P/LP, B/LB,
-    concordance]):
+    four chart slots in row 1, plus a legend block and one concordance panel
+    sharing row 2 (six slots total = 2 scopes x 2 [P/LP, B/LB] + 1 legend
+    block + 1 concordance panel):
 
-    Row 1: vus[P/LP, B/LB] + gnomad[P/LP, B/LB].
-    Row 2: clinvar_control[P/LP, B/LB] + clingen_control[P/LP, B/LB].
-    Row 3: unobserved[P/LP, B/LB] + clinvar_control-concordance +
-    clingen_control-concordance.
+    Row 1: vus[P/LP, B/LB] + clinvar_control[P/LP, B/LB].
+    Row 2: ablation legend (columns 0-2) + clinvar_control-concordance
+    (column 3).
 
-    Always exactly these five scopes, regardless of `--scope`/`--document-
+    Always exactly these two scopes, regardless of `--scope`/`--document-
     scope` (which affect every other output of this module) -- this is a
     fixed, finished figure layout, not a general-purpose renderer.
 
     Each scope's own name is a bold title centered above its own charts
     (`_calibrated_add_group_title`) rather than a per-row left-side label;
     the left side instead carries a single generic "# variants" y-axis
-    label per row (comparison charts only).
+    label per row (comparison charts only). The ablation legend
+    (`_calibrated_legend_handles`) sits in row 2's own left column, stacked
+    vertically (`ncol=1`) so each "upgraded" swatch can carry a full-
+    sentence label instead of the old 3-across grid's terse "Upgraded"; the
+    concordance color key (`_calibrated_concordance_legend_handles`) is a
+    separate legend anchored directly under the concordance panel instead.
 
     Sets Arial/`pdf.fonttype=42` for this figure only (`plt.rc_context`),
     not globally -- so it doesn't change the font used by this module's
     other chart-drawing functions.
     """
-    row_defs = [
-        [("comparison", "vus"), ("comparison", "gnomad")],
-        [("comparison", "clinvar_control"), ("comparison", "clingen_control")],
-        [("comparison", "unobserved"), ("concordance", "clinvar_control"), ("concordance", "clingen_control")],
-    ]
-    n_rows = len(row_defs)
+    comparison_row = [("vus", 0), ("clinvar_control", 2)]
     row_h = 1.5
-    fig_h = row_h * n_rows + 1.0  # +1.0: room for the legend's three rows
+    # Row 2 only needs to be a little taller than a plain chart row: the
+    # ablation legend's 8 stacked entries fit snugly at `labelspacing=0.8`,
+    # and the concordance panel next to it only needs `row_h` itself.
+    legend_row_h = 1.8
+    # Fixed inch margins above/below the grid, added on top of the two rows'
+    # own height rather than carved out of it -- below the grid has to fit
+    # the concordance panel's own x-tick labels, its F/P/C caption, and the
+    # concordance color-key legend, all stacked in that order.
+    top_margin_in = 0.35
+    bottom_margin_in = 0.85
+    fig_h = row_h + legend_row_h + top_margin_in + bottom_margin_in
 
     with plt.rc_context({"font.family": "Arial", "font.size": 7, "pdf.fonttype": 42}):
         fig = plt.figure(figsize=(6.5, fig_h), dpi=300)
         fig.patch.set_facecolor(CHART_SURFACE)
-        top = 1 - 0.35 / fig_h
-        bottom = 0.9 / fig_h  # room for the legend's three rows
-        gs = fig.add_gridspec(n_rows, 4, wspace=0.35, hspace=0.8, top=top, bottom=bottom, left=0.08, right=0.99)
-
-        for row, row_def in enumerate(row_defs):
-            col = 0
-            concordance_axes = []
-            for kind, scope in row_def:
-                if kind == "comparison":
-                    comparison_data = build_direction_comparison_chart_data(
-                        df, predictors, scopes=(scope,), show_class_upgrade=True
-                    )
-                    ax_plp = fig.add_subplot(gs[row, col])
-                    _calibrated_draw_comparison_chart(
-                        ax_plp, comparison_data[DIRECTION_PATHOGENIC], ylabel="# variants" if col == 0 else None
-                    )
-                    ax_plp.set_title("P/LP", fontsize=6, color=CHART_INK_MUTED, pad=2)
-                    ax_blb = fig.add_subplot(gs[row, col + 1])
-                    # Label-collision staggering (_calibrated_place_labels_
-                    # with_stagger) is scoped to just this one chart, per
-                    # request -- every other comparison chart here
-                    # (including this same scope's own P/LP panel) keeps
-                    # the plain, always-centered label it always had.
-                    _calibrated_draw_comparison_chart(
-                        ax_blb, comparison_data[DIRECTION_BENIGN], use_stagger=(scope == "clingen_control")
-                    )
-                    ax_blb.set_title("B/LB", fontsize=6, color=CHART_INK_MUTED, pad=2)
-                    fig.canvas.draw()
-                    _calibrated_add_group_title(fig, [ax_plp, ax_blb], _CALIBRATED_SCOPE_TITLE[scope])
-                    col += 2
-                else:
-                    concordance_data = build_control_concordance_chart_data(df, predictors, scopes=(scope,))
-                    ax_conc = fig.add_subplot(gs[row, col])
-                    _calibrated_draw_concordance_subpanel(ax_conc, concordance_data, predictors)
-                    fig.canvas.draw()
-                    _calibrated_add_group_title(fig, [ax_conc], _CALIBRATED_CONCORDANCE_TITLE[scope], fontsize=6.5)
-                    concordance_axes.append(ax_conc)
-                    col += 1
-            if concordance_axes:
-                fig.canvas.draw()
-                _calibrated_add_concordance_key(fig, concordance_axes)
-
-        legend_handles = _calibrated_legend_handles()
-        fig.legend(
-            legend_handles, [h.get_label() for h in legend_handles], loc="lower center", bbox_to_anchor=(0.5, 0.0),
-            ncol=4, frameon=False, fontsize=7, labelcolor=CHART_INK_SECONDARY,
+        top = 1 - top_margin_in / fig_h
+        bottom = bottom_margin_in / fig_h
+        # hspace=0.8 (this figure's other multi-row GridSpecs) is a relative
+        # fraction of the *average* row height -- fine when every row is the
+        # same size, but with row 2 a different height than row 1 it opened a
+        # much bigger gap between them than either row's own content needs;
+        # confirmed on the real figure and tightened to 0.3 here (0.15 was
+        # tight enough that row 2's own concordance group title collided
+        # with row 1's x-tick labels directly above it).
+        gs = fig.add_gridspec(
+            2, 4, wspace=0.35, hspace=0.3, top=top, bottom=bottom, left=0.08, right=0.99,
+            height_ratios=[row_h, legend_row_h],
         )
+
+        for scope, col in comparison_row:
+            comparison_data = build_direction_comparison_chart_data(
+                df, predictors, scopes=(scope,), show_class_upgrade=True
+            )
+            ax_plp = fig.add_subplot(gs[0, col])
+            _calibrated_draw_comparison_chart(
+                ax_plp, comparison_data[DIRECTION_PATHOGENIC], ylabel="# variants" if col == 0 else None
+            )
+            ax_plp.set_title("P/LP", fontsize=6, color=CHART_INK_MUTED, pad=2)
+            ax_blb = fig.add_subplot(gs[0, col + 1])
+            _calibrated_draw_comparison_chart(ax_blb, comparison_data[DIRECTION_BENIGN])
+            ax_blb.set_title("B/LB", fontsize=6, color=CHART_INK_MUTED, pad=2)
+            fig.canvas.draw()
+            _calibrated_add_group_title(fig, [ax_plp, ax_blb], _CALIBRATED_SCOPE_TITLE[scope])
+
+        # Row 2, columns 0-2: the ablation legend, stacked vertically in an
+        # otherwise-empty invisible axes so it aligns with the concordance
+        # panel's own row rather than floating in the figure's outer margin.
+        legend_ax = fig.add_subplot(gs[1, 0:3])
+        legend_ax.axis("off")
+        legend_handles = _calibrated_legend_handles()
+        legend_ax.legend(
+            legend_handles, [h.get_label() for h in legend_handles], loc="upper left", ncol=1, frameon=False,
+            fontsize=7, labelcolor=CHART_INK_SECONDARY, borderaxespad=0, handletextpad=0.5, labelspacing=0.8,
+        )
+
+        # Row 2, column 3: clinvar_control's own concordance panel, with its
+        # color key + F/P/C caption anchored directly under it.
+        concordance_data = build_control_concordance_chart_data(df, predictors, scopes=("clinvar_control",))
+        ax_conc = fig.add_subplot(gs[1, 3])
+        _calibrated_draw_concordance_subpanel(ax_conc, concordance_data, predictors)
+        fig.canvas.draw()
+        _calibrated_add_group_title(fig, [ax_conc], _CALIBRATED_CONCORDANCE_TITLE["clinvar_control"], fontsize=6.5)
+        _calibrated_add_concordance_key(fig, [ax_conc])
+
+        conc_handles = _calibrated_concordance_legend_handles()
+        conc_position = ax_conc.get_position()
+        conc_cx = (conc_position.x0 + conc_position.x1) / 2
+        # Anchored just below the F/P/C caption (itself just below the axes,
+        # see `_calibrated_add_concordance_key`) rather than at the figure's
+        # absolute bottom edge (y=0) -- anchoring at y=0 left a large gap
+        # here whenever `bottom_margin_in` had more room than this legend's
+        # own height actually needed, confirmed on the real figure.
+        conc_legend_top = conc_position.y0 - 0.04
+        fig.legend(
+            conc_handles, [h.get_label() for h in conc_handles], loc="upper center",
+            bbox_to_anchor=(conc_cx, conc_legend_top), ncol=1, frameon=False, fontsize=7,
+            labelcolor=CHART_INK_SECONDARY,
+        )
+
         output_path.parent.mkdir(parents=True, exist_ok=True)
         fig.savefig(output_path, facecolor=CHART_SURFACE)
         plt.close(fig)
