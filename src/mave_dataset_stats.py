@@ -7,7 +7,11 @@ together with its dataset-level metadata (Supplementary_Data_3.xlsx) and
 reports, for three groupings of datasets -- IGVF-produced only, non-IGVF
 ("community") only, and combined -- the number of datasets, variant effect
 measurements, RNA scores, composite scores, distinct variants assayed, and
-genes represented. `rna_scores` is a breakdown of `variant_effect_measurements`
+genes represented. The IGVF-produced grouping is additionally broken out into
+"IGVF SGE" and "IGVF VAMP-seq" sub-rows -- the latter covering
+`IGVF_VAMP_SEQ_DATASETS` (G6PD_IGVF, TSC2_IGVF, and all six F9_Popp_2025_*
+datasets), the former every other IGVF-produced dataset -- immediately below
+the "IGVF" row. `rna_scores` is a breakdown of `variant_effect_measurements`
 (every row with a non-empty `rna_score` also carries a regular
 `auth_reported_score`), not an addition to it, reported beside it for
 visibility. Distinct variants assayed is reported three ways: distinct
@@ -303,6 +307,25 @@ MEASUREMENT_VALUE = "primary score set"
 
 CALM_GENES = frozenset({"CALM1", "CALM2", "CALM3"})
 CALM_MERGED_LABEL = "CALM1/2/3"
+
+# IGVF-produced datasets using a VAMP-seq assay rather than SGE -- everything
+# else IGVF-produced counts as SGE. Used to split the Dataset summary's "IGVF"
+# row into "IGVF SGE"/"IGVF VAMP-seq" sub-rows. Matches Supplementary_Data_3's
+# Curation sheet `Assay Name` column ("Vamp-seq" vs. "SGE") for every
+# IGVF-produced dataset: G6PD_IGVF, TSC2_IGVF, and all six F9_Popp_2025_*
+# datasets (including the F9_Popp_2025_model meta-analysis).
+IGVF_VAMP_SEQ_DATASETS = frozenset(
+    {
+        "G6PD_IGVF",
+        "TSC2_IGVF",
+        "F9_Popp_2025_carboxy_F9_specific",
+        "F9_Popp_2025_carboxy_gla_motif",
+        "F9_Popp_2025_heavy_chain",
+        "F9_Popp_2025_light_chain",
+        "F9_Popp_2025_model",
+        "F9_Popp_2025_strep_2",
+    }
+)
 
 SCORE_COLUMNS = {
     "REVEL": "REVEL",
@@ -834,7 +857,12 @@ def compute_all_stats_from_frame(condensed, metadata):
     non_igvf_datasets = set(metadata.index[~is_igvf])
     all_datasets = igvf_datasets | non_igvf_datasets
 
+    igvf_vamp_seq_datasets = igvf_datasets & IGVF_VAMP_SEQ_DATASETS
+    igvf_sge_datasets = igvf_datasets - igvf_vamp_seq_datasets
+
     igvf_stats, igvf_genes = compute_bucket_stats(condensed, igvf_datasets, measurement_datasets)
+    igvf_sge_stats, _ = compute_bucket_stats(condensed, igvf_sge_datasets, measurement_datasets)
+    igvf_vamp_seq_stats, _ = compute_bucket_stats(condensed, igvf_vamp_seq_datasets, measurement_datasets)
     non_igvf_stats, non_igvf_genes = compute_bucket_stats(condensed, non_igvf_datasets, measurement_datasets)
     combined_stats, _ = compute_bucket_stats(condensed, all_datasets, measurement_datasets)
 
@@ -842,7 +870,7 @@ def compute_all_stats_from_frame(condensed, metadata):
 
     combined_measurements = combined_stats["variant_effect_measurements"]
     combined_measurements_and_rna = combined_measurements + combined_stats["rna_scores"]
-    for bucket_stats in (igvf_stats, non_igvf_stats, combined_stats):
+    for bucket_stats in (igvf_stats, igvf_sge_stats, igvf_vamp_seq_stats, non_igvf_stats, combined_stats):
         bucket_stats["pct_variant_effect_measurements"] = (
             100 * bucket_stats["variant_effect_measurements"] / combined_measurements
             if combined_measurements
@@ -858,6 +886,8 @@ def compute_all_stats_from_frame(condensed, metadata):
 
     stats = {
         "IGVF": igvf_stats,
+        "IGVF SGE": igvf_sge_stats,
+        "IGVF VAMP-seq": igvf_vamp_seq_stats,
         "Community (non-IGVF)": non_igvf_stats,
         "Combined (IGVF + community)": combined_stats,
     }
