@@ -127,6 +127,8 @@ legend) instead of one combined multi-section image -- see
 `docs/figures.md`.
 """
 
+import textwrap
+from collections import defaultdict
 from itertools import pairwise
 from pathlib import Path
 
@@ -136,7 +138,9 @@ import pandas as pd
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from matplotlib.patches import Patch
+from matplotlib.lines import Line2D
+from matplotlib.patches import Patch, Rectangle
+from matplotlib.transforms import ScaledTranslation
 
 from src.build_variant_reclassification_dataset import (
     DEFAULT_CHECKPOINT_FILE,
@@ -2819,7 +2823,19 @@ def save_ablation_document_grid(
 # columns and aren't meant to replace the wider document renderers' own
 # labeling above.
 _CALIBRATED_PREDICTOR_ABBR = {"REVEL": "REVEL", "AlphaMissense": "AM", "MutPred2": "MP2"}
-_CALIBRATED_ARM_ABBR = {"functional": "Fxn", "predictor": "Pred", "combined": "Comb"}
+# "Experimental" (not "Functional"): this figure calls MAVE-based evidence
+# "experimental" rather than "functional" -- see _CALIBRATED_LIGHT_LABEL/
+# _CALIBRATED_UPGRADE_LABEL below -- so the concordance panel's per-arm
+# label (drawn on a diagonal, see _calibrated_draw_concordance_subpanel)
+# reads "Experimental", not "Functional". Scoped to just this dict/figure --
+# `FUNCTIONAL_ALONE_LABEL`/`CONCORDANCE_ARM_LABELS` etc. still say
+# "Functional" for every other chart/document this module renders.
+_CALIBRATED_ARM_LABEL = {"functional": "Experimental", "predictor": "Predictor", "combined": "Combined"}
+# Plain white, not the rest of this module's off-white `CHART_SURFACE` --
+# confirmed on the real figure to read as an unwanted grey cast once this
+# figure was cropped down to its final calibrated size. Scoped to just this
+# figure (every other chart in this module keeps `CHART_SURFACE`).
+_CALIBRATED_SURFACE = "white"
 _CALIBRATED_SCOPE_TITLE = {
     "vus": "ClinVar VUS",
     "clinvar_control": "ClinVar controls",
@@ -2833,18 +2849,50 @@ _CALIBRATED_CONCORDANCE_TITLE = {
     "clinvar_control": "ClinVar control\nconcordance",
 }
 _CALIBRATED_LEGEND_LABEL = {
-    SYNERGY_LABEL: "Neither alone",
-    CONFLICT_LABEL: "Lost to combining",
+    SYNERGY_LABEL: "Both sources needed for classification",
+    CONFLICT_LABEL: "Combination results in no evidence",
+}
+# Display override for the light ("alone sufficient") swatch of the
+# functional/experimental and predictor/predictive categories -- `BOTH_
+# ALONE_LABEL`'s own text is unchanged, so `_calibrated_legend_handles`
+# falls back to the category constant itself for that one.
+_CALIBRATED_LIGHT_LABEL = {
+    FUNCTIONAL_ALONE_LABEL: "Experimental data alone sufficient",
+    PREDICTOR_ALONE_LABEL: "Predictive data alone sufficient",
 }
 # Full-sentence labels for each category's "upgraded" (dark) swatch, used
 # now that the ablation legend is a single stacked column with room for a
 # full sentence rather than 3-across columns sharing the terse "Upgraded"
-# with an implied subject -- see `_calibrated_legend_handles`.
+# with an implied subject -- see `_calibrated_legend_handles`. "Experimental
+# data"/"predictive data" (not "Functional"/"Predictive" alone), matching
+# `_CALIBRATED_LIGHT_LABEL` above.
 _CALIBRATED_UPGRADE_LABEL = {
-    FUNCTIONAL_ALONE_LABEL: "Functional alone suffices, but predictive data yields upgraded evidence",
-    PREDICTOR_ALONE_LABEL: "Predictive alone suffices, but functional data yields upgraded evidence",
-    BOTH_ALONE_LABEL: "Either alone suffices, but both together yield upgraded evidence",
+    FUNCTIONAL_ALONE_LABEL: "Experimental data alone suffices, but predictive data moves to more confident class",
+    PREDICTOR_ALONE_LABEL: "Predictive data alone suffices, but experimental data moves to more confident class",
+    BOTH_ALONE_LABEL: "Either alone suffices, but both together move to more confident class",
 }
+# Character width `_calibrated_legend_handles` wraps every label to -- tuned
+# against row 2's left two grid columns (half the figure's width), the
+# ablation legend's own home once the concordance panel widened to the
+# other two columns (see `save_calibrated_ablation_figure`).
+_CALIBRATED_LEGEND_WRAP_WIDTH = 40
+# Shared by `_calibrated_draw_stacked_segment`'s `ax.bar()` call and
+# `_calibrated_draw_comparison_chart`'s thin-segment pass, which strips this
+# same edge back off a segment too thin to hold it -- see that function.
+_CALIBRATED_SEGMENT_EDGE_LINEWIDTH = 0.8
+# Hard-coded on/off switch for the thin white border between adjacent
+# stacked-bar segments -- default off. Confirmed on the real figure that
+# eliminating it entirely reads more cleanly than fighting the border-vs-
+# thin-segment interactions it otherwise requires (a border-sized segment
+# gets swallowed by its own edge stroke, a neighbor's edge has to be
+# selectively dropped and manually redrawn to avoid erasing whichever thin
+# segment it sits next to, etc. -- see `_calibrated_draw_comparison_chart`,
+# all of which only runs when this is True). The thin-segment *overlay*
+# itself (a real, if rare, rendering-resolution problem -- a handful of
+# variants out of a 13,000+-variant bar can be sub-pixel regardless of
+# whether segments have borders) stays on either way; only the border
+# bookkeeping around it is skipped when this is off.
+_CALIBRATED_SHOW_SEGMENT_BORDERS = False
 
 
 def _calibrated_fmt_count(n):
@@ -2854,8 +2902,42 @@ def _calibrated_fmt_count(n):
     return f"{n / 1000:.1f}k" if abs(n) >= 1000 else f"{n:,}"
 
 
+def _calibrated_label_ink(color):
+    """Count-label ink color for one stacked-bar segment: white on the one
+    segment dark enough to need it -- `SYNERGY_CATEGORY_COLORS[BOTH_ALONE_
+    LABEL]`, "Either alone suffices, but both together move to more
+    confident class"'s dark purple -- `CHART_INK_PRIMARY` (black) on every
+    other segment. Not `_label_ink_for(color)`'s general auto white/black
+    choice: confirmed on the real figure that a single consistent ink color
+    reads more cleanly across a bar with several differently-shaded
+    segments than switching per segment -- this one color is the sole
+    exception, dark enough that black text on it isn't legible.
+    """
+    return "white" if color == SYNERGY_CATEGORY_COLORS[BOTH_ALONE_LABEL] else CHART_INK_PRIMARY
+
+
+# Downward nudge (points) for every segment count label across this figure's
+# ablation and concordance charts, all vertically centered (`va="center"`)
+# on their own segment: confirmed on the real figure that digit-only labels
+# (no descenders) read as sitting slightly high when centered on the full
+# em box, the same way a single digit looks optically off-center in a
+# circle -- a fixed physical nudge (not a fraction of the segment's own
+# data height) since the same font/fontsize renders the same regardless of
+# which chart or how tall the segment is.
+_CALIBRATED_LABEL_NUDGE_PT = 1.0
+
+
+def _calibrated_label_transform(ax):
+    """`ax.transData`, offset down by `_CALIBRATED_LABEL_NUDGE_PT` -- pass as
+    `transform=` to a count-label `ax.text` call instead of its data
+    coordinates directly.
+    """
+    return ax.transData + ScaledTranslation(0, -_CALIBRATED_LABEL_NUDGE_PT / 72, ax.figure.dpi_scale_trans)
+
+
 def _calibrated_draw_stacked_segment(
-    ax, x_positions, heights, bottoms, color, totals, bar_width, hatch=None, min_frac=0.05, label_candidates=None
+    ax, x_positions, heights, bottoms, color, totals, bar_width, hatch=None, min_frac=0.05, label_candidates=None,
+    thin_bars=None,
 ):
     """Draws one stacked-bar segment. By default (`label_candidates=None`,
     every chart except the ClinGen-control B/LB one -- see `_calibrated_
@@ -2868,31 +2950,40 @@ def _calibrated_draw_stacked_segment(
     together (thin stacked bands, e.g. "Predictive alone"/"Either alone" on
     that one bar, which has only a handful of variants total), and stagger
     just the colliding ones instead of stacking illegible overlapping text.
+
+    `thin_bars`, when given, collects this call's `BarContainer` so
+    `_calibrated_draw_comparison_chart` can come back once the axes' final
+    ylim is set and strip the edge off any segment too thin to hold it (see
+    that function's own thin-segment pass) -- not decided here, since the
+    axes isn't at its final data-to-pixel scale yet at draw time.
     """
-    ax.bar(
+    bars = ax.bar(
         x_positions,
         heights,
         bottom=bottoms,
         width=bar_width,
         color=color,
-        edgecolor=CHART_SURFACE,
-        linewidth=0.8,
+        edgecolor=_CALIBRATED_SURFACE if _CALIBRATED_SHOW_SEGMENT_BORDERS else "none",
+        linewidth=_CALIBRATED_SEGMENT_EDGE_LINEWIDTH,
         hatch=hatch,
         zorder=3,
     )
+    if thin_bars is not None:
+        thin_bars.append(bars)
     for xi, height, bottom, total in zip(x_positions, heights, bottoms, totals):
         if total and height / total >= min_frac:
             if label_candidates is not None:
                 label_candidates.append((xi, bottom + height / 2, _calibrated_fmt_count(height), color))
             else:
-                # Always black (CHART_INK_PRIMARY), not `_label_ink_for(color)`'s
-                # auto white/black choice -- confirmed on the real figure that a
-                # single consistent ink color reads more cleanly across a bar
-                # with several differently-shaded segments than white on the
-                # darker ones and black on the lighter ones.
+                # `_calibrated_label_ink`: black on every segment except the
+                # one dark purple one, not `_label_ink_for(color)`'s general
+                # auto white/black choice -- confirmed on the real figure
+                # that a single consistent ink color reads more cleanly
+                # across a bar with several differently-shaded segments
+                # than switching on every one of them.
                 ax.text(
                     xi, bottom + height / 2, _calibrated_fmt_count(height), ha="center", va="center", fontsize=7,
-                    color=CHART_INK_PRIMARY, zorder=4,
+                    color=_calibrated_label_ink(color), zorder=4, transform=_calibrated_label_transform(ax),
                 )
     return [b + h for b, h in zip(bottoms, heights)]
 
@@ -2987,7 +3078,10 @@ def _calibrated_place_labels_with_stagger(ax, label_candidates, bar_width, fonts
         for cluster_idx in clusters:
             if len(cluster_idx) == 1:
                 y, text, color = group[cluster_idx[0]]
-                ax.text(x, y, text, ha="center", va="center", fontsize=7, color=CHART_INK_PRIMARY, zorder=4)
+                ax.text(
+                    x, y, text, ha="center", va="center", fontsize=7, color=_calibrated_label_ink(color), zorder=4,
+                    transform=_calibrated_label_transform(ax),
+                )
                 continue
 
             two_col_sides = [i % 2 for i in range(len(cluster_idx))]  # 0 = left, 1 = right
@@ -3006,7 +3100,10 @@ def _calibrated_place_labels_with_stagger(ax, label_candidates, bar_width, fonts
 
             for i, idx in enumerate(cluster_idx):
                 y, text, color = group[idx]
-                ax.text(x + dxs[i], y, text, ha="center", va="center", fontsize=6, color=CHART_INK_PRIMARY, zorder=4)
+                ax.text(
+                    x + dxs[i], y, text, ha="center", va="center", fontsize=6, color=_calibrated_label_ink(color),
+                    zorder=4, transform=_calibrated_label_transform(ax),
+                )
 
 
 def _calibrated_draw_comparison_chart(ax, chart_data, ylabel=None, use_stagger=False):
@@ -3028,12 +3125,13 @@ def _calibrated_draw_comparison_chart(ax, chart_data, ylabel=None, use_stagger=F
     class_upgrade = chart_data.get("class_upgrade")
     predictors = list(predictor_counts)
 
-    ax.set_facecolor(CHART_SURFACE)
+    ax.set_facecolor(_CALIBRATED_SURFACE)
     x_positions = list(range(len(predictors)))
     bar_width = 0.6
     bottoms = [0.0] * len(predictors)
     resolved_totals = [sum(int(predictor_counts[p][c]) for c in SYNERGY_CATEGORY_ORDER) for p in predictors]
     label_candidates = [] if use_stagger else None
+    thin_bars = []
 
     for category in SYNERGY_CATEGORY_ORDER:
         if class_upgrade is not None and category in CLASS_UPGRADE_CATEGORIES:
@@ -3052,12 +3150,13 @@ def _calibrated_draw_comparison_chart(ax, chart_data, ylabel=None, use_stagger=F
                     bar_width,
                     hatch=CLASS_DOWNGRADE_HATCH if outcome == CLASS_DOWNGRADED else None,
                     label_candidates=label_candidates,
+                    thin_bars=thin_bars,
                 )
         else:
             heights = [int(predictor_counts[p][category]) for p in predictors]
             bottoms = _calibrated_draw_stacked_segment(
                 ax, x_positions, heights, bottoms, SYNERGY_CATEGORY_COLORS[category], resolved_totals, bar_width,
-                label_candidates=label_candidates,
+                label_candidates=label_candidates, thin_bars=thin_bars,
             )
 
     max_resolved = max(resolved_totals, default=1)
@@ -3141,6 +3240,157 @@ def _calibrated_draw_comparison_chart(ax, chart_data, ylabel=None, use_stagger=F
     top = (R - a * bottom) / (1 - a)
     ax.set_ylim(bottom=bottom, top=top)
 
+    # A segment thinner than its own edge stroke renders as just that
+    # stroke's color, in effect erasing it -- confirmed on the real figure
+    # for a handful-of-variants "upgraded" segment on the missense-only
+    # chart, back when this figure drew segment borders at all. With
+    # `_CALIBRATED_SHOW_SEGMENT_BORDERS` off (the default), there's no
+    # border to be swallowed by, so a segment is only actually invisible
+    # once it drops below about a device pixel tall; with borders on, its
+    # own edge stroke plus its neighbors' can erase something several
+    # times that tall (see below), so the threshold there is a multiple of
+    # the edge linewidth instead. Each is a fixed point size, so convert it
+    # to this axes' just-established data scale (px_per_unit, above) the
+    # same way the label-height correction above does.
+    if _CALIBRATED_SHOW_SEGMENT_BORDERS:
+        min_visible_height = 2 * _CALIBRATED_SEGMENT_EDGE_LINEWIDTH * (ax.figure.dpi / 72) / px_per_unit
+    else:
+        min_visible_height = 1 * (ax.figure.dpi / 72) / px_per_unit
+    thin = set()
+    for k, bars in enumerate(thin_bars):
+        for i, patch in enumerate(bars.patches):
+            if 0 < patch.get_height() < min_visible_height:
+                thin.add((k, i))
+    for k, i in thin:
+        thin_bars[k].patches[i].set_edgecolor("none")
+
+    # `thin_bars` holds one `BarContainer` per stacking step in stacking
+    # order (see `_calibrated_draw_stacked_segment`'s `thin_bars` param),
+    # so a segment's immediate neighbors for a given predictor are one
+    # step before/after it in this same list. `sides_to_drop[(k, i)]`
+    # identifies those neighbors -- "top" for the one below a thin
+    # segment, "bottom" for the one above -- skipping a neighbor that's
+    # independently thin itself (rare, but real: two adjacent sub-shades
+    # of the same category, e.g. "downgraded" and "upgraded", can each be
+    # thin on either side of a large "unchanged" -- not adjacent to *each
+    # other* -- but a thin "upgraded" can sit directly next to a thin
+    # "downgraded" from the *next* category; that neighbor already gets
+    # its own overlay below and never needs anything here).
+    sides_to_drop = defaultdict(set)
+    for k, i in thin:
+        if k > 0 and (k - 1, i) not in thin:
+            sides_to_drop[(k - 1, i)].add("top")
+        if k < len(thin_bars) - 1 and (k + 1, i) not in thin:
+            sides_to_drop[(k + 1, i)].add("bottom")
+
+    for (k, i), dropped in sides_to_drop.items():
+        patch = thin_bars[k].patches[i]
+        # A fill's own edge is antialiased (blended toward whatever's
+        # behind it) by default wherever it doesn't land exactly on a
+        # pixel boundary -- confirmed on the real figure that this left a
+        # partial-opacity fringe right where this neighbor's fill was
+        # supposed to butt up against the thin segment's overlay (below),
+        # reading as a thin gap even though the overlay is solid, hard-
+        # edged, and genuinely overlaps into this neighbor's territory.
+        # Needed regardless of `_CALIBRATED_SHOW_SEGMENT_BORDERS`: this is
+        # about the overlay meeting this neighbor's fill cleanly, not
+        # about the border between them.
+        patch.set_antialiased(False)
+        if not _CALIBRATED_SHOW_SEGMENT_BORDERS:
+            continue
+        # A neighbor only needs its *one* edge touching the thin segment
+        # gone -- `Rectangle` can't stroke individual sides, though, so the
+        # fix used to clear all four of a neighbor's sides via
+        # `set_edgecolor("none")`. Confirmed on the real figure that this
+        # was doubly wrong: (1) it made the neighbor's fill quietly wider
+        # (the vanished left/right edges no longer inset it the same
+        # half-linewidth every other segment's edge does), and (2) it
+        # dropped the neighbor's *other* edge too (e.g. the "Predictive
+        # data alone sufficient" segment below a thin one would also lose
+        # its own separate boundary with "Experimental data alone
+        # sufficient" below that), which was never the segment causing the
+        # cover-up. Every side other than the one or two in `dropped` is
+        # manually redrawn right where `Rectangle`'s own edge would have
+        # put it.
+        patch.set_edgecolor("none")
+        x0, y0 = patch.get_x(), patch.get_y()
+        x1, y1 = x0 + patch.get_width(), y0 + patch.get_height()
+        side_coords = {
+            "left": ((x0, x0), (y0, y1)),
+            "right": ((x1, x1), (y0, y1)),
+            "top": ((x0, x1), (y1, y1)),
+            "bottom": ((x0, x1), (y0, y0)),
+        }
+        for side, (xs, ys) in side_coords.items():
+            if side not in dropped:
+                ax.add_line(Line2D(
+                    xs, ys, color=_CALIBRATED_SURFACE, linewidth=_CALIBRATED_SEGMENT_EDGE_LINEWIDTH, zorder=3.1,
+                ))
+
+    # Stripping edges above only helps a segment that has *some* rendered
+    # height to show once its borders are out of the way -- a truly
+    # sub-pixel segment (e.g. a handful of variants out of a 13,000+-
+    # variant bar, confirmed on the real figure) has no fill to reveal
+    # either way. Rather than give it real height -- which would also have
+    # to shift every label and patch stacked above it, the "% resolved"
+    # text, and the headroom this axes' ylim already committed to -- this
+    # draws one extra same-color patch on top of the stack instead: the
+    # real segment's own left/right extent, but its top/bottom extended
+    # past its own (negligible) real top/bottom by a fixed margin on each
+    # side, rather than centered on its midpoint and widened to a fixed
+    # total height (which couldn't reach past its own real extent by more
+    # than half that total, and confirmed on the real figure to leave a
+    # visible white gap between this patch and the neighbor it's meant to
+    # overpaint whenever that fell short of a full device pixel). Sampling
+    # the saved image's actual pixel values at several margins settled this
+    # empirically rather than by calculation: a 1px margin still left the
+    # gap, a 2px margin closed it cleanly with no gap at all three of this
+    # dataset's real thin segments -- so 2px it is, even though the real
+    # segment's own (negligible) height means the total rendered height
+    # (margin x2 plus that sliver of real height) comes out closer to 4px
+    # than the 2px originally asked for; a smaller, gap-free margin may
+    # exist, but wasn't worth the further trial and error to chase once
+    # this one was confirmed reliable on the real chart.
+    # `antialiased=False` on both this patch and (see above) the neighbors
+    # it overlaps: a fill's own edges are blended with whatever's behind
+    # them by default wherever they don't land exactly on a pixel boundary
+    # -- confirmed on the real figure that this left a partial-opacity
+    # fringe on the neighbor's own edge that a merely-solid (but still
+    # antialiased) overlay didn't fully paint over. Turning antialiasing
+    # off on both makes the rasterizer snap to hard pixel coverage instead.
+    # No `hatch` (unlike the real segment it stands in for, which may be a
+    # hatched "downgraded" sub-shade): a hatch pattern needs several
+    # repeats to read as a texture rather than noise, and at this deliberately
+    # small a height it rendered as stray diagonal lines instead -- confirmed
+    # on the real figure. This patch only needs to say "nonzero, too small to
+    # size accurately"; the hatch/no-hatch distinction isn't preserved for it.
+    # Manually bordered on its left/right only, and only when borders are
+    # shown at all (never top/bottom, which would just re-erase it the
+    # same way a real segment's own edge does) so it doesn't read as wider
+    # than every bordered real segment beside it.
+    # Overpaints a couple of pixels of whichever neighbor(s) it sits inside,
+    # which is itself invisible for any neighbor with real height to spare
+    # -- this would only visibly distort a *neighboring* segment if that
+    # neighbor were *also* forced up to this same minimum height, not the
+    # case for anything in this dataset today.
+    margin = 2 / px_per_unit
+    for k, i in thin:
+        patch = thin_bars[k].patches[i]
+        x0 = patch.get_x()
+        x1 = x0 + patch.get_width()
+        y0 = patch.get_y() - margin
+        y1 = patch.get_y() + patch.get_height() + margin
+        ax.add_patch(Rectangle(
+            (x0, y0), x1 - x0, y1 - y0,
+            facecolor=patch.get_facecolor(), edgecolor="none", zorder=3.5, antialiased=False,
+        ))
+        if _CALIBRATED_SHOW_SEGMENT_BORDERS:
+            for xs in ((x0, x0), (x1, x1)):
+                ax.add_line(Line2D(
+                    xs, (y0, y1), color=_CALIBRATED_SURFACE, linewidth=_CALIBRATED_SEGMENT_EDGE_LINEWIDTH,
+                    zorder=3.6,
+                ))
+
     if use_stagger:
         _calibrated_place_labels_with_stagger(ax, label_candidates, bar_width)
     for x, total in zip(x_positions, resolved_totals):
@@ -3184,8 +3434,7 @@ def _calibrated_draw_concordance_subpanel(ax, concordance_data, predictors):
     `_draw_concordance_panel` above, this one doesn't need either as a
     parameter.
     """
-    ax.set_facecolor(CHART_SURFACE)
-    n_predictors = len(predictors)
+    ax.set_facecolor(_CALIBRATED_SURFACE)
     group_width = 0.85
     bar_width = group_width / len(CONCORDANCE_ARM_ORDER)
     max_total = 0
@@ -3196,6 +3445,15 @@ def _calibrated_draw_concordance_subpanel(ax, concordance_data, predictors):
 
     for p_idx, predictor in enumerate(predictors):
         arm_counts = concordance_data[predictor]
+        # Above the group's own bars (not below, as a normal x-tick label
+        # would sit) -- confirmed on the real figure that below left no
+        # good spot for it once the diagonal "Experimental"/"Predictor"/
+        # "Combined" labels and their own room to extend downward already
+        # claimed that space.
+        ax.text(
+            p_idx, max_total * 1.02, _CALIBRATED_PREDICTOR_ABBR[predictor], ha="center", va="bottom", fontsize=7,
+            color=CHART_INK_PRIMARY, zorder=4,
+        )
         for a_idx, arm in enumerate(CONCORDANCE_ARM_ORDER):
             x = p_idx + (a_idx - 1) * bar_width
             bottom = 0.0
@@ -3221,45 +3479,63 @@ def _calibrated_draw_concordance_subpanel(ax, concordance_data, predictors):
                     ink = CHART_INK_PRIMARY if status == CONCORDANT else _label_ink_for(color)
                     ax.text(
                         x, bottom + height / 2, _calibrated_fmt_count(height), ha="center", va="center", fontsize=6,
-                        color=ink, zorder=4,
+                        color=ink, zorder=4, transform=_calibrated_label_transform(ax),
                     )
                 bottom += height
-            # Single-letter (_CALIBRATED_ARM_ABBR[arm][0]), not the full
-            # "Fxn"/"Pred"/"Comb" abbreviation: confirmed on the real figure
-            # that the full form, repeated once per predictor (9 labels
-            # total in this narrow a panel), overlaps into an unreadable
-            # run-on. A shared key below both concordance panels (see
-            # _calibrated_add_concordance_key) spells out what F/P/C mean
-            # instead -- one per-axes key here, tried first, put two copies
-            # close enough together to run into one unreadable line, and
-            # the second was clipped at the figure's right edge besides.
+            # On a 45-degree diagonal, not horizontal: the full "Experimental"/
+            # "Predictor"/"Combined" word, spelled out here instead of a
+            # single-letter abbreviation plus a shared key spelling it out
+            # once below the panel (an earlier version's approach) -- three
+            # of these sit close enough together (one per bar, in this
+            # narrow a panel) that horizontal full words would run into each
+            # other, but a diagonal needs much less horizontal room per
+            # label for the same text. `ha="right"` anchors each label by
+            # its own end at its own tick, so it reads upward-and-right
+            # into its own bar rather than drifting into its left
+            # neighbor's bar.
             ax.text(
-                x, -max_total * 0.06, _CALIBRATED_ARM_ABBR[arm][0], ha="center", va="top", fontsize=7,
-                color=CHART_INK_MUTED, zorder=4,
+                x, -max_total * 0.03, _CALIBRATED_ARM_LABEL[arm], ha="right", va="top", fontsize=6,
+                color=CHART_INK_MUTED, zorder=4, rotation=45, rotation_mode="anchor",
             )
 
-    ax.set_ylim(bottom=-max_total * 0.16, top=max_total * 1.05)
-    ax.set_xticks(range(n_predictors))
-    ax.set_xticklabels([_CALIBRATED_PREDICTOR_ABBR[p] for p in predictors], fontsize=7, color=CHART_INK_PRIMARY)
-    ax.tick_params(axis="x", pad=9)
+    # top=1.18 (not the ablation comparison chart's usual ~1.05): room for
+    # the "REVEL"/"AM"/"MP2" label now drawn above each group's own bars
+    # (see above) instead of as an x-tick label below them.
+    ax.set_ylim(bottom=-max_total * 0.5, top=max_total * 1.18)
+    ax.set_xticks([])
     ax.set_yticks([])
     for spine in ax.spines.values():
         spine.set_visible(False)
     ax.tick_params(axis="both", which="both", length=0, colors=CHART_INK_MUTED, labelsize=7)
+    # The diagonal "Experimental" label rotates down-and-left from its own
+    # bar (see above), which -- for the very first bar only, with nothing
+    # to its own left inside the axes -- extended past the axes' default
+    # auto-margined left x-limit and got clipped at the figure's own left
+    # edge, confirmed on the real figure. Every other diagonal label has a
+    # neighboring bar's empty gap to extend into instead. Widening just the
+    # left x-limit (right stays auto) gives that one label the same room
+    # without affecting any bar's own position or width.
+    left, right = ax.get_xlim()
+    ax.set_xlim(left=left - 0.4, right=right)
 
 
 def _calibrated_legend_handles():
     """Handles for `save_calibrated_ablation_figure`'s ablation legend -- a
-    single vertically-stacked column (`ncol=1`), grouped by category:
+    single vertically-stacked column (`ncol=1`), in the same top-to-bottom
+    order the categories themselves stack in on the chart (see
+    `SYNERGY_CATEGORY_ORDER`/`CLASS_UPGRADE_STATUS_ORDER`: "neither" sits
+    stacked above "either" above "predictive" above "experimental", and
+    each category's own "upgraded" dark shade sits above its "unchanged"
+    light shade within its own group):
 
-        Functional alone sufficient
-        Functional alone suffices, but predictive data yields upgraded evidence
-        Neither alone
-        Predictive alone sufficient
-        Predictive alone suffices, but functional data yields upgraded evidence
-        Lost to combining
+        Both sources needed for classification
+        Either alone suffices, but both together move to more confident class
         Either alone sufficient
-        Either alone suffices, but both together yield upgraded evidence
+        Predictive data alone suffices, but experimental data moves to more confident class
+        Predictive data alone sufficient
+        Experimental data alone suffices, but predictive data moves to more confident class
+        Experimental data alone sufficient
+        Combination results in no evidence
 
     The light swatch of each pair gets the category's own full label with no
     qualifier; the dark ("upgraded") swatch gets its own full-sentence label
@@ -3268,23 +3544,41 @@ def _calibrated_legend_handles():
     3-across grid, a single stacked column has no adjacent "Functional alone
     sufficient" light swatch directly above it for a terse "Upgraded" to
     implicitly refer back to, so the label has to be self-contained.
+    "Combination results in no evidence" sits last despite not stacking
+    inside the same bar at all -- it's the separate below-the-axis conflict
+    bar, the one thing here with no stacking-order position of its own to
+    match, so it goes at the visual bottom, right where its bar is.
 
     The concordance color key is a separate legend (`_calibrated_
     concordance_legend_handles`), positioned under the concordance panel
     instead of appended here.
+
+    Every label is wrapped to `_CALIBRATED_LEGEND_WRAP_WIDTH` characters
+    (`textwrap.fill`, a no-op on the already-short ones) -- the ablation
+    legend only occupies row 2's left two columns (half the figure's width,
+    see `save_calibrated_ablation_figure`), not wide enough for the longer
+    "upgraded" sentences on one line.
     """
     func, pred, either, neither = SYNERGY_CATEGORY_ORDER
 
+    def wrapped(text):
+        return textwrap.fill(text, width=_CALIBRATED_LEGEND_WRAP_WIDTH)
+
     def upgrade_pair(category):
         return [
-            Patch(color=CLASS_UPGRADE_LIGHT_COLORS[category], label=category),
-            Patch(color=SYNERGY_CATEGORY_COLORS[category], label=_CALIBRATED_UPGRADE_LABEL[category]),
+            Patch(color=SYNERGY_CATEGORY_COLORS[category], label=wrapped(_CALIBRATED_UPGRADE_LABEL[category])),
+            Patch(
+                color=CLASS_UPGRADE_LIGHT_COLORS[category],
+                label=wrapped(_CALIBRATED_LIGHT_LABEL.get(category, category)),
+            ),
         ]
 
     return (
-        upgrade_pair(func) + [Patch(color=SYNERGY_CATEGORY_COLORS[neither], label=_CALIBRATED_LEGEND_LABEL[neither])]
-        + upgrade_pair(pred) + [Patch(color=CONFLICT_COLOR, label=_CALIBRATED_LEGEND_LABEL[CONFLICT_LABEL])]
+        [Patch(color=SYNERGY_CATEGORY_COLORS[neither], label=wrapped(_CALIBRATED_LEGEND_LABEL[neither]))]
         + upgrade_pair(either)
+        + upgrade_pair(pred)
+        + upgrade_pair(func)
+        + [Patch(color=CONFLICT_COLOR, label=wrapped(_CALIBRATED_LEGEND_LABEL[CONFLICT_LABEL]))]
     )
 
 
@@ -3319,24 +3613,6 @@ def _calibrated_add_group_title(fig, axes, label, pad=0.012, fontsize=7.5):
     fig.text((x0 + x1) / 2, y, label, ha="center", va="bottom", fontsize=fontsize, color=CHART_INK_PRIMARY, fontweight="bold")
 
 
-def _calibrated_add_concordance_key(fig, axes, pad=0.006, fontsize=5.5):
-    """One "F/P/C = Functional / Predictor / Combined arm" caption centered
-    below the combined horizontal extent of both concordance panels --
-    tried first as a per-panel `ax.set_xlabel`, but with the two panels
-    sitting right next to each other that put two copies of the same
-    caption close enough together to read as one run-on line, and the
-    second copy was clipped at the figure's right edge besides.
-    """
-    positions = [ax.get_position() for ax in axes]
-    x0 = min(p.x0 for p in positions)
-    x1 = max(p.x1 for p in positions)
-    y = min(p.y0 for p in positions) - pad
-    fig.text(
-        (x0 + x1) / 2, y, "F/P/C = Functional / Predictor / Combined arm",
-        ha="center", va="top", fontsize=fontsize, color=CHART_INK_MUTED,
-    )
-
-
 def save_calibrated_ablation_figure(df, predictors, output_path):
     """Render Extended Data Figure 10's final, hand-calibrated layout to
     `output_path` (format inferred from the extension, e.g. .png/.svg/.pdf):
@@ -3345,8 +3621,8 @@ def save_calibrated_ablation_figure(df, predictors, output_path):
     block + 1 concordance panel):
 
     Row 1: vus[P/LP, B/LB] + clinvar_control[P/LP, B/LB].
-    Row 2: ablation legend (columns 0-2) + clinvar_control-concordance
-    (column 3).
+    Row 2: ablation legend (columns 0-1) + clinvar_control-concordance
+    (columns 2-3).
 
     Always exactly these two scopes, regardless of `--scope`/`--document-
     scope` (which affect every other output of this module) -- this is a
@@ -3356,11 +3632,16 @@ def save_calibrated_ablation_figure(df, predictors, output_path):
     (`_calibrated_add_group_title`) rather than a per-row left-side label;
     the left side instead carries a single generic "# variants" y-axis
     label per row (comparison charts only). The ablation legend
-    (`_calibrated_legend_handles`) sits in row 2's own left column, stacked
-    vertically (`ncol=1`) so each "upgraded" swatch can carry a full-
-    sentence label instead of the old 3-across grid's terse "Upgraded"; the
-    concordance color key (`_calibrated_concordance_legend_handles`) is a
-    separate legend anchored directly under the concordance panel instead.
+    (`_calibrated_legend_handles`) sits in row 2's own left two columns,
+    stacked vertically (`ncol=1`, wrapped to `_CALIBRATED_LEGEND_WRAP_
+    WIDTH`) so each "upgraded" swatch can carry a full-sentence label
+    instead of the old 3-across grid's terse "Upgraded"; the concordance
+    color key (`_calibrated_concordance_legend_handles`) is a separate,
+    one-line (`ncol=3`) legend anchored directly under the concordance
+    panel instead -- which spans the other two columns (the full width of
+    the two `clinvar_control` ablation charts above it) rather than sharing
+    a column with the ablation legend, so it isn't squeezed to a quarter of
+    the figure's width.
 
     Sets Arial/`pdf.fonttype=42` for this figure only (`plt.rc_context`),
     not globally -- so it doesn't change the font used by this module's
@@ -3368,21 +3649,22 @@ def save_calibrated_ablation_figure(df, predictors, output_path):
     """
     comparison_row = [("vus", 0), ("clinvar_control", 2)]
     row_h = 1.5
-    # Row 2 only needs to be a little taller than a plain chart row: the
-    # ablation legend's 8 stacked entries fit snugly at `labelspacing=0.8`,
-    # and the concordance panel next to it only needs `row_h` itself.
-    legend_row_h = 1.8
+    # Row 2 needs more headroom than a plain chart row: the ablation
+    # legend's three "upgraded" sentences each wrap to two lines at this
+    # column's width (see `_CALIBRATED_LEGEND_WRAP_WIDTH`), and the
+    # concordance panel next to it only needs `row_h` itself.
+    legend_row_h = 2.1
     # Fixed inch margins above/below the grid, added on top of the two rows'
     # own height rather than carved out of it -- below the grid has to fit
-    # the concordance panel's own x-tick labels, its F/P/C caption, and the
-    # concordance color-key legend, all stacked in that order.
+    # the concordance panel's own "REVEL"/"AM"/"MP2" x-tick labels and the
+    # concordance color-key legend, stacked in that order.
     top_margin_in = 0.35
-    bottom_margin_in = 0.85
+    bottom_margin_in = 0.6
     fig_h = row_h + legend_row_h + top_margin_in + bottom_margin_in
 
     with plt.rc_context({"font.family": "Arial", "font.size": 7, "pdf.fonttype": 42}):
         fig = plt.figure(figsize=(6.5, fig_h), dpi=300)
-        fig.patch.set_facecolor(CHART_SURFACE)
+        fig.patch.set_facecolor(_CALIBRATED_SURFACE)
         top = 1 - top_margin_in / fig_h
         bottom = bottom_margin_in / fig_h
         # hspace=0.8 (this figure's other multi-row GridSpecs) is a relative
@@ -3412,10 +3694,10 @@ def save_calibrated_ablation_figure(df, predictors, output_path):
             fig.canvas.draw()
             _calibrated_add_group_title(fig, [ax_plp, ax_blb], _CALIBRATED_SCOPE_TITLE[scope])
 
-        # Row 2, columns 0-2: the ablation legend, stacked vertically in an
+        # Row 2, columns 0-1: the ablation legend, stacked vertically in an
         # otherwise-empty invisible axes so it aligns with the concordance
         # panel's own row rather than floating in the figure's outer margin.
-        legend_ax = fig.add_subplot(gs[1, 0:3])
+        legend_ax = fig.add_subplot(gs[1, 0:2])
         legend_ax.axis("off")
         legend_handles = _calibrated_legend_handles()
         legend_ax.legend(
@@ -3423,32 +3705,42 @@ def save_calibrated_ablation_figure(df, predictors, output_path):
             fontsize=7, labelcolor=CHART_INK_SECONDARY, borderaxespad=0, handletextpad=0.5, labelspacing=0.8,
         )
 
-        # Row 2, column 3: clinvar_control's own concordance panel, with its
-        # color key + F/P/C caption anchored directly under it.
+        # Row 2, columns 2-3: clinvar_control's own concordance panel --
+        # spanning both columns (the full width of the two clinvar_control
+        # ablation charts above it, see the docstring) -- with its color key
+        # anchored directly under it.
         concordance_data = build_control_concordance_chart_data(df, predictors, scopes=("clinvar_control",))
-        ax_conc = fig.add_subplot(gs[1, 3])
+        ax_conc = fig.add_subplot(gs[1, 2:4])
         _calibrated_draw_concordance_subpanel(ax_conc, concordance_data, predictors)
         fig.canvas.draw()
         _calibrated_add_group_title(fig, [ax_conc], _CALIBRATED_CONCORDANCE_TITLE["clinvar_control"], fontsize=6.5)
-        _calibrated_add_concordance_key(fig, [ax_conc])
 
         conc_handles = _calibrated_concordance_legend_handles()
         conc_position = ax_conc.get_position()
         conc_cx = (conc_position.x0 + conc_position.x1) / 2
-        # Anchored just below the F/P/C caption (itself just below the axes,
-        # see `_calibrated_add_concordance_key`) rather than at the figure's
-        # absolute bottom edge (y=0) -- anchoring at y=0 left a large gap
-        # here whenever `bottom_margin_in` had more room than this legend's
-        # own height actually needed, confirmed on the real figure.
-        conc_legend_top = conc_position.y0 - 0.04
+        # Anchored below the axes' own bottom edge (the diagonal "Experimental"/
+        # "Predictor"/"Combined" labels live inside that bbox, and "REVEL"/
+        # "AM"/"MP2" now sit above the bars instead of below, so there's
+        # nothing else competing for this space) rather than at the
+        # figure's absolute bottom edge (y=0) -- anchoring at y=0 left a
+        # large gap here whenever `bottom_margin_in` had more room than
+        # this legend's own height actually needed, confirmed on the real
+        # figure. `ncol=3` (one line) rather than the ablation legend's
+        # stacked `ncol=1`: the wider concordance panel gives this legend
+        # plenty of width to spread its three short labels across one row
+        # instead. 0.01125 (half of 0.0225, itself half of the original
+        # 0.045): confirmed on the real figure there was still room to
+        # bring this legend closer once "REVEL"/"AM"/"MP2" moved above the
+        # bars and stopped sharing this space.
+        conc_legend_top = conc_position.y0 - 0.01125
         fig.legend(
             conc_handles, [h.get_label() for h in conc_handles], loc="upper center",
-            bbox_to_anchor=(conc_cx, conc_legend_top), ncol=1, frameon=False, fontsize=7,
-            labelcolor=CHART_INK_SECONDARY,
+            bbox_to_anchor=(conc_cx, conc_legend_top), ncol=3, frameon=False, fontsize=7,
+            labelcolor=CHART_INK_SECONDARY, columnspacing=1.2,
         )
 
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        fig.savefig(output_path, facecolor=CHART_SURFACE)
+        fig.savefig(output_path, facecolor=_CALIBRATED_SURFACE)
         plt.close(fig)
 
 
