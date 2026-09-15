@@ -7,7 +7,7 @@ DNA-resolution columns (e.g. mapped_hgvs_g), since a row may describe a
 single DNA variant or a protein variant with several reverse-translation
 candidates.
 
-Three kinds of datasets are handled, selected by the `dataset_name` column:
+Four kinds of datasets are handled, selected by the `dataset_name` column:
 
 \b
 1. MAVE-join datasets (BAP1_Waters_2024, CHEK2_Gebbia_2024, OTC_Lo_2023,
@@ -18,7 +18,13 @@ Three kinds of datasets are handled, selected by the `dataset_name` column:
    position in the row's Flag list is set to "*".
 2. KCNQ4_Zheng_2022_current_homozygous / KCNQ4_Zheng_2022_v12_homozygous:
    flagged per DNA candidate, marking anything that is not a SNV.
-3. Everything else: Flag is a list of empty strings.
+3. LDLR_Tabet_2025_uptake / LDLR_Tabet_2025_abundance: every row whose
+   amino-acid position (mapped_hgvs_p_start) falls within one of the six
+   LDLR LA module ranges is flagged entirely, regardless of DNA candidate.
+   These LA modules are excluded from calibration and classification alike
+   -- ExCALIBR also honors this flag to exclude the variants from
+   calibration.
+4. Everything else: Flag is a list of empty strings.
 """
 
 from pathlib import Path
@@ -73,6 +79,25 @@ STRING_JOIN_DATASETS = {
 SNV_FILTER_DATASETS = {
     "KCNQ4_Zheng_2022_current_homozygous",
     "KCNQ4_Zheng_2022_v12_homozygous",
+}
+
+# LDLR LA (ligand-binding) module amino-acid ranges excluded from calibration
+# and classification. LA2/LA3 and LA4/LA5 boundaries are as provided by the
+# investigator (LA2 and LA3 share position 106).
+LDLR_LA_MODULE_RANGES = [
+    (25, 65),  # LA1
+    (66, 106),  # LA2
+    (106, 145),  # LA3
+    (146, 186),  # LA4
+    (195, 233),  # LA5
+    (234, 272),  # LA6
+]
+
+# Datasets flagged entirely (every DNA candidate) when their amino-acid
+# position (mapped_hgvs_p_start) falls within one of a set of ranges.
+AA_RANGE_FILTER_DATASETS = {
+    "LDLR_Tabet_2025_uptake": LDLR_LA_MODULE_RANGES,
+    "LDLR_Tabet_2025_abundance": LDLR_LA_MODULE_RANGES,
 }
 
 
@@ -176,6 +201,20 @@ def flagged_rows_for_string_join(df, dataset_name, cfg, filtering_dir):
     return set(sub.index[matches])
 
 
+def flagged_rows_for_aa_range(df, dataset_name, ranges):
+    """Return the set of row indices to flag for an amino-acid-range dataset."""
+    sub = df[df["dataset_name"] == dataset_name]
+    if sub.empty:
+        return set()
+
+    aa_pos = pd.to_numeric(sub["mapped_hgvs_p_start"], errors="coerce")
+    in_range = pd.Series(False, index=sub.index)
+    for lo, hi in ranges:
+        in_range |= (aa_pos >= lo) & (aa_pos <= hi)
+
+    return set(sub.index[in_range])
+
+
 def flag_snv_filter_row(row):
     starts = split_pipe(row["mapped_hgvs_g_start"])
     stops = split_pipe(row["mapped_hgvs_g_stop"])
@@ -200,6 +239,12 @@ def compute_flags(df, filtering_dir):
 
     for dataset_name, cfg in STRING_JOIN_DATASETS.items():
         flagged_ids = flagged_rows_for_string_join(df, dataset_name, cfg, filtering_dir)
+        if flagged_ids:
+            idx = list(flagged_ids)
+            flag.loc[idx] = counts.loc[idx].apply(starred_flag)
+
+    for dataset_name, ranges in AA_RANGE_FILTER_DATASETS.items():
+        flagged_ids = flagged_rows_for_aa_range(df, dataset_name, ranges)
         if flagged_ids:
             idx = list(flagged_ids)
             flag.loc[idx] = counts.loc[idx].apply(starred_flag)

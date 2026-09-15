@@ -96,9 +96,13 @@ It also reports two further sections, sourced from separate input files:
   - `--checkpoint-file` (default
     `data/output/reclassification/integrated_variant_effect_dataset_analysis.csv.gz`):
     the notebook's own checkpoint, saved just before its category split --
-    already has the LDLR LA-module-1 exclusion and F9/TP53 restricted-dataset
-    filter baked in, which this section reproduces separately (against the
-    expanded file) purely to report their individual effects.
+    already has the F9/TP53 restricted-dataset filter baked in, which this
+    section reproduces separately (against the expanded file) purely to
+    report its individual effect. LDLR's LA-module exclusion is a
+    `Flag == '*'` set upstream by `flag_variants.py`, so it isn't baked into
+    the checkpoint as a row-drop -- it survives into the checkpoint (still
+    present, just flagged) and is folded into the "Other flagged variants"
+    step below like any other pre-existing flag.
   - `--chek2-file` (default `data/input/maves/CHEK2_Gebbia_2024.xlsx`): same
     CHEK2 QC workbook `build_variant_reclassification_dataset.py` uses.
 - **Reclassification agreement** (Figure 4c): for every sheet in

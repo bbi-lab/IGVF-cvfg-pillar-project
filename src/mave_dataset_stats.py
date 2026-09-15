@@ -358,18 +358,18 @@ EXCALIBR_MIXED_YEAR_DATASET_SUFFIX = "_clinvar_2018"
 EXCALIBR_EXCLUDED_GENES = frozenset({"F9", "TP53", "SFPQ"})
 
 # --- Reclassification filter funnel -----------------------------------------
-# Pre-checkpoint exclusions from Variant_Classification_analysis.ipynb (cells
-# 3, 4, and 42), reproduced here against the raw expanded file since the
-# notebook's own checkpoint (DEFAULT_CHECKPOINT_FILE below) already has them
-# baked in. See compute_reclassification_filter_funnel's docstring.
+# Pre-checkpoint exclusion from Variant_Classification_analysis.ipynb (cell
+# 40), reproduced here against the raw expanded file since the notebook's own
+# checkpoint (DEFAULT_CHECKPOINT_FILE below) already has it baked in. LDLR's
+# LA-module exclusion no longer lives here -- it's now a Flag == '*' set by
+# flag_variants.py upstream of both the expanded file and the checkpoint, so
+# it's folded into the generic "Other flagged variants" step below like any
+# other pre-existing flag. See compute_reclassification_filter_funnel's
+# docstring.
 DEFAULT_CHECKPOINT_FILE = Path("data/output/reclassification/integrated_variant_effect_dataset_analysis.csv.gz")
 DEFAULT_CHEK2_FILE = Path("data/input/maves/CHEK2_Gebbia_2024.xlsx")
 
 FUNNEL_GENOMIC_KEY_COLS = ["Gene", "Chrom", "hg38_start", "ref_allele", "alt_allele"]
-LDLR_VLDL_PRIORITY_RANGES = [(66, 106), (234, 272)]  # LA module 2, LA module 6
-LDLR_VLDL_PRIORITY_DATASET = "LDLR_Tabet_2025_presence_VLDL"
-LDLR_VLDL_FALLBACK_DATASETS = frozenset({"LDLR_Tabet_2025_uptake", "LDLR_Tabet_2025_abundance"})
-LDLR_LA1_EXCLUDE_RANGE = (25, 65)  # LA module 1
 F9_TP53_RESTRICTED_DATASETS = frozenset(
     {
         "TP53_Boettcher_2019",
@@ -1422,10 +1422,14 @@ def compute_reclassification_filter_funnel(expanded, checkpoint, chek2, condense
     pipeline's actual order and recording distinct-DNA-variant and
     distinct-assayed-variant counts after each step.
 
-    Steps 1-3 (LDLR +VLDL assay priority, LDLR LA module 1, F9/TP53
-    restricted datasets) are `Variant_Classification_analysis.ipynb` cells 3,
-    4, and 42 respectively, reproduced against `expanded` since they're what
-    produces `checkpoint` in the first place. The remaining steps mirror
+    Step 1 (F9/TP53 restricted datasets) is `Variant_Classification_
+    analysis.ipynb` cell 40, reproduced against `expanded` since it's what
+    produces `checkpoint` in the first place. LDLR's LA-module exclusion is
+    no longer a pre-checkpoint row-drop -- it's a `Flag == '*'` set by
+    `flag_variants.py` upstream of `expanded` itself, so those rows survive
+    into `checkpoint` (still present, just flagged) and are only removed
+    later, folded into the "Other flagged variants" step below alongside any
+    other pre-existing flag. The remaining steps mirror
     `src.build_variant_reclassification_dataset.apply_notebook_exclusions`,
     split into named sub-steps: Flag=='*' removal is split into the CHEK2
     QC flag specifically vs. any other pre-existing flag, since the notebook
@@ -1536,28 +1540,7 @@ def compute_reclassification_filter_funnel(expanded, checkpoint, chek2, condense
     )
     record("- RNA scores", expanded)
 
-    aa_pos = pd.to_numeric(expanded["aa_pos"], errors="coerce")
-    in_vldl_range = pd.Series(False, index=expanded.index)
-    for lo, hi in LDLR_VLDL_PRIORITY_RANGES:
-        in_vldl_range |= aa_pos.between(lo, hi)
-    ldlr_vldl_range_mask = (expanded["Gene"] == "LDLR") & in_vldl_range
-    vldl_rows = expanded.loc[
-        ldlr_vldl_range_mask & (expanded["Dataset"] == LDLR_VLDL_PRIORITY_DATASET),
-        ["aa_pos", "aa_ref", "aa_alt"],
-    ]
-    vldl_keys = set(map(tuple, vldl_rows.values))
-    row_aa_keys = pd.Series(list(zip(expanded["aa_pos"], expanded["aa_ref"], expanded["aa_alt"])), index=expanded.index)
-    superseded_mask = (
-        ldlr_vldl_range_mask & expanded["Dataset"].isin(LDLR_VLDL_FALLBACK_DATASETS) & row_aa_keys.isin(vldl_keys)
-    )
-    step = expanded[~superseded_mask]
-    record("- LDLR: +VLDL assay preferred over abundance/uptake (LA modules 2/6)", step)
-
-    la1_mask = (step["Gene"] == "LDLR") & aa_pos.reindex(step.index).between(*LDLR_LA1_EXCLUDE_RANGE)
-    step = step[~la1_mask]
-    record("- LDLR: LA module 1 excluded entirely (aa 25-65)", step)
-
-    step = step[~step["Dataset"].isin(F9_TP53_RESTRICTED_DATASETS)]
+    step = expanded[~expanded["Dataset"].isin(F9_TP53_RESTRICTED_DATASETS)]
     record("- F9/TP53: restricted to the meta-analysis dataset only", step)
 
     step = checkpoint[checkpoint[GENE_COL] != "SFPQ"].copy()

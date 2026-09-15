@@ -1708,14 +1708,18 @@ def test_funnel_distinct_dna_variants_normalizes_hg38_start_and_chrom():
 
 
 def _expanded_funnel_fixture():
-    """One row per pre-checkpoint exclusion reason, plus one survivor.
+    """One row per pre-checkpoint exclusion reason, plus survivors.
 
-    row1/row2 share a DNA coordinate (LDLR LA module 2, aa 70): row1 is the
-    +VLDL assay, row2 the abundance assay it supersedes -- row2 alone should
-    be dropped, and since they share a coordinate the distinct-DNA-variant
-    count doesn't change at that step (only the distinct-assayed count does).
-    row3 is LDLR LA module 1 (blanket-excluded regardless of assay). row4 is
-    an F9 dataset not on the meta-analysis allowlist. row5 (GENEA) survives.
+    row1/row2 share a DNA coordinate (two datasets scoring the same
+    variant): the leading rows count DNA-level rows directly (5) while
+    distinct_dna_variants collapses the shared coordinate (4). row3 is an
+    ordinary gene, unaffected by anything at this pre-checkpoint stage.
+    row4 is an F9 dataset not on the meta-analysis allowlist -- the only
+    exclusion left at this stage. LDLR's LA-module exclusion no longer
+    happens here: it's now a `Flag == '*'` set upstream by
+    flag_variants.py, so it behaves like any other pre-existing flag,
+    folded into "Other flagged variants" post-checkpoint (see
+    `_checkpoint_funnel_fixture`). row5 (GENEA) survives.
 
     row1 also carries an `rna_score`, the fixture's sole RNA-score-bearing
     measurement -- exercises the funnel's leading "including RNA scores"/
@@ -1729,17 +1733,14 @@ def _expanded_funnel_fixture():
         "hg38_start",
         "ref_allele",
         "alt_allele",
-        "aa_pos",
-        "aa_ref",
-        "aa_alt",
         "rna_score",
     ]
     rows = [
-        ("LDLR_Tabet_2025_presence_VLDL", "LDLR", "urn:mavedb:v1", "19", 100, "A", "G", 70, "A", "V", "0.5"),
-        ("LDLR_Tabet_2025_abundance", "LDLR", "urn:mavedb:v2", "19", 100, "A", "G", 70, "A", "V", ""),
-        ("LDLR_Tabet_2025_uptake", "LDLR", "urn:mavedb:v3", "19", 200, "C", "T", 30, "G", "D", ""),
-        ("F9_Popp_2025_strep_2", "F9", "urn:mavedb:v4", "X", 300, "A", "C", 10, "M", "I", ""),
-        ("GENEA_Study_2020", "GENEA", "urn:mavedb:v5", "1", 400, "A", "G", 5, "M", "I", ""),
+        ("GENEB_Study_2020a", "GENEB", "urn:mavedb:v1", "19", 100, "A", "G", "0.5"),
+        ("GENEB_Study_2020b", "GENEB", "urn:mavedb:v2", "19", 100, "A", "G", ""),
+        ("GENEC_Study_2020", "GENEC", "urn:mavedb:v3", "19", 200, "C", "T", ""),
+        ("F9_Popp_2025_strep_2", "F9", "urn:mavedb:v4", "X", 300, "A", "C", ""),
+        ("GENEA_Study_2020", "GENEA", "urn:mavedb:v5", "1", 400, "A", "G", ""),
     ]
     return pd.DataFrame(rows, columns=columns)
 
@@ -1985,20 +1986,10 @@ def test_compute_reclassification_filter_funnel_sequential_steps():
     assert rna_scores_step["distinct_assayed_variants"] == 5
     assert rna_scores_step["assayed_removed"] == 0
 
-    vldl = by_label["- LDLR: +VLDL assay preferred over abundance/uptake (LA modules 2/6)"]
-    assert vldl["rows"] == 4
-    assert vldl["distinct_dna_variants"] == 4  # unchanged -- row1 still covers that coordinate
-    assert vldl["distinct_assayed_variants"] == 4  # row2's urn is gone
-
-    la1 = by_label["- LDLR: LA module 1 excluded entirely (aa 25-65)"]
-    assert la1["rows"] == 3
-    assert la1["distinct_dna_variants"] == 3
-    assert la1["distinct_assayed_variants"] == 3
-
     f9tp53 = by_label["- F9/TP53: restricted to the meta-analysis dataset only"]
-    assert f9tp53["rows"] == 2
-    assert f9tp53["distinct_dna_variants"] == 2
-    assert f9tp53["distinct_assayed_variants"] == 2
+    assert f9tp53["rows"] == 4
+    assert f9tp53["distinct_dna_variants"] == 3
+    assert f9tp53["distinct_assayed_variants"] == 4
 
     # Post-checkpoint steps read `checkpoint` directly (its own 9-row fixture,
     # unrelated to the 2 pre-checkpoint survivors above).

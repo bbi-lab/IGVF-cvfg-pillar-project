@@ -22,7 +22,7 @@ for the `ASSAY_PRIORITY_LIST`-specific background this doc builds on.
   evidence disagrees with predictor evidence.
 - **[Gene-specific special-casing](#gene-specific-special-casing)** --
   `F9`/`TP53`'s alternate calibration, `SFPQ`'s exclusion, `CHEK2`'s QC
-  flag, `LDLR`'s assay-priority-by-position override, and the
+  flag, `LDLR`'s LA-module exclusion, and the
   2018-vs-2025 ClinVar vintage switch.
 - **[Deduplication strategy](#deduplication-strategy)** -- how the
   pipeline picks one representative record when the same variant is
@@ -287,41 +287,38 @@ started qualifying `hgvs_p` with the transcript accession without a
 corresponding update to this merge. Fixed by stripping the prefix before
 matching.
 
-### `LDLR`: `+VLDL` uptake assay prioritized in two LA modules, LA module 1 excluded entirely
+### `LDLR`: all six LA modules excluded from calibration and classification
 
-Within LA module 2 (`aa_pos` 66-106) and LA module 6 (`aa_pos` 234-272), a
-row filter runs immediately after `pp` is loaded, before any other
-processing: for any amino-acid substitution in those two ranges where
-`LDLR_Tabet_2025_presence_VLDL` (LDL uptake measured in the *presence* of
-excess VLDL, i.e. "+VLDL") has a measurement, the corresponding rows from
-`LDLR_Tabet_2025_uptake` ("−VLDL" uptake, without VLDL) and
-`LDLR_Tabet_2025_abundance` (a cell-surface abundance assay) are dropped
-for that same substitution. Substitutions in those ranges that `+VLDL`
-doesn't cover keep their `uptake`/`abundance` data unchanged -- this is a
-priority with fallback, not a blanket exclusion of the other two assays.
-Per the original investigator, `+VLDL` is less subject to a blind spot the
-other two assays have specifically in these two modules; the same
-prioritization was deliberately *not* extended to LA module 1, which
-instead gets the blanket exclusion described below.
+`LDLR` has two remaining assays, `LDLR_Tabet_2025_uptake` and
+`LDLR_Tabet_2025_abundance` (a third, `LDLR_Tabet_2025_presence_VLDL`, has
+been removed from the dataset entirely). Any row from either of those two
+datasets whose amino-acid position falls within one of the six LA
+(ligand-binding repeat) module ranges is excluded:
 
-Unlike the other special-casing in this section, this rule runs on raw,
-per-assay rows before dedup, category split, or `ASSAY_PRIORITY_LIST` ever
-run, so it applies identically regardless of dedup strategy and to all
-five variant categories alike -- `controls`/`ClinGen_Repo` and
-`VUS`/`gnomAD`/`Unobserved` equally. Confirmed directly against the
-current data: 10,780 rows (5,392 `abundance`, 5,388 `uptake`) are dropped
-by this rule, and every remaining LA2/LA6 substitution that had `+VLDL`
-coverage has `LDLR_Tabet_2025_presence_VLDL` as its only surviving assay
-in that position range -- `uptake`/`abundance` are retained only for the
-substitutions `+VLDL` didn't cover (21 substitutions in each module, per
-the reclassification-stage data).
+| LA module | `aa_pos` range |
+|---|---|
+| LA1 | 25-65 |
+| LA2 | 66-106 |
+| LA3 | 106-145 |
+| LA4 | 146-186 |
+| LA5 | 195-233 |
+| LA6 | 234-272 |
 
-Immediately after that priority rule, in the same pre-dedup step, LA
-module 1 (`aa_pos` 25-65) is dropped entirely: every `LDLR` row in that
-range is removed outright, regardless of assay, rather than having one
-assay prioritized over the others. This is a blanket exclusion, not a
-priority-with-fallback -- no LA module 1 substitution survives into
-Supplementary Data 5.
+Unlike the other gene-specific special-casing in this section, this
+exclusion isn't implemented in `Variant_Classification_analysis.ipynb`
+itself -- it's a `Flag` value set upstream, in `flag_variants.py` (the last
+step of the Dockerized variant-annotation pipeline, before
+`integrated_variant_effect_dataset.tsv.gz` is written). Setting it there,
+rather than in the notebook, means the same flag reaches both consumers of
+that file: `OddsPath_calculations.ipynb` (calibration) and
+`Variant_Classification_analysis.ipynb` (classification) both already drop
+`Flag == '*'` rows generically, and ExCALIBR's own calibration code also
+honors this flag to exclude these variants from calibration. Previously,
+LA module 1 was excluded from classification only (a blanket row-drop
+early in the notebook), and LA modules 2/6 used an assay-priority-with-
+fallback rule preferring `LDLR_Tabet_2025_presence_VLDL` where it had
+data -- neither of those reached calibration. Both mechanisms have been
+replaced by this single upstream flag covering all six LA modules.
 
 ### `BRCA1`/`PTEN`/`MSH2`/`TP53`: 2018 vs. 2025 ClinVar vintage
 
@@ -692,7 +689,7 @@ tie fell through to `sort_values`' stable sort -- i.e. whichever row
 happened to arrive first in the input DataFrame -- which isn't a documented
 policy and isn't robust to unrelated upstream changes. Confirmed directly:
 removing the LDLR LA-module-1 rows (an unrelated exclusion -- see
-[`LDLR`](#ldlr-vldl-uptake-assay-prioritized-in-two-la-modules)) shifted
+[`LDLR`](#ldlr-all-six-la-modules-excluded-from-calibration-and-classification)) shifted
 every later row's position in the DataFrame enough to flip the tie-break
 outcome for **158-3,480 rows per `VUS`/`gnomAD`/`Unobserved` sheet** (up to
 ~4% of a sheet), with `Fxn_points`/`Class_*` unchanged in every case --
