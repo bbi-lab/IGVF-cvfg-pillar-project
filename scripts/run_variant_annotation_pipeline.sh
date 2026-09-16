@@ -23,9 +23,9 @@ set -euo pipefail
 # scripts/variant_annotation_pipeline.sh (N reads
 # data/cvfg_variants.<N-1>.tsv and writes data/cvfg_variants.<N>.tsv, except
 # step 21, which writes the final integrated MAVE dataset files directly; see
-# that script's header for the full step list) and skips the final gzip into
-# data/output/maves/ either way, since even --step 21 only writes its outputs to
-# the staged intermediate directory.
+# that script's header for the full step list). --step 21 also gzips those
+# final outputs into data/output/maves/, same as a full run; any other --step
+# N leaves its output in the staged intermediate directory only.
 #
 # --prepare-gnomad-cache builds/refreshes Step 7's local gnomAD Hail table
 # cache and exits -- it skips all of the CVFG-specific data staging below,
@@ -139,13 +139,25 @@ fi
 
 export VARIANT_DATA_DIR="$stage_dir"
 
+expanded="$stage_dir/data/integrated_variant_effect_dataset.tsv"
+condensed="$stage_dir/data/integrated_variant_effect_dataset.condensed.tsv"
+out_dir="$CVFG_PROJECT_DIR/data/output/maves"
+
+gzip_final_outputs() {
+  mkdir -p "$out_dir"
+  echo "Gzipping final outputs into data/output/maves/ ..."
+  gzip -kf -c "$expanded" > "$out_dir/integrated_variant_effect_dataset.tsv.gz"
+  gzip -kf -c "$condensed" > "$out_dir/integrated_variant_effect_dataset.condensed.tsv.gz"
+  echo "Done:"
+  echo "  $out_dir/integrated_variant_effect_dataset.tsv.gz"
+  echo "  $out_dir/integrated_variant_effect_dataset.condensed.tsv.gz"
+}
+
 if [[ -n "$step" ]]; then
   echo "Running step $step of scripts/variant_annotation_pipeline.sh in $va_dir (VARIANT_DATA_DIR=$VARIANT_DATA_DIR) ..."
   ( cd "$va_dir" && bash "$CVFG_PROJECT_DIR/scripts/variant_annotation_pipeline.sh" "$step" )
   if [[ "$step" == "21" ]]; then
-    echo "Done:"
-    echo "  $stage_dir/data/integrated_variant_effect_dataset.tsv"
-    echo "  $stage_dir/data/integrated_variant_effect_dataset.condensed.tsv"
+    gzip_final_outputs
   else
     echo "Done: $stage_dir/data/cvfg_variants.$step.tsv"
   fi
@@ -155,15 +167,4 @@ fi
 echo "Running scripts/variant_annotation_pipeline.sh in $va_dir (VARIANT_DATA_DIR=$VARIANT_DATA_DIR) ..."
 ( cd "$va_dir" && bash "$CVFG_PROJECT_DIR/scripts/variant_annotation_pipeline.sh" )
 
-expanded="$stage_dir/data/integrated_variant_effect_dataset.tsv"
-condensed="$stage_dir/data/integrated_variant_effect_dataset.condensed.tsv"
-out_dir="$CVFG_PROJECT_DIR/data/output/maves"
-mkdir -p "$out_dir"
-
-echo "Gzipping final outputs into data/output/maves/ ..."
-gzip -kf -c "$expanded" > "$out_dir/integrated_variant_effect_dataset.tsv.gz"
-gzip -kf -c "$condensed" > "$out_dir/integrated_variant_effect_dataset.condensed.tsv.gz"
-
-echo "Done:"
-echo "  $out_dir/integrated_variant_effect_dataset.tsv.gz"
-echo "  $out_dir/integrated_variant_effect_dataset.condensed.tsv.gz"
+gzip_final_outputs
