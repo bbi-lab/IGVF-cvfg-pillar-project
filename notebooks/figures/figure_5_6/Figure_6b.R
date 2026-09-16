@@ -170,10 +170,12 @@ ggsave(
   width = 183, # Max 183
   height = 90,
   units = 'mm',
-  device = cairo_pdf)
+  device = cairo_pdf,
+  create.dir = TRUE)
 ggsave(
   '../../../data/output/figures/figure_6/figure_6b.svg',
   fig6b_plot,
   width = 183, # Max 183
   height = 75,
-  units = 'mm')
+  units = 'mm',
+  create.dir = TRUE)

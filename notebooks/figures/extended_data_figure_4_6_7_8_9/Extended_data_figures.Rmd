@@ -1675,7 +1675,7 @@ VUS_REVEL_YP$Conflicting_REVEL <- ifelse(
 
 sankey_VUS_REVEL_YP_points <- make_sankey_VUS(VUS_REVEL_YP, Conflicting_REVEL, colors_custom)
 
-ggsave('../../../data/output/figures/extended_data_figure_9/sankey_VUS_ExOP_REVEL_GeneSpecific_points.png',sankey_VUS_REVEL_YP_points, dpi = 300, device = 'png', bg = 'transparent')
+ggsave('../../../data/output/figures/extended_data_figure_9/sankey_VUS_ExOP_REVEL_GeneSpecific_points.png',sankey_VUS_REVEL_YP_points, dpi = 300, device = 'png', bg = 'transparent', create.dir = TRUE)
 
 
 #gnomAD points sankey
@@ -1747,7 +1747,7 @@ gnomad_REVEL_YP$Conflicting_REVEL <- ifelse(
 
 sankey_gnomad_REVEL_YP_points = make_sankey_gnomad(gnomad_REVEL_YP, Conflicting_REVEL, colors_custom)
 
-ggsave('../../../data/output/figures/extended_data_figure_9/sankey_gnomAD_ExOP_REVEL_GeneSpecific_points.png',sankey_gnomad_REVEL_YP_points, dpi = 300, device = 'png', bg = 'transparent')
+ggsave('../../../data/output/figures/extended_data_figure_9/sankey_gnomAD_ExOP_REVEL_GeneSpecific_points.png',sankey_gnomad_REVEL_YP_points, dpi = 300, device = 'png', bg = 'transparent', create.dir = TRUE)
 
 #unobserved
 
@@ -1818,7 +1818,7 @@ unseen_REVEL_YP$Conflicting_REVEL <- ifelse(
 
 sankey_unseen_REVEL_YP_points = make_sankey_unseen(unseen_REVEL_YP, Conflicting_REVEL, colors_custom)
 
-ggsave('../../../data/output/figures/extended_data_figure_9/sankey_unseen_ExOP_REVEL_GeneSpecific_points.png',sankey_unseen_REVEL_YP_points, dpi = 300, device = 'png', bg = 'transparent')
+ggsave('../../../data/output/figures/extended_data_figure_9/sankey_unseen_ExOP_REVEL_GeneSpecific_points.png',sankey_unseen_REVEL_YP_points, dpi = 300, device = 'png', bg = 'transparent', create.dir = TRUE)
 
 # Calibrated versions: real print size, 5.5pt Arial, 47 x 86mm excluding
 # label overflow (see lib/sankey_calibrated.R; make_sankey_calibrated() is

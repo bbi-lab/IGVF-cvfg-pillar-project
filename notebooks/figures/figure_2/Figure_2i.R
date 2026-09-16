@@ -113,5 +113,6 @@ ggsave(
   height = 30,
   units = 'mm',
   family = 'Arial',
-  device = cairo_pdf
+  device = cairo_pdf,
+  create.dir = TRUE
 )

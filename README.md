@@ -295,8 +295,6 @@ docker compose build r-figures
 #### Figure 2
 
 ```bash
-mkdir -p data/output/figures/figure_2/Histogram_wStripplot
-
 # 1. Prep notebook (run first; everything else in this figure depends on it)
 poetry run jupyter nbconvert --to notebook --execute \
   --ExecutePreprocessor.kernel_name=igvf-cvfg-pillar-project \
@@ -380,8 +378,6 @@ docker compose run --rm -w /usr/src/app/notebooks/figures/extended_data_figure_2
 #### Extended Data Figure 5
 
 ```bash
-mkdir -p data/output/figures/extended_data_figure_5
-
 poetry run jupyter nbconvert --to notebook --execute \
   --ExecutePreprocessor.kernel_name=igvf-cvfg-pillar-project \
   --ExecutePreprocessor.timeout=600 \
