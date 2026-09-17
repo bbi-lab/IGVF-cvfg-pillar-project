@@ -80,6 +80,43 @@ instead of just one (`src/load_excalibr_calibrations.py`'s `format_range`);
 against every comma-separated range in a cell and returns that point value
 if any of them contains it.
 
+### Benign predictor evidence is capped at Strong (no Very Strong tier)
+
+`BP4_Very Strong` (`-8` points) is no longer available from gene-specific
+predictor calibration -- the `BP4_Very Strong` threshold column has been
+removed from the `REVEL_gene_specific_calibration`/
+`AM_gene_specific_calibrations`/`MP2_gene_specific_calibrations` sheets in
+`Supplementary_Data_4.xlsx`, so benign-direction predictor points now bottom
+out at `BP4_Strong` (`-4`). This matches the genome-wide calibration, which
+never populated a Very Strong tier for REVEL or MutPred2 and doesn't even
+reach `BP4_Strong` for AlphaMissense (`GENOME_WIDE_REVEL_THRESHOLDS` in
+`src/build_figure4_data.py`) -- so the genome-wide fallback was already
+capped this way; only the gene-specific side needed to change.
+
+Why: auditing `Supplementary_Data_5.xlsx`, essentially every variant that
+ever received `-8` gene-specific predictor points was `TP53` (REVEL:
+547/547, MutPred2: 738/738, AlphaMissense: 694/704, the remaining 10
+`SCN5A`) -- an artifact of `TP53`'s unusually large, well-powered functional
+datasets (`TP53_Funk_2025`, `TP53_Fayer_2021_meta`) letting its per-gene GMM
+threshold reach further into the benign tail than any other gene's
+calibration, not a generalizable Very-Strong-magnitude benign signal.
+Simulating the cap (recomputing `Total_Points_*` with gene-specific
+predictor points floored at `-4`) moves 420 (REVEL), 528 (AlphaMissense),
+and 563 (MutPred2) of these `TP53` variants from Benign to Likely Benign;
+none move as far as Uncertain, since the paired functional evidence behind
+these calls is independently strong benign-direction.
+
+How to apply: `Points_<predictor>_GeneSpecific_GenomeWide` simply never
+produces `-8` once the column is gone -- `classify_score`'s
+column-existence check (`if col in gene_row.columns`) and
+`calculate_p_points`'s point-value dict already handle its absence without
+further changes there. `src/build_figure4_data.py`'s
+`load_gene_specific_revel_thresholds` reindexes onto the fixed
+`REVEL_TIER_ORDER` rather than assuming every tier column exists in the
+sheet, so a missing `BP4_Very Strong` column reads as `NaN` there too,
+consistent with how the genome-wide table already represents an
+unpopulated tier.
+
 ## Handling conflicting evidence
 
 The deduplication strategies described below resolve *which record to

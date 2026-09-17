@@ -232,7 +232,10 @@ def load_gene_specific_revel_thresholds(supplementary_data_4_path, gene):
     df = df.set_index("Gene")
     if gene not in df.index:
         raise ValueError(f"{gene!r} has no row in the REVEL_gene_specific_calibration sheet")
-    return df.loc[gene, REVEL_TIER_ORDER]
+    # reindex (not .loc[]) so a tier column absent from the sheet -- e.g. "BP4_Very
+    # Strong", dropped now that benign predictor evidence is capped at Strong -- reads
+    # as NaN instead of raising KeyError, matching GENOME_WIDE_REVEL_THRESHOLDS.
+    return df.reindex(columns=REVEL_TIER_ORDER).loc[gene]
 
 
 def build_panel_e_data(integrated_df, supplementary_data_4_path, gene=MSH2_GENE):

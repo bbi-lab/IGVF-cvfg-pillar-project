@@ -1,9 +1,12 @@
+import numpy as np
 import pandas as pd
 from click.testing import CliRunner
 
 from src.build_figure4_data import (
     GENOME_WIDE_REVEL_THRESHOLDS,
+    REVEL_TIER_ORDER,
     categorize_clinical_status,
+    load_gene_specific_revel_thresholds,
     main,
     score_to_revel_tier,
     unique_gene_snvs_with_revel,
@@ -77,6 +80,21 @@ def test_categorize_clinical_status_clinvar_outranks_gnomad():
     categories = categorize_clinical_status(gene_snvs)
 
     assert list(categories) == ["PLP"]
+
+
+def test_load_gene_specific_revel_thresholds_handles_missing_very_strong_column(tmp_path):
+    # "BP4_Very Strong" is no longer in the calibration sheet now that benign
+    # predictor evidence is capped at Strong; this must read as NaN, not raise.
+    tiers_present = [t for t in REVEL_TIER_ORDER if t != "BP4_Very Strong"]
+    df = pd.DataFrame([{"Gene": "TP53", **{t: 0.5 for t in tiers_present}}])
+    supp_data_4 = tmp_path / "supp4.xlsx"
+    df.to_excel(supp_data_4, sheet_name="REVEL_gene_specific_calibration", index=False)
+
+    thresholds = load_gene_specific_revel_thresholds(supp_data_4, "TP53")
+
+    assert list(thresholds.index) == REVEL_TIER_ORDER
+    assert np.isnan(thresholds["BP4_Very Strong"])
+    assert thresholds["BP4_Strong"] == 0.5
 
 
 def test_main_cli_requires_cached_json(tmp_path):
