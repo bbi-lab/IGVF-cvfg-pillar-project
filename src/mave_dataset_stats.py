@@ -95,9 +95,9 @@ notebooks/analysis/README_OddsPath_classifications.md) of treating any non-empty
 The Dataset summary and Genes represented sections above always count
 CALM1/CALM2/CALM3 as one gene target (see above). Elsewhere in the report --
 the Meta-analyses gene column and the ExCALIBR calibration coverage section --
-they're counted as three separate genes by default, since that's how the
-underlying data labels them; pass `--merge-calm-genes` to count them as one
-there too, since they encode the same calmodulin protein.
+they're also merged into one gene target by default, since they encode the
+same calmodulin protein; pass `--no-merge-calm-genes` to count them as three
+separate genes there instead, matching how the underlying data labels them.
 
 Two further sections cover ExCALIBR calibration coverage and reclassification
 agreement, sourced from `--excalibr-calibrations-file` (default
@@ -2690,14 +2690,14 @@ def build_report_text(
     help="Optional path to also write the full report as a text file",
 )
 @click.option(
-    "--merge-calm-genes",
-    is_flag=True,
-    default=False,
+    "--merge-calm-genes/--no-merge-calm-genes",
+    default=True,
     help=(
         "Count CALM1, CALM2, and CALM3 as a single gene target ('CALM1/2/3') "
         "instead of three separate genes in the Meta-analyses gene column and "
         "the ExCALIBR calibration coverage section (the Dataset summary and "
-        "Genes represented sections always merge them)."
+        "Genes represented sections always merge them regardless of this flag). "
+        "On by default; pass --no-merge-calm-genes to count them separately there."
     ),
 )
 @click.option(
