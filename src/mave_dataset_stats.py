@@ -41,13 +41,12 @@ per dataset -- one row per IGVF-produced dataset, sorted by
 It additionally reports, in a set of text tables, how many variants and
 variant measurements have REVEL, AlphaMissense, and MutPred2 scores, and how
 many fall into each of several clinical-attribute buckets (ClinVar VUS,
-ClinVar pathogenic/benign, observed in gnomAD, or none of the above). This
-clinical-attribute breakdown is reported twice: once using ClinVar 2025 for
-every gene, and once using ClinVar 2025 for every gene except BRCA1, PTEN,
-MSH2, and TP53, which use ClinVar 2018 instead. Each is reported four ways: at
-the assayed-variant (protein-resolution, from the condensed file) or
-DNA-variant (from the expanded file) level, and as distinct variants or as
-variant measurements (i.e. rows). Each clinical-attribute table also carries
+ClinVar pathogenic/benign, observed in gnomAD, or none of the above), using
+ClinVar 2025 for every gene except BRCA1, PTEN, MSH2, and TP53, which use
+ClinVar 2018 instead. This is reported four ways: at the assayed-variant
+(protein-resolution, from the condensed file) or DNA-variant (from the
+expanded file) level, and as distinct variants or as variant measurements
+(i.e. rows). Each clinical-attribute table also carries
 two extra columns breaking out, for each of the four buckets, how many of the
 level's SNVs are in it (or, at the assayed-variant level, "SNV-accessible"
 variants: those with at least one single-nucleotide-substitution candidate
@@ -1256,10 +1255,9 @@ def build_variant_level_reports(condensed, expanded, condensed_path, expanded_pa
     Each is reported at four levels: assayed (protein-resolution, from the
     condensed file) vs. DNA-level (from the expanded file) variants, and
     distinct variants vs. variant measurements (rows). The clinical-attribute
-    breakdown is additionally reported twice per level: once using ClinVar
-    2025 throughout, and once substituting ClinVar 2018 for BRCA1, PTEN,
-    MSH2, and TP53 (see `mixed_year_clinvar_series`). See `variant_flags` for
-    `allow_clinvar_conflicts`.
+    breakdown uses ClinVar 2025 for every gene except BRCA1, PTEN, MSH2, and
+    TP53, which use ClinVar 2018 instead (see `mixed_year_clinvar_series`).
+    See `variant_flags` for `allow_clinvar_conflicts`.
     """
     levels = [
         ("assayed variants, distinct", condensed, condensed_path, SNV_ACCESSIBLE_LABEL, distinct_variant_flags),
@@ -1269,19 +1267,11 @@ def build_variant_level_reports(condensed, expanded, condensed_path, expanded_pa
     ]
 
     score_sections = []
-    clinical_sections = []
     clinical_sections_mixed_year = []
     for label, df, source, snv_label, flags_fn in levels:
         flags = flags_fn(df, snv_label, allow_clinvar_conflicts=allow_clinvar_conflicts)
         total, table = summarize_flags(flags[SCORE_LABELS])
         score_sections.append(format_count_table(f"Score coverage -- {label} (from {source})", total, table))
-
-        clinical_total, snv_total, clinical_table = summarize_clinical_flags(flags, snv_label)
-        clinical_sections.append(
-            format_clinical_table(
-                f"Clinical attributes -- {label} (from {source})", clinical_total, snv_total, clinical_table, snv_label
-            )
-        )
 
         mixed_flags = flags_fn(
             df, snv_label, clinvar_series=mixed_year_clinvar_series(df), allow_clinvar_conflicts=allow_clinvar_conflicts
@@ -1297,7 +1287,7 @@ def build_variant_level_reports(condensed, expanded, condensed_path, expanded_pa
             )
         )
 
-    return score_sections, clinical_sections, clinical_sections_mixed_year
+    return score_sections, clinical_sections_mixed_year
 
 
 def excalibr_dataset_to_gene_map(calibration_datasets, metadata):
@@ -2210,10 +2200,12 @@ def compute_variant_classification_stats(workbook):
       `vus_total`. Also reports how many unresolved rows have
       `Total_Points_* in NEAR_PATHOGENIC_POINTS_VALUES` (4 or 5) -- the
       strongest possible Uncertain calls, one or two points short of
-      resolving Likely Pathogenic. This overlaps the categories above (a
-      near-pathogenic row can be concordant, discordant, experimental-only,
-      or predictive-only) rather than adding a sixth mutually-exclusive
-      bucket.
+      resolving Likely Pathogenic. This overlaps the other unresolved
+      columns (a near-pathogenic row can be concordant, discordant,
+      experimental-only, or predictive-only, and so also counts toward
+      "zero or one source" when it's experimental-only or predictive-only)
+      rather than adding a sixth mutually-exclusive bucket. It can never be
+      "neither", since a zero-zero split always totals 0 points, not 4 or 5.
     - Within `gnomAD` alone (population variants with a `gnomad_MAF` value,
       per `notebooks/analysis/README_Variant_Classification_analysis.md` --
       not necessarily lacking a ClinVar call, so this can overlap `VUS`) and
@@ -2311,7 +2303,9 @@ def format_variant_classification_table(stats_by_predictor, title=VARIANT_CLASSI
                 "Predictive only": _pct_col(f"{unresolved_key}_only_predictive", unresolved_key),
                 "Neither": _pct_col(f"{unresolved_key}_neither", unresolved_key),
                 "0 or 1 source (total)": _pct_col(f"{unresolved_key}_zero_or_one_source", unresolved_key),
-                "+4/+5 points (overlaps above)": _pct_col(f"{unresolved_key}_near_pathogenic", unresolved_key),
+                "+4/+5 points (overlaps Concordant/Discordant/Experimental/Predictive/0-or-1-source, not Neither)": _pct_col(
+                    f"{unresolved_key}_near_pathogenic", unresolved_key
+                ),
             },
             index=predictors,
         )
@@ -2583,7 +2577,6 @@ def build_report_text(
     igvf_dataset_measurement_counts_summary,
     composite_score_datasets_summary,
     score_sections,
-    clinical_sections,
     clinical_sections_mixed_year,
     calibration_summary,
     filter_funnel_summary,
@@ -2611,8 +2604,6 @@ def build_report_text(
         composite_score_datasets_summary,
         "=== Score coverage (REVEL, AlphaMissense, MutPred2) ===",
         *score_sections,
-        f"=== Clinical attributes (ClinVar 2025, gnomAD; {conflict_note}) ===",
-        *clinical_sections,
         f"=== Clinical attributes (ClinVar 2025, except ClinVar 2018 for BRCA1/PTEN/MSH2/TP53; gnomAD; {conflict_note}) ===",
         *clinical_sections_mixed_year,
         calibration_summary,
@@ -2755,7 +2746,7 @@ def main(
 
     expanded = pd.read_csv(expanded_file, sep="\t", dtype=str, keep_default_na=False)
     genomic_variant_summary = format_genomic_variant_count(expanded_file, expanded)
-    score_sections, clinical_sections, clinical_sections_mixed_year = build_variant_level_reports(
+    score_sections, clinical_sections_mixed_year = build_variant_level_reports(
         condensed, expanded, condensed_file, expanded_file, allow_clinvar_conflicts=allow_clinvar_conflicts
     )
 
@@ -2815,7 +2806,6 @@ def main(
         igvf_dataset_measurement_counts_summary,
         composite_score_datasets_summary,
         score_sections,
-        clinical_sections,
         clinical_sections_mixed_year,
         calibration_summary,
         filter_funnel_summary,
