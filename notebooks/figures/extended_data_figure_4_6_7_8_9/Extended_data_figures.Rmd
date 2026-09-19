@@ -1324,6 +1324,166 @@ for (predictor_name in names(PREDICTORS_6ALT)) {
 
 ```{r}
 
+#Extended Data Figure 4alt
+
+# Alternate version of Extended Data Figure 4 (AlphaMissense/MutPred2 x
+# ClinVar controls/ClinGen Evidence Repository, via ExCALIBR/GeneSpecific
+# calibration): adds REVEL/GeneSpecific as a third predictor -- Ext. Data
+# Fig 4 (and the Ext. Data Figure 4 missense chunk above) only ever loaded
+# AM/MP2 GeneSpecific sheets, even though Supplementary_Data_5.xlsx's
+# controls_REVEL_GeneSpecific/ClinGen_Repo_REVEL_GeneSpecific sheets have
+# the identical column shape (Class_REVEL/
+# Points_REVEL_GeneSpecific_GenomeWide) as the AM/MP2 sheets -- and adds a
+# missense-only variant of every panel, exactly mirroring Ext. Data Figure
+# 6alt's own REVEL/AM/MP2 x All/Missense structure but for
+# ExCALIBR/GeneSpecific instead of OddsPath/Universal calibration: 3
+# predictors x 2 consequence scopes x 2 truth sources (ClinVar controls /
+# ClinGen Evidence Repository) x {sankey, confusion matrix} = 24 PDFs. All
+# charts use the same shrunk-50% core dimensions as Ext. Data Figure 4
+# missense (sankey 37x64mm -> 18.5x32mm, confusion matrix 31x27mm ->
+# 15.5x13.5mm, i.e. Ext. Data Fig 4's own calibrated core, not Fig 6's);
+# font sizes stay the same (label_pt = 6). Sankey node labels are
+# abbreviated to P/LP/VUS/LB/B, same as Ext. Data Figure 6alt/Fig 4
+# missense.
+#
+# Entirely new, isolated code -- doesn't reuse or modify any object from
+# the Ext. Data Fig 4 block or the Ext. Data Figure 4 missense chunk above,
+# so neither figure's own output can regress. Reads its own fresh
+# controls_REVEL_GeneSpecific/ClinGen_Repo_REVEL_GeneSpecific sheets (never
+# read elsewhere in this document), but reuses the already-loaded
+# clinvar_AM_YP/clinvar_MP2_YP/ClinGen_AM_YP/ClinGen_MP2_YP raw data and
+# this document's already-defined make_confusion_matrix_clinvar_chek2()/
+# make_confusion_matrix_clingen()/add_clinvar()/fix_clingen_naming()
+# helpers and colors_custom/levels_order_extdata_4_6/
+# make_sankey_calibrated()/make_confusion_matrix_calibrated(), all already
+# in scope from the Ext. Data Fig 4/6 chunk above -- but defines its own
+# label_overrides/filter helper rather than depending on either earlier
+# chunk's, so this chunk doesn't need to run in any particular order
+# relative to them.
+
+clinvar_REVEL_YP_4alt <- read_excel(file.path(DATA_DIR, "supplementary_data/Supplementary_Data_5.xlsx"), sheet = "controls_REVEL_GeneSpecific")
+ClinGen_REVEL_YP_4alt <- read_excel(file.path(DATA_DIR, "supplementary_data/Supplementary_Data_5.xlsx"), sheet = "ClinGen_Repo_REVEL_GeneSpecific")
+
+EXT_DATA_FIG_4ALT_DIR <- file.path(dirname(OUT_DIR), "extended_data_figure_4alt")
+
+SANKEY_4ALT_WIDTH_MM <- 18.5
+SANKEY_4ALT_HEIGHT_MM <- 32
+CM_4ALT_WIDTH_MM <- 15.5
+CM_4ALT_HEIGHT_MM <- 13.5
+
+label_overrides_4alt <- c(
+  "Benign" = "B", "Likely benign" = "LB", "Likely Benign" = "LB",
+  "Uncertain" = "VUS", "No Classification" = "VUS",
+  "Likely pathogenic" = "LP", "Likely Pathogenic" = "LP", "Pathogenic" = "P"
+)
+
+# simplified_consequence lives on every GeneSpecific sheet too (same column
+# Figure5_6.Rmd's own consequence_filter param and Ext. Data Figure 6alt/Fig
+# 4 missense use).
+filter_missense_4alt <- function(df) df[df$simplified_consequence == "missense_variant", ]
+
+PREDICTORS_4ALT <- list(
+  REVEL = list(class_col = "Class_REVEL", pred_col = "Points_REVEL_GeneSpecific_GenomeWide"),
+  AM    = list(class_col = "Class_AM",    pred_col = "Points_AM_GeneSpecific_GenomeWide"),
+  MP2   = list(class_col = "Class_MP2",   pred_col = "Points_MP2_GeneSpecific_GenomeWide")
+)
+
+# ---- ClinVar controls ----
+
+clinvar_excalibr_raw_4alt <- list(REVEL = clinvar_REVEL_YP_4alt, AM = clinvar_AM_YP, MP2 = clinvar_MP2_YP)
+
+build_clinvar_excalibr_4alt <- function(predictor_name, consequence) {
+  spec <- PREDICTORS_4ALT[[predictor_name]]
+  df <- clinvar_excalibr_raw_4alt[[predictor_name]]
+  if (consequence == "missense") df <- filter_missense_4alt(df)
+
+  cm <- make_confusion_matrix_clinvar_chek2(
+    df, spec$class_col, "clnsig_group_18_25", paste0(predictor_name, "_GeneSpecific"),
+    "Fxn_points", spec$pred_col
+  )
+  cm_calibrated <- make_confusion_matrix_calibrated(
+    TP = cm$metrics$TP, TN = cm$metrics$TN, FP = cm$metrics$FP, FN = cm$metrics$FN,
+    total_n = cm$total_n, matrix_width_mm = CM_4ALT_WIDTH_MM, matrix_height_mm = CM_4ALT_HEIGHT_MM,
+    x_label = "ClinVar classification", y_label = NULL
+  )
+
+  df_sankey <- add_clinvar(df)
+  sankey_calibrated <- make_sankey_calibrated(
+    df_sankey, source_col = clinvar, points_col = !!rlang::sym(spec$class_col),
+    colors_custom = colors_custom, levels_order = levels_order_extdata_4_6,
+    width_mm = SANKEY_4ALT_WIDTH_MM, height_mm = SANKEY_4ALT_HEIGHT_MM, label_pt = 6,
+    show_count = FALSE, wrap_destination_labels = TRUE, label_overrides = label_overrides_4alt
+  )
+
+  list(cm = cm_calibrated, sankey = sankey_calibrated)
+}
+
+for (predictor_name in names(PREDICTORS_4ALT)) {
+  for (consequence in c("all", "missense")) {
+    panel <- build_clinvar_excalibr_4alt(predictor_name, consequence)
+    ggsave(
+      file.path(EXT_DATA_FIG_4ALT_DIR, sprintf("sankey_clinvar_ExOP_%s_GeneSpecific_%s_calibrated.pdf", predictor_name, consequence)),
+      panel$sankey$plot, width = panel$sankey$width_mm, height = panel$sankey$height_mm,
+      units = 'mm', device = cairo_pdf, create.dir = TRUE
+    )
+    ggsave(
+      file.path(EXT_DATA_FIG_4ALT_DIR, sprintf("cm_clinvar_ExOP_%s_GeneSpecific_%s_calibrated.pdf", predictor_name, consequence)),
+      panel$cm$plot, width = panel$cm$width_mm, height = panel$cm$height_mm,
+      units = 'mm', device = cairo_pdf, create.dir = TRUE
+    )
+  }
+}
+
+# ---- ClinGen Evidence Repository ----
+
+clingen_excalibr_raw_4alt <- list(REVEL = ClinGen_REVEL_YP_4alt, AM = ClinGen_AM_YP, MP2 = ClinGen_MP2_YP)
+
+build_clingen_excalibr_4alt <- function(predictor_name, consequence) {
+  spec <- PREDICTORS_4ALT[[predictor_name]]
+  df <- clingen_excalibr_raw_4alt[[predictor_name]]
+  if (consequence == "missense") df <- filter_missense_4alt(df)
+
+  cm <- make_confusion_matrix_clingen(
+    df, spec$class_col, "Updated_Classification_ClinGen_repo", paste0(predictor_name, "_GeneSpecific"),
+    "Fxn_points", spec$pred_col
+  )
+  cm_calibrated <- make_confusion_matrix_calibrated(
+    TP = cm$metrics$TP, TN = cm$metrics$TN, FP = cm$metrics$FP, FN = cm$metrics$FN,
+    total_n = cm$total_n, matrix_width_mm = CM_4ALT_WIDTH_MM, matrix_height_mm = CM_4ALT_HEIGHT_MM,
+    x_label = "ClinGen classification", y_label = NULL
+  )
+
+  df_sankey <- df %>% filter(Updated_Classification_ClinGen_repo != "VUS")
+  df_sankey <- fix_clingen_naming(df_sankey)
+  sankey_calibrated <- make_sankey_calibrated(
+    df_sankey, source_col = Updated_Classification_ClinGen_repo, points_col = !!rlang::sym(spec$class_col),
+    colors_custom = colors_custom, levels_order = levels_order_extdata_4_6,
+    width_mm = SANKEY_4ALT_WIDTH_MM, height_mm = SANKEY_4ALT_HEIGHT_MM, label_pt = 6,
+    show_count = FALSE, wrap_destination_labels = TRUE, label_overrides = label_overrides_4alt
+  )
+
+  list(cm = cm_calibrated, sankey = sankey_calibrated)
+}
+
+for (predictor_name in names(PREDICTORS_4ALT)) {
+  for (consequence in c("all", "missense")) {
+    panel <- build_clingen_excalibr_4alt(predictor_name, consequence)
+    ggsave(
+      file.path(EXT_DATA_FIG_4ALT_DIR, sprintf("sankey_clingen_ExOP_%s_GeneSpecific_%s_calibrated.pdf", predictor_name, consequence)),
+      panel$sankey$plot, width = panel$sankey$width_mm, height = panel$sankey$height_mm,
+      units = 'mm', device = cairo_pdf, create.dir = TRUE
+    )
+    ggsave(
+      file.path(EXT_DATA_FIG_4ALT_DIR, sprintf("cm_clingen_ExOP_%s_GeneSpecific_%s_calibrated.pdf", predictor_name, consequence)),
+      panel$cm$plot, width = panel$cm$width_mm, height = panel$cm$height_mm,
+      units = 'mm', device = cairo_pdf, create.dir = TRUE
+    )
+  }
+}
+```
+
+```{r}
+
 #Extended Data Figure 7 (VUS AM and MP2)
 
 VUS_AM_YP =read_excel(file.path(DATA_DIR, "supplementary_data/Supplementary_Data_5.xlsx"), sheet = "VUS_AM")
