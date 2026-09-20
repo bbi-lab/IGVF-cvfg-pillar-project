@@ -960,6 +960,62 @@ dedup mechanics is automatically available to the other's.
 reproduced for audit/comparison purposes; it is not the recommended
 setting for either parameter going forward.
 
+### Preprint vs. current: Supplementary Data 6's missing aa-side dtype cast
+
+Independent of the `CONTROLS_CLINGEN_DEDUP_STRATEGY`/shared-module work
+above, `OddsPath_classifications.ipynb`'s `controls`/`ClinGen_Repo`
+categories under-deduplicated relative to `Variant_Classification_
+analysis.ipynb`'s, from the preprint until this was fixed -- not because of
+a dedup-*strategy* difference, but a missing type cast.
+
+`catch_mis_2`'s final nt/aa merge groups by `['Gene', 'Chrom', 'hg38_start',
+'ref_allele', 'alt_allele']` via `pandas.DataFrame.drop_duplicates`, which
+requires the grouped columns to match in *type*, not just value.
+`Variant_Classification_analysis.ipynb` casts `Chrom`/`hg38_start`/
+`ref_allele`/`alt_allele`/`Gene` to consistent types on `sankey_f` -- the
+full dataframe, nt and aa rows together -- in the cell just before the
+`Fxn_points`-conflict-marking step, well before the nt/aa split that
+eventually feeds `controls`/`controls_aa`. Every row, regardless of
+resolution, carries matching dtypes by the time `catch_mis_2` runs.
+
+`OddsPath_classifications.ipynb` only applied the equivalent cast to its
+nt-type half. The cell marking opposite-sign functional conflicts on
+`OP_nuc` casts `Chrom`/`hg38_start`/`ref_allele`/`alt_allele`/`Gene` to
+`str`; the aa-type equivalent, on `OP_aa`, only cast `aa_pos`/`aa_ref`/
+`aa_alt`/`Gene`/`Ref_seq_transcript_ID_stripped` -- never `Chrom`,
+`hg38_start`, `ref_allele`, or `alt_allele`. After `OP_nuc`/`OP_aa` are
+concatenated (`OP_sankey_full`), an nt-type row and an aa-type row scoring
+the *same* physical variant from two different datasets could carry
+mismatched types in the columns `catch_mis_2` groups by (e.g. `hg38_start`
+as `str` on the nt side, left at its original numeric dtype on the aa
+side), so `drop_duplicates` silently failed to recognize them as the same
+group and kept both.
+
+**Effect**: both the preprint's `Supplementary_Data_6.xlsx` and the current
+one (before this fix) retained one nt-type row *and* one aa-type row for
+every control/ClinGen_Repo variant assayed by more than one dataset where
+one assay reported it at DNA resolution and another at protein resolution
+-- e.g. `BRCA1_Findlay_2018` (nt) and `BRCA1_Adamovich_2022_HDR` (aa) both
+surviving for the same BRCA1 variant. `Variant_Classification_analysis.
+ipynb`/`Supplementary_Data_5.xlsx` never had this problem, since its
+whole-dataframe cast predates the nt/aa split entirely. Comparing the
+preprint's root-level `Supplementary_Data_5.v1.xlsx`/`Supplementary_Data_
+6.v1.xlsx` confirms the asymmetry already existed then: 28 duplicate
+`(hgvs_c, hgvs_p, Gene)` rows in Data 5's `controls_REVEL_GeneSpecific` vs.
+242 in Data 6's `controls_REVEL_OP`. Just before this fix, Data 5 was down
+to 0 duplicates while Data 6 had grown to 502 (251 nt/aa pairs) in
+`controls_REVEL_OP` alone -- new overlapping datasets added after the
+preprint (e.g. `TP53_Funk_2025` alongside the existing `TP53_Fayer_2021_
+meta`) only made the gap wider.
+
+**Fix**: `OddsPath_classifications.ipynb`'s `OP_aa` cell now also casts
+`Chrom`/`hg38_start`/`ref_allele`/`alt_allele` to `str`, mirroring
+`OP_nuc`'s cast exactly, so nt and aa rows compare equal in `catch_mis_2`
+whenever they share a genomic position. This is a type-consistency fix
+upstream of the shared dedup functions -- it does not touch
+`src/lib/dedup.py` or either `CONTROLS_CLINGEN_DEDUP_STRATEGY`/
+`VUS_GNOMAD_UNOBSERVED_DEDUP_STRATEGY` value.
+
 ### Comparing `v1` to the decided approach
 
 **Predates the aa-stage tie-break decision below.** This comparison's
