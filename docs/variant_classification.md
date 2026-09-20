@@ -1338,6 +1338,47 @@ already-counted genuine differences above, contribute zero genuine
 differences and zero flips -- every other gene's pick change is a tie
 artifact.
 
+## Why Supplementary Data 5 and 6 populations differ
+
+`Supplementary_Data_5.xlsx` (`Variant_Classification_analysis.ipynb`) and
+`Supplementary_Data_6.xlsx` (`OddsPath_classifications.ipynb`) both derive
+a `controls`/`ClinGen_Repo`/`VUS`/`gnomAD`/`Unobserved` population from the
+same shared checkpoint, using the same dedup mechanics
+(`src/lib/dedup.py`). Their populations nonetheless don't match row for
+row -- e.g. 12944 vs. 13090 distinct REVEL `controls` variants -- and
+won't, even with every structural bug fixed (see the dedup fixes above).
+The reason is what each file's functional-evidence column actually means:
+
+- Data 5's `Fxn_points` is the pipeline's "Current" per-gene pick --
+  ExCALIBR for most genes, OddsPath only for `F9`/`TP53`.
+- Data 6's `OP_points` is raw OddsPath likelihood-ratio evidence, computed
+  the same way for every gene, and frequently `NaN` for an individual
+  assay-dataset that lacks enough controls for OddsPath's own calculation
+  -- even where `Fxn_points`/ExCALIBR is well-defined for that same row.
+
+Because the two columns disagree about how much evidence a given
+dataset/variant carries (and whether it's present at all), anywhere the
+pipeline ranks or compares evidence across datasets or resolutions, the
+two files can reach a different answer:
+
+- **Conflict detection**: two datasets disagreeing in sign on the same
+  variant is a real ExCALIBR conflict Data 5 excludes, but invisible to
+  Data 6 when `OP_points` is `NaN` for both.
+- **Cross-resolution conflict**: an nt-type and an aa-type assay
+  disagreeing on the same variant is a conflict on either axis, but each
+  notebook only ever checks its own evidence column.
+- **Candidate-selection tagging**: within a tied amino-acid-change group,
+  whichever candidate has the single highest `Fxn_points` (or
+  gene-specific predictor points) can differ from whichever has the
+  highest `OP_points` (or genome-wide predictor points), so the two
+  notebooks can tag -- and thus retain -- a different representative row.
+
+This is inherent to comparing a gene-specific-calibration population
+against a universal-calibration one; each file is self-consistent with
+its own evidence source. It is not something further dedup fixes can
+close, and the residual gap should be expected to persist at roughly its
+current size.
+
 ## Outputs
 
 Each of the five categories × three predictors (REVEL, AlphaMissense,
