@@ -49,12 +49,17 @@ def controls_aa_sort_key(df, strategy):
     computed it via `ASSAY_PRIORITY_LIST`). Otherwise, prefers the higher-
     quality ClinVar record (`clinvar_star_18_25`), then most recent review
     date (`clinvar_date_last_reviewed_18_25`, ClinVar's `"Mon DD, YYYY"`
-    text -- parsed here, not ISO), then greatest `abs(Fxn_points)` and
-    `Dataset` name as deterministic fallbacks (inert today since candidates
-    reaching this tie-break are already magnitude-tied by construction, but
-    closing off any dependency on incidental row order for a remaining
-    tie). Requires `df` to already have `Fxn_points`, `Dataset`, and (for
-    non-`"v1"`) `clinvar_star_18_25`/`clinvar_date_last_reviewed_18_25`.
+    text -- parsed here, not ISO), then greatest `abs(Fxn_points)`,
+    `Dataset` name, and `hgvs_c` as deterministic fallbacks (inert today
+    since candidates reaching this tie-break are already magnitude-tied by
+    construction, but closing off any dependency on incidental row order
+    for a remaining tie). `Dataset` alone doesn't fully close that gap --
+    several candidates can be different NT realizations of the same amino-
+    acid change reported by the *same* dataset (e.g. multiple synonymous
+    codon choices), so `hgvs_c` (ascending) is needed as the final,
+    always-distinct tiebreaker. Requires `df` to already have `Fxn_points`,
+    `Dataset`, `hgvs_c`, and (for non-`"v1"`)
+    `clinvar_star_18_25`/`clinvar_date_last_reviewed_18_25`.
     """
     if strategy == "v1":
         return "assay_priority", True
@@ -63,7 +68,10 @@ def controls_aa_sort_key(df, strategy):
     df["clinvar_review_date"] = pd.to_datetime(
         df["clinvar_date_last_reviewed_18_25"], format="%b %d, %Y", errors="coerce"
     )
-    return ["clinvar_review_rank", "clinvar_review_date", "abs_Fxn_points", "Dataset"], [False, False, False, True]
+    return (
+        ["clinvar_review_rank", "clinvar_review_date", "abs_Fxn_points", "Dataset", "hgvs_c"],
+        [False, False, False, True, True],
+    )
 
 
 def clingen_aa_sort_key(df, strategy):
@@ -74,9 +82,13 @@ def clingen_aa_sort_key(df, strategy):
     there's no review-status tier to rank the way `controls_aa_sort_key`
     does -- so the tie-break is: prefer non-retracted, then most recent
     `Approval Date_ClinGen_repo`, then `Published Date_ClinGen_repo`, then
-    `abs(Fxn_points)` and `Dataset` name as deterministic fallbacks.
-    Requires `df` to already have `Fxn_points`, `Dataset`, and (for
-    non-`"v1"`) `Retracted_ClinGen_repo`/`Approval Date_ClinGen_repo`/
+    `abs(Fxn_points)`, `Dataset` name, and `hgvs_c` as deterministic
+    fallbacks. `Dataset` alone doesn't fully close the gap -- several
+    candidates can be different NT realizations of the same amino-acid
+    change reported by the *same* dataset -- so `hgvs_c` (ascending) is
+    needed as the final, always-distinct tiebreaker. Requires `df` to
+    already have `Fxn_points`, `Dataset`, `hgvs_c`, and (for non-`"v1"`)
+    `Retracted_ClinGen_repo`/`Approval Date_ClinGen_repo`/
     `Published Date_ClinGen_repo`.
     """
     if strategy == "v1":
@@ -84,8 +96,15 @@ def clingen_aa_sort_key(df, strategy):
     df["abs_Fxn_points"] = df["Fxn_points"].abs()
     df["_not_retracted"] = df["Retracted_ClinGen_repo"].fillna(0) != 1
     return (
-        ["_not_retracted", "Approval Date_ClinGen_repo", "Published Date_ClinGen_repo", "abs_Fxn_points", "Dataset"],
-        [False, False, False, False, True],
+        [
+            "_not_retracted",
+            "Approval Date_ClinGen_repo",
+            "Published Date_ClinGen_repo",
+            "abs_Fxn_points",
+            "Dataset",
+            "hgvs_c",
+        ],
+        [False, False, False, False, True, True],
     )
 
 

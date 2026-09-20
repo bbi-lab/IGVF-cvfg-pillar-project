@@ -17,13 +17,13 @@ AA_GROUP_COLS = ["Gene", "aa_pos", "aa_ref", "aa_alt"]
 
 def _controls_aa_frame(rows):
     """`rows`: (Gene, aa_pos, aa_ref, aa_alt, Chrom, hg38_start, ref_allele,
-    alt_allele, Dataset, Fxn_points, clinvar_star_18_25, clinvar_date_last_reviewed_18_25).
+    alt_allele, Dataset, Fxn_points, clinvar_star_18_25, clinvar_date_last_reviewed_18_25, hgvs_c).
     """
     return pd.DataFrame(
         rows,
         columns=[
             "Gene", "aa_pos", "aa_ref", "aa_alt", "Chrom", "hg38_start", "ref_allele", "alt_allele",
-            "Dataset", "Fxn_points", "clinvar_star_18_25", "clinvar_date_last_reviewed_18_25",
+            "Dataset", "Fxn_points", "clinvar_star_18_25", "clinvar_date_last_reviewed_18_25", "hgvs_c",
         ],
     )
 
@@ -31,14 +31,14 @@ def _controls_aa_frame(rows):
 def _clingen_aa_frame(rows):
     """`rows`: (Gene, aa_pos, aa_ref, aa_alt, Chrom, hg38_start, ref_allele,
     alt_allele, Dataset, Fxn_points, Retracted_ClinGen_repo, Approval Date_ClinGen_repo,
-    Published Date_ClinGen_repo).
+    Published Date_ClinGen_repo, hgvs_c).
     """
     return pd.DataFrame(
         rows,
         columns=[
             "Gene", "aa_pos", "aa_ref", "aa_alt", "Chrom", "hg38_start", "ref_allele", "alt_allele",
             "Dataset", "Fxn_points", "Retracted_ClinGen_repo", "Approval Date_ClinGen_repo",
-            "Published Date_ClinGen_repo",
+            "Published Date_ClinGen_repo", "hgvs_c",
         ],
     )
 
@@ -59,8 +59,8 @@ def _dedup_frame(rows):
 def test_controls_aa_two_distinct_snvs_both_kept_higher_magnitude_wins():
     df = _controls_aa_frame(
         [
-            ("G1", 100, "A", "V", "1", 1000, "G", "A", "Dataset_P", 5, "criteria provided, single submitter", "Jan 01, 2020"),
-            ("G1", 100, "A", "V", "1", 1003, "C", "T", "Dataset_Q", 8, "criteria provided, single submitter", "Jan 01, 2020"),
+            ("G1", 100, "A", "V", "1", 1000, "G", "A", "Dataset_P", 5, "criteria provided, single submitter", "Jan 01, 2020", "c.1G>A"),
+            ("G1", 100, "A", "V", "1", 1003, "C", "T", "Dataset_Q", 8, "criteria provided, single submitter", "Jan 01, 2020", "c.4C>T"),
         ]
     )
     sort_by, ascending = controls_aa_sort_key(df, "abs_max")
@@ -74,8 +74,8 @@ def test_controls_aa_two_distinct_snvs_both_kept_higher_magnitude_wins():
 def test_controls_aa_quality_breaks_tie_ahead_of_older_date():
     df = _controls_aa_frame(
         [
-            ("G1", 200, "A", "V", "1", 2000, "G", "A", "Dataset_P", 5, "criteria provided, single submitter", "Jan 01, 2020"),
-            ("G1", 200, "A", "V", "1", 2003, "C", "T", "Dataset_Q", 5, "reviewed by expert panel", "Jan 01, 2019"),
+            ("G1", 200, "A", "V", "1", 2000, "G", "A", "Dataset_P", 5, "criteria provided, single submitter", "Jan 01, 2020", "c.1G>A"),
+            ("G1", 200, "A", "V", "1", 2003, "C", "T", "Dataset_Q", 5, "reviewed by expert panel", "Jan 01, 2019", "c.4C>T"),
         ]
     )
     sort_by, ascending = controls_aa_sort_key(df, "abs_max")
@@ -88,8 +88,8 @@ def test_controls_aa_same_nt_variant_different_datasets_collapses_to_one_row():
     collapse to exactly one row, not be treated as competing SNVs."""
     df = _controls_aa_frame(
         [
-            ("PAX6", 10, "Q", "*", "11", 31802817, "G", "A", "PAX6_BLX_geneticin", 8, None, None),
-            ("PAX6", 10, "Q", "*", "11", 31802817, "G", "A", "PAX6_LE9_geneticin", 8, None, None),
+            ("PAX6", 10, "Q", "*", "11", 31802817, "G", "A", "PAX6_BLX_geneticin", 8, None, None, "c.28C>T"),
+            ("PAX6", 10, "Q", "*", "11", 31802817, "G", "A", "PAX6_LE9_geneticin", 8, None, None, "c.28C>T"),
         ]
     )
     sort_by, ascending = controls_aa_sort_key(df, "abs_max")
@@ -104,8 +104,8 @@ def test_controls_aa_mixed_dtype_chrom_still_collapses():
     same-NT-variant collapse."""
     df = _controls_aa_frame(
         [
-            ("PAX6", 10, "Q", "*", "11", 31802817, "G", "A", "PAX6_BLX_geneticin", 8, None, None),
-            ("PAX6", 10, "Q", "*", 11, 31802817, "G", "A", "PAX6_LE9_geneticin", 8, None, None),
+            ("PAX6", 10, "Q", "*", "11", 31802817, "G", "A", "PAX6_BLX_geneticin", 8, None, None, "c.28C>T"),
+            ("PAX6", 10, "Q", "*", 11, 31802817, "G", "A", "PAX6_LE9_geneticin", 8, None, None, "c.28C>T"),
         ]
     )
     assert df["Chrom"].dtype == object
@@ -117,8 +117,8 @@ def test_controls_aa_mixed_dtype_chrom_still_collapses():
 def test_controls_aa_v1_strategy_drops_loser_byte_for_byte():
     df = _controls_aa_frame(
         [
-            ("G1", 400, "A", "V", "1", 4000, "G", "A", "Dataset_Z", 5, "reviewed by expert panel", "Jan 01, 2020"),
-            ("G1", 400, "A", "V", "1", 4003, "C", "T", "Dataset_A", 5, "criteria provided, single submitter", "Jan 01, 2020"),
+            ("G1", 400, "A", "V", "1", 4000, "G", "A", "Dataset_Z", 5, "reviewed by expert panel", "Jan 01, 2020", "c.1G>A"),
+            ("G1", 400, "A", "V", "1", 4003, "C", "T", "Dataset_A", 5, "criteria provided, single submitter", "Jan 01, 2020", "c.4C>T"),
         ]
     )
     df["assay_priority"] = [1, 0]  # Dataset_A ranks first under v1
@@ -132,8 +132,8 @@ def test_controls_aa_v1_strategy_drops_loser_byte_for_byte():
 def test_clingen_aa_prefers_non_retracted_then_recent_approval_date():
     df = _clingen_aa_frame(
         [
-            ("G1", 100, "A", "V", "1", 1000, "G", "A", "Dataset_P", 5, 1, "2020-01-01", "2020-01-01"),
-            ("G1", 100, "A", "V", "1", 1003, "C", "T", "Dataset_Q", 5, 0, "2020-01-01", "2020-01-01"),
+            ("G1", 100, "A", "V", "1", 1000, "G", "A", "Dataset_P", 5, 1, "2020-01-01", "2020-01-01", "c.1G>A"),
+            ("G1", 100, "A", "V", "1", 1003, "C", "T", "Dataset_Q", 5, 0, "2020-01-01", "2020-01-01", "c.4C>T"),
         ]
     )
     sort_by, ascending = clingen_aa_sort_key(df, "abs_max")
@@ -144,8 +144,8 @@ def test_clingen_aa_prefers_non_retracted_then_recent_approval_date():
 def test_clingen_aa_recent_approval_date_breaks_tie_among_non_retracted():
     df = _clingen_aa_frame(
         [
-            ("G1", 200, "A", "V", "1", 2000, "G", "A", "Dataset_P", 5, 0, "2019-01-01", "2019-01-01"),
-            ("G1", 200, "A", "V", "1", 2003, "C", "T", "Dataset_Q", 5, 0, "2023-01-01", "2019-01-01"),
+            ("G1", 200, "A", "V", "1", 2000, "G", "A", "Dataset_P", 5, 0, "2019-01-01", "2019-01-01", "c.1G>A"),
+            ("G1", 200, "A", "V", "1", 2003, "C", "T", "Dataset_Q", 5, 0, "2023-01-01", "2019-01-01", "c.4C>T"),
         ]
     )
     sort_by, ascending = clingen_aa_sort_key(df, "abs_max")
@@ -156,8 +156,8 @@ def test_clingen_aa_recent_approval_date_breaks_tie_among_non_retracted():
 @pytest.mark.parametrize("strategy", ["abs_max", "nt_then_abs_max"])
 def test_final_fallback_is_deterministic_dataset_name_not_row_order(strategy):
     rows_forward = [
-        ("G1", 500, "A", "V", "1", 5000, "G", "A", "Dataset_Z", 5, "criteria provided, single submitter", "Jan 01, 2020", "aa"),
-        ("G1", 500, "A", "V", "1", 5003, "C", "T", "Dataset_A", 5, "criteria provided, single submitter", "Jan 01, 2020", "aa"),
+        ("G1", 500, "A", "V", "1", 5000, "G", "A", "Dataset_Z", 5, "criteria provided, single submitter", "Jan 01, 2020", "c.1G>A", "aa"),
+        ("G1", 500, "A", "V", "1", 5003, "C", "T", "Dataset_A", 5, "criteria provided, single submitter", "Jan 01, 2020", "c.4C>T", "aa"),
     ]
     cols = list(_controls_aa_frame([]).columns) + ["nucleotide_or_aa"]
     df_forward = pd.DataFrame(rows_forward, columns=cols)
@@ -175,6 +175,34 @@ def test_final_fallback_is_deterministic_dataset_name_not_row_order(strategy):
     assert out_forward.loc[out_forward.Variant_Role == "primary", "Dataset"].iloc[0] == "Dataset_A"
     assert (out_forward.loc[out_forward.Variant_Role == "primary", "Dataset"].iloc[0]
             == out_reversed.loc[out_reversed.Variant_Role == "primary", "Dataset"].iloc[0])
+
+
+@pytest.mark.parametrize("strategy", ["abs_max", "nt_then_abs_max"])
+def test_final_fallback_within_same_dataset_uses_hgvs_c_not_row_order(strategy):
+    """Regression: several synonymous NT realizations of the same amino-acid
+    change, all reported by the *same* dataset (real example: F9 p.Cys69Ser
+    scored six ways by F9_Popp_2025_model), tie on every key including
+    `Dataset` -- `hgvs_c` must still pick a row order-independent winner."""
+    rows_forward = [
+        ("G1", 500, "A", "V", "1", 5000, "G", "A", "Dataset_Z", 5, "criteria provided, single submitter", "Jan 01, 2020", "c.4C>T", "aa"),
+        ("G1", 500, "A", "V", "1", 5003, "C", "T", "Dataset_Z", 5, "criteria provided, single submitter", "Jan 01, 2020", "c.1G>A", "aa"),
+    ]
+    cols = list(_controls_aa_frame([]).columns) + ["nucleotide_or_aa"]
+    df_forward = pd.DataFrame(rows_forward, columns=cols)
+    df_reversed = pd.DataFrame(list(reversed(rows_forward)), columns=cols)
+
+    def run(df):
+        sort_by, ascending = controls_aa_sort_key(df, strategy)
+        if strategy == "nt_then_abs_max":
+            df["_is_aa"] = df["nucleotide_or_aa"] == "aa"
+            sort_by, ascending = ["_is_aa"] + sort_by, [True] + ascending
+        return aa_dedup_or_mark(df, AA_GROUP_COLS, GENOMIC_KEY_COLS, sort_by, ascending, strategy)
+
+    out_forward = run(df_forward)
+    out_reversed = run(df_reversed)
+    assert out_forward.loc[out_forward.Variant_Role == "primary", "hgvs_c"].iloc[0] == "c.1G>A"
+    assert (out_forward.loc[out_forward.Variant_Role == "primary", "hgvs_c"].iloc[0]
+            == out_reversed.loc[out_reversed.Variant_Role == "primary", "hgvs_c"].iloc[0])
 
 
 # --- catch_mis_2 ------------------------------------------------------------------------

@@ -960,13 +960,7 @@ dedup mechanics is automatically available to the other's.
 reproduced for audit/comparison purposes; it is not the recommended
 setting for either parameter going forward.
 
-### Preprint vs. current: Supplementary Data 6's missing aa-side dtype cast
-
-Independent of the `CONTROLS_CLINGEN_DEDUP_STRATEGY`/shared-module work
-above, `OddsPath_classifications.ipynb`'s `controls`/`ClinGen_Repo`
-categories under-deduplicated relative to `Variant_Classification_
-analysis.ipynb`'s, from the preprint until this was fixed -- not because of
-a dedup-*strategy* difference, but a missing type cast.
+### Supplementary Data 6's missing aa-side dtype cast
 
 `catch_mis_2`'s final nt/aa merge groups by `['Gene', 'Chrom', 'hg38_start',
 'ref_allele', 'alt_allele']` via `pandas.DataFrame.drop_duplicates`, which
@@ -988,25 +982,25 @@ concatenated (`OP_sankey_full`), an nt-type row and an aa-type row scoring
 the *same* physical variant from two different datasets could carry
 mismatched types in the columns `catch_mis_2` groups by (e.g. `hg38_start`
 as `str` on the nt side, left at its original numeric dtype on the aa
-side), so `drop_duplicates` silently failed to recognize them as the same
-group and kept both.
+side), so `drop_duplicates` silently fails to recognize them as the same
+group and keeps both.
 
-**Effect**: both the preprint's `Supplementary_Data_6.xlsx` and the current
-one (before this fix) retained one nt-type row *and* one aa-type row for
-every control/ClinGen_Repo variant assayed by more than one dataset where
-one assay reported it at DNA resolution and another at protein resolution
--- e.g. `BRCA1_Findlay_2018` (nt) and `BRCA1_Adamovich_2022_HDR` (aa) both
-surviving for the same BRCA1 variant. `Variant_Classification_analysis.
-ipynb`/`Supplementary_Data_5.xlsx` never had this problem, since its
-whole-dataframe cast predates the nt/aa split entirely. Comparing the
-preprint's root-level `Supplementary_Data_5.v1.xlsx`/`Supplementary_Data_
-6.v1.xlsx` confirms the asymmetry already existed then: 28 duplicate
-`(hgvs_c, hgvs_p, Gene)` rows in Data 5's `controls_REVEL_GeneSpecific` vs.
-242 in Data 6's `controls_REVEL_OP`. Just before this fix, Data 5 was down
-to 0 duplicates while Data 6 had grown to 502 (251 nt/aa pairs) in
-`controls_REVEL_OP` alone -- new overlapping datasets added after the
-preprint (e.g. `TP53_Funk_2025` alongside the existing `TP53_Fayer_2021_
-meta`) only made the gap wider.
+**Effect**: both the preprint's `Supplementary_Data_6.xlsx` and the
+current one (before this fix) retain one nt-type row *and* one aa-type
+row for every control/ClinGen_Repo variant assayed by more than one
+dataset where one assay reported it at DNA resolution and another at
+protein resolution -- e.g. `BRCA1_Findlay_2018` (nt) and
+`BRCA1_Adamovich_2022_HDR` (aa) both surviving for the same BRCA1 variant.
+`Variant_Classification_analysis.ipynb`/`Supplementary_Data_5.xlsx` never
+has this problem, since its whole-dataframe cast predates the nt/aa split
+entirely. The preprint's root-level `Supplementary_Data_5.v1.xlsx`/
+`Supplementary_Data_6.v1.xlsx` show the same asymmetry: 28 duplicate
+`(hgvs_c, hgvs_p, Gene)` rows in Data 5's `controls_REVEL_GeneSpecific`
+vs. 242 in Data 6's `controls_REVEL_OP`. In the current dataset (before
+this fix), Data 5 has 0 duplicates while Data 6 has 502 (251 nt/aa pairs)
+in `controls_REVEL_OP` alone -- new overlapping datasets added after the
+preprint (e.g. `TP53_Funk_2025` alongside the existing
+`TP53_Fayer_2021_meta`) widen the gap further.
 
 **Fix**: `OddsPath_classifications.ipynb`'s `OP_aa` cell now also casts
 `Chrom`/`hg38_start`/`ref_allele`/`alt_allele` to `str`, mirroring
@@ -1015,6 +1009,123 @@ whenever they share a genomic position. This is a type-consistency fix
 upstream of the shared dedup functions -- it does not touch
 `src/lib/dedup.py` or either `CONTROLS_CLINGEN_DEDUP_STRATEGY`/
 `VUS_GNOMAD_UNOBSERVED_DEDUP_STRATEGY` value.
+
+A further gap remains even with this fix in place: 13102 distinct control
+variants in `Supplementary_Data_6.xlsx`'s `controls_REVEL_OP` vs. 12944 in
+`Supplementary_Data_5.xlsx`'s `controls_REVEL_GeneSpecific` -- 180 present
+only in Data 6, 22 only in Data 5. That gap has three further causes, one
+fixed below, one inherent (folded into Mechanism 1), and one addressed
+defensively in shared code.
+
+### Supplementary Data 6's missing cross-resolution conflict check
+
+`Variant_Classification_analysis.ipynb`'s cell 64 (the same cell that adds
+the dtype cast above) re-runs the opposite-sign `Fxn_points` conflict
+check on the *combined* nt+aa dataframe (`sankey_f`), in addition to the
+two separate per-type passes on `sankey_nuc` and `sankey_aa`. That third,
+combined pass is what catches an nt-type assay and an aa-type assay
+disagreeing on the *same* variant -- a case the two per-type passes
+structurally cannot see, since each only groups rows of its own
+resolution.
+
+`OddsPath_classifications.ipynb` only has the two per-type passes (on
+`OP_nuc` and `OP_aa` separately, using `OP_points`), not the combined
+re-check, so a real cross-resolution conflict on `OP_points` itself (not
+just the `Fxn_points`/`OP_points` axis difference described under
+Mechanism 1) can survive into `controls_REVEL_OP`. Examples: BRCA1
+`c.5044G>A` (`BRCA1_Findlay_2018`, nt, `OP_points=+4`; `BRCA1_Adamovich_
+2022_HDR`/`Cisplatin_Resistance`, aa, `OP_points=-4`) and TP53 `c.378C>G`
+(`TP53_Funk_2025`, nt, `OP_points=+4`; `TP53_Fayer_2021_meta`, aa,
+`OP_points=-2`) -- both absent from Data 5, both present in Data 6 before
+this fix. This class of case accounts for roughly 11 of the 180
+REVEL-only-in-Data-6 variants.
+
+**Fix**: added a cell to `OddsPath_classifications.ipynb`, immediately
+after `OP_sankey_full = pd.concat([OP_nuc, OP_aa])`, that re-runs the
+opposite-sign check on the combined dataframe using `OP_points` and marks
+`VariantNotes_OP = "conflicting_fxn_data"` accordingly -- mirroring
+`Variant_Classification_analysis.ipynb`'s cell 64, adapted to Data 6's own
+evidence column and variable names.
+
+### CHEK2's `controls_REVEL_OP`-only variants are not caused by a missing QC exclusion
+
+Ten of the remaining REVEL-only-in-Data-6 variants are all
+`CHEK2_McCarthy-Leo_2024` rows. The cause is not that
+`OddsPath_classifications.ipynb` skips `Variant_Classification_
+analysis.ipynb`'s CHEK2 QC merge (`data/input/maves/CHEK2_Gebbia_2024.xlsx`,
+`Filter_CI == 1` -> `Flag = '*'`; see [`CHEK2`: an external QC
+flag](#chek2-an-external-qc-flag)): the shared checkpoint
+(`integrated_variant_effect_dataset_analysis.csv.gz`) already carries
+`Flag = '*'` for the QC-failing rows (12809 of `CHEK2_Gebbia_2024`'s 29681
+rows), applied upstream of both notebooks rather than by either notebook's
+own cells. No notebook change is needed or was made for this.
+
+The actual cause is a further surface of the `Fxn_points`-vs-`OP_points`
+evidence-axis difference described under Mechanism 1, this time in the
+*candidate-selection* step rather than the top-level conflict check.
+Within the narrow `Ile157=` amino-acid-change group at this position,
+`CHEK2_Gebbia_2024`'s `Fxn_points` (`-2`) outranks
+`CHEK2_McCarthy-Leo_2024`'s (`-1`) in absolute value, so only Gebbia's row
+is tagged as the group's representative candidate in
+`Variant_Classification_analysis.ipynb`. Gebbia's row is then removed by
+the (correctly shared) CHEK2 `Flag` exclusion, orphaning the position --
+McCarthy-Leo's row was never tagged as a candidate, so it doesn't take
+Gebbia's place. `OddsPath_classifications.ipynb` ranks the same group by
+`OP_points` instead, which favors McCarthy-Leo, so its row is tagged and
+survives. This is the same inherent axis difference as Mechanism 1, not a
+bug, so no fix applies here.
+
+### aa-stage tie-break gained an `hgvs_c` fallback
+
+`controls_aa_sort_key`/`clingen_aa_sort_key` (`src/lib/dedup.py`) fall
+back to `Dataset` name (ascending) as a tiebreaker when every other key
+ties -- see [Implementation](#implementation) above. That fallback is
+inert whenever the tied candidates come from more than one dataset, but
+does nothing when they come from the *same* dataset: several synonymous
+NT realizations of one amino-acid change, reported by a single assay, all
+share the same `Dataset` value too. In that case the sort falls through to
+`pandas`' stable sort over whatever row order the candidates happen to
+arrive in -- deterministic for a single run, but not independent of
+incidental upstream processing order, so two otherwise-identical pipeline
+runs could pick different representative NT variants for the same
+protein-level control variant, purely as a side effect of row order
+rather than any real evidence difference.
+
+No live example of a genuine same-dataset, fully-tied candidate set has
+been found in the current data: the two candidate examples (F9
+`p.Cys69Ser`, scored six ways by `F9_Popp_2025_model`; BRCA2
+`p.Ala2780=`, scored by `BRCA2_Huang_2025_SGE`) both resolve via the
+gene-specific-vs-universal calibration axis difference (Mechanism 1)
+before the tie-break is ever reached, rather than via row order. The
+fallback is kept anyway: it closes a real gap demonstrated on synthetic
+data (`test_final_fallback_within_same_dataset_uses_hgvs_c_not_row_order`
+in `tests/test_dedup.py`), at zero risk to the existing behavior.
+
+**Fix**: both sort-key functions now append `hgvs_c` (ascending) after
+`Dataset` as a second, always-distinct fallback, so a same-dataset tie --
+if one is ever hit -- resolves the same way regardless of input row
+order. `catch_mis_2`'s own tie-break (the separate nt-vs-aa merge one
+stage later) wasn't touched -- its `nt_then_abs_max` default already
+prefers nt-type rows outright, and no example of a still-order-dependent
+tie there has been found.
+
+### Where the REVEL `controls` population gap settles
+
+With the dtype-cast fix and the cross-resolution conflict check applied
+(the CHEK2 cause requiring no fix, and the tie-break fallback closing a
+gap not observed live), the two files carry 12944 distinct control
+variants in `Supplementary_Data_5.xlsx`'s `controls_REVEL_GeneSpecific`
+vs. 13090 in `Supplementary_Data_6.xlsx`'s `controls_REVEL_OP` -- 169
+present only in Data 6, 23 only in Data 5. Every case examined above
+resolves to the same root phenomenon: `Fxn_points` vs. `OP_points` (or
+gene-specific vs. genome-wide predictor calibration) ranking a shared
+position or amino-acid change differently, surfacing at whichever
+pipeline step happens to compare across resolutions, datasets, or
+predictor calibrations. That axis difference is inherent to comparing a
+gene-specific-calibration population against a universal-calibration one
+-- each arm is self-consistent with its own evidence source -- not a bug
+to fix further. The residual gap should be expected to persist at
+roughly this order of magnitude.
 
 ### Comparing `v1` to the decided approach
 
