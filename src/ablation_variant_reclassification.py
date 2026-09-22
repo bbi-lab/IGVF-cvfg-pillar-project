@@ -2850,7 +2850,7 @@ _CALIBRATED_CONCORDANCE_TITLE = {
 }
 _CALIBRATED_LEGEND_LABEL = {
     SYNERGY_LABEL: "Both sources needed for classification",
-    CONFLICT_LABEL: "Combination results in no evidence",
+    CONFLICT_LABEL: "Classification lost due to combining evidence",
 }
 # Display override for the light ("alone sufficient") swatch of the
 # functional/experimental and predictor/predictive categories -- `BOTH_
@@ -3535,7 +3535,7 @@ def _calibrated_legend_handles():
         Predictive data alone sufficient
         Experimental data alone suffices, but predictive data moves to more confident class
         Experimental data alone sufficient
-        Combination results in no evidence
+        Classification lost due to combining evidence
 
     The light swatch of each pair gets the category's own full label with no
     qualifier; the dark ("upgraded") swatch gets its own full-sentence label
@@ -3544,7 +3544,7 @@ def _calibrated_legend_handles():
     3-across grid, a single stacked column has no adjacent "Functional alone
     sufficient" light swatch directly above it for a terse "Upgraded" to
     implicitly refer back to, so the label has to be self-contained.
-    "Combination results in no evidence" sits last despite not stacking
+    "Classification lost due to combining evidence" sits last despite not stacking
     inside the same bar at all -- it's the separate below-the-axis conflict
     bar, the one thing here with no stacking-order position of its own to
     match, so it goes at the visual bottom, right where its bar is.
@@ -3593,7 +3593,7 @@ def _calibrated_concordance_legend_handles():
     return [Patch(color=CONCORDANCE_STATUS_COLORS[s], label=s.capitalize()) for s in concordance_order]
 
 
-def _calibrated_add_group_title(fig, axes, label, pad=0.012, fontsize=7.5):
+def _calibrated_add_group_title(fig, axes, label, pad=0.012, fontsize=7.5, panel_letter=None):
     """Center `label` above the combined horizontal extent of `axes` (a list
     of one or more subplots occupying adjacent columns of the same row),
     `pad` figure-fraction inches above the tallest of their top edges --
@@ -3605,12 +3605,22 @@ def _calibrated_add_group_title(fig, axes, label, pad=0.012, fontsize=7.5):
     titles ("ClinGen control concordance") are wider than the single narrow
     axes column they sit above and were confirmed clipping at the figure's
     right edge as one line even at a reduced fontsize.
+
+    `panel_letter`, if given, is set at the group's own top-left corner
+    (same baseline as `label`, left-aligned at `x0`) rather than centered --
+    the panel tag ("a"/"b"/"c") for this group, distinct from `label`'s own
+    descriptive title.
     """
     positions = [ax.get_position() for ax in axes]
     x0 = min(p.x0 for p in positions)
     x1 = max(p.x1 for p in positions)
     y = max(p.y1 for p in positions) + pad
     fig.text((x0 + x1) / 2, y, label, ha="center", va="bottom", fontsize=fontsize, color=CHART_INK_PRIMARY, fontweight="bold")
+    if panel_letter is not None:
+        fig.text(
+            x0, y, panel_letter, ha="left", va="bottom", fontsize=9,
+            family="Arial", fontweight="normal", color=CHART_INK_PRIMARY,
+        )
 
 
 def save_calibrated_ablation_figure(df, predictors, output_path):
@@ -3679,7 +3689,7 @@ def save_calibrated_ablation_figure(df, predictors, output_path):
             height_ratios=[row_h, legend_row_h],
         )
 
-        for scope, col in comparison_row:
+        for panel_letter, (scope, col) in zip("ab", comparison_row):
             comparison_data = build_direction_comparison_chart_data(
                 df, predictors, scopes=(scope,), show_class_upgrade=True
             )
@@ -3692,7 +3702,7 @@ def save_calibrated_ablation_figure(df, predictors, output_path):
             _calibrated_draw_comparison_chart(ax_blb, comparison_data[DIRECTION_BENIGN])
             ax_blb.set_title("B/LB", fontsize=6, color=CHART_INK_MUTED, pad=2)
             fig.canvas.draw()
-            _calibrated_add_group_title(fig, [ax_plp, ax_blb], _CALIBRATED_SCOPE_TITLE[scope])
+            _calibrated_add_group_title(fig, [ax_plp, ax_blb], _CALIBRATED_SCOPE_TITLE[scope], panel_letter=panel_letter)
 
         # Row 2, columns 0-1: the ablation legend, stacked vertically in an
         # otherwise-empty invisible axes so it aligns with the concordance
@@ -3713,7 +3723,9 @@ def save_calibrated_ablation_figure(df, predictors, output_path):
         ax_conc = fig.add_subplot(gs[1, 2:4])
         _calibrated_draw_concordance_subpanel(ax_conc, concordance_data, predictors)
         fig.canvas.draw()
-        _calibrated_add_group_title(fig, [ax_conc], _CALIBRATED_CONCORDANCE_TITLE["clinvar_control"], fontsize=6.5)
+        _calibrated_add_group_title(
+            fig, [ax_conc], _CALIBRATED_CONCORDANCE_TITLE["clinvar_control"], fontsize=6.5, panel_letter="c"
+        )
 
         conc_handles = _calibrated_concordance_legend_handles()
         conc_position = ax_conc.get_position()
