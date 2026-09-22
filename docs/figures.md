@@ -441,6 +441,37 @@ page edge. Fixed by widening `x_range` to also cover the title's/x-label's
 own text width when it exceeds the matrix's; a no-op for every existing
 (larger) calibrated confusion matrix in this project.
 
+### Extended Data Figure 6/6alt, gene-specific (reviewer-only)
+
+A companion `.Rmd`, `Extended_data_figures_gene_specific.Rmd`, rebuilds
+Extended Data Figure 6 and Extended Data Figure 6alt -- the only two
+figures in `Extended_data_figures.Rmd` derived from
+`Supplementary_Data_6.xlsx` -- from `Supplementary_Data_6_gene_specific.xlsx`
+instead: the variant `OddsPath_classifications.ipynb` produces with
+`ONLY_ODDSPATH_CALIBRATED_DATASETS = True` and
+`USE_GENE_SPECIFIC_PREDICTOR_CALIBRATIONS = True` (see
+`notebooks/analysis/README_OddsPath_classifications.md`'s "Reviewer-only
+variant" section). Every other figure (4, 4 missense, 4alt, 7alt, 8, 9)
+reads only `Supplementary_Data_5.xlsx`, unaffected by that variant, so
+this companion doesn't reproduce them.
+
+All helper functions, calibrated dimensions, and plotting logic are copied
+verbatim from `Extended_data_figures.Rmd`'s own Fig 6/6alt chunks (with the
+ExCALIBR/GeneSpecific Fig 4 portions removed), so the only functional
+difference is the input workbook. Run it the same way as the main `.Rmd`:
+
+```bash
+docker compose run --rm -w /usr/src/app/notebooks/figures/extended_data_figure_4_6_7_8_9 \
+  r-figures -e 'rmarkdown::render("Extended_data_figures_gene_specific.Rmd")'
+```
+
+Writes to `data/output/figures/extended_data_figure_6_gene_specific/` (PNGs
++ calibrated PDFs, mirroring Extended Data Figure 6's own file names) and
+`data/output/figures/extended_data_figure_6alt_gene_specific/` (24
+calibrated PDFs, mirroring Extended Data Figure 6alt's own file names) --
+distinct folders so nothing here can collide with or overwrite the
+standard Extended Data Figure 6/6alt outputs.
+
 ### Extended Data Figure 4alt
 
 An alternate version of Extended Data Figure 4 (AlphaMissense/MutPred2 x
@@ -500,6 +531,46 @@ by default; see `--input`/`--output` (`--help`) to override either path.
 `consequence_filter` param) and writes to
 `extended_data_figure_7alt_missense/new_classification_heatmap_missense.pdf`
 instead, so it doesn't overwrite the all-consequences run.
+
+### Extended Data Figure 7alt, OddsPath variant (`src/make_extended_data_figure_7alt_op.py`)
+
+No figure anywhere in this repo previously visualized
+`Supplementary_Data_6.xlsx`'s own OddsPath-based VUS/gnomAD/Unobserved
+sheets (`{VUS,gnomAD,Unobserved}_{REVEL,AM,MP2}_OP`, classified via
+`Class_OP_{REVEL,AM,MP2}`) -- Extended Data Figure 7alt above and Figure 6
+both read only `Supplementary_Data_5.xlsx`'s ExCALIBR/GeneSpecific
+classification. This script is the same 9-row x 5-column (+ Total)
+calibrated heatmap as Extended Data Figure 7alt, applied to those OP sheets
+instead: "functional evidence from OddsPath likelihood ratios, plus
+predictive evidence calibrated genome-wide only" (see
+`notebooks/analysis/README_OddsPath_classifications.md`), matching the
+OddsPath/Universal calibration used by Extended Data Figure 6/6alt.
+
+Two data quirks handled here (see the script's own module docstring for
+detail): the Unobserved group's MutPred2 sheet is spelled
+`Unobserved_mut_OP`, not `Unobserved_MP2_OP` (reproducing
+`OddsPath_classifications.ipynb`'s own sheet-naming); and unlike
+Supplementary Data 5's classification, no row in these OP sheets ever
+reaches "Pathogenic" (genome-wide REVEL/AM/MP2 top out at PP3_Strong = +4),
+so a category absent from a sheet is plotted as a genuine zero rather than
+raising, unlike `make_extended_data_figure_7alt.py`'s stricter check.
+
+```bash
+poetry run python -m src.make_extended_data_figure_7alt_op
+```
+
+Writes `data/output/figures/extended_data_figure_7alt_op/new_classification_heatmap_op.pdf`
+by default; same `--input`/`--output`/`--consequence-filter` options as
+`make_extended_data_figure_7alt.py` (`--help` for details). To build the
+gene-specific variant (Supplementary Data 6, gene-specific -- see
+`notebooks/analysis/README_OddsPath_classifications.md`'s "Reviewer-only
+variant" section) instead of the standard one:
+
+```bash
+poetry run python -m src.make_extended_data_figure_7alt_op \
+  --input data/output/supplementary_data/Supplementary_Data_6_gene_specific.xlsx \
+  --output data/output/figures/extended_data_figure_7alt_op_gene_specific/new_classification_heatmap_op_gene_specific.pdf
+```
 
 ### Extended Data Figure 10 (`src/ablation_variant_reclassification.py`)
 

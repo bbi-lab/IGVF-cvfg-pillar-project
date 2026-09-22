@@ -1379,6 +1379,56 @@ its own evidence source. It is not something further dedup fixes can
 close, and the residual gap should be expected to persist at roughly its
 current size.
 
+## Supplementary Data 6 restricted to OddsPath-calibrated datasets (preprint vs. current)
+
+**Preprint / before this change**: `Supplementary_Data_6.xlsx` included
+every variant from every dataset, regardless of whether that dataset's
+OddsPath likelihood ratio could actually be computed. A dataset lacking
+enough controls for OddsPath's own calculation (`OddsNormal`/`OddsAbnormal`
+both missing -- see [above](#why-supplementary-data-5-and-6-populations-differ))
+simply contributed `OP_points = NaN`, treated as `0` (no functional
+evidence) throughout classification -- indistinguishable in the output
+from a variant whose *computed* OddsPath likelihood ratio happened to fall
+in the "no evidence" range. 24 of the pipeline's 71 datasets never had an
+OddsPath calibration succeed in either direction (e.g. `BRCA2_Sahu_2025_SGE`,
+`CHEK2_Gebbia_2024`, `SFPQ_IGVF`, `TARDBP_Bolognesi_Faure_2019` -- see
+`notebooks/analysis/OddsPath_calculations.ipynb`).
+
+**Current**: `OddsPath_classifications.ipynb`'s `ONLY_ODDSPATH_CALIBRATED_DATASETS`
+parameter now defaults to `True` (see
+`notebooks/analysis/README_OddsPath_classifications.md`), restricting
+Supplementary Data 6 to variants from datasets that have an OddsPath
+calibration on file -- `OddsNormal` and/or `OddsAbnormal` actually computed,
+even if only one direction succeeded. This removes the 24 uncalibrated
+datasets entirely rather than letting them contribute silent zero-evidence
+rows. The effect is a genuine population shrink, not a reclassification:
+across the `VUS`/`gnomAD`/`Unobserved` categories, row counts drop
+11-15% for every predictor (e.g. `VUS` × REVEL: 17,574 → 15,131; `gnomAD` ×
+REVEL: 35,599 → 31,509; `Unobserved` × REVEL: 95,901 → 81,649), and the
+pre-dedup population drops from 965,991 to 663,377 rows (~31%). The
+independent `USE_GENE_SPECIFIC_PREDICTOR_CALIBRATIONS` parameter
+(gene-specific predictor calibration with genome-wide fallback, mirroring
+Supplementary Data 5's own `Total_Points_GeneSpecific_*`) remains a
+reviewer-only option, default `False`, and does not itself change row
+counts -- it only reclassifies the variants that survive the dataset
+filter.
+
+**Why**: this gives a fairer comparison of classification strength between
+the proposed method (Supplementary Data 5, gene-specific-with-fallback
+predictor calibration) and the accepted OddsPath method (Supplementary
+Data 6) -- both now describe genuinely OddsPath-calibrated evidence,
+rather than Data 6 quietly crediting uncalibrated datasets with zero
+functional points alongside datasets where OddsPath actually found no
+evidence. Independent of any measured difference in classification
+strength, this also makes the comparison more principled on its own terms:
+OddsPath's score-range binning (which raw score values count as
+"functionally normal" vs. "abnormal" for a given assay) is typically set
+by investigator judgment, while Supplementary Data 5's ExCALIBR/gene-specific
+calibration derives functional classes from the assay's own reported score
+distribution and MaveDB's `auth_reported_func_class` -- a more principled
+basis for defining functional classes once both files are restricted to
+variants their respective method can actually evidence.
+
 ## Outputs
 
 Each of the five categories × three predictors (REVEL, AlphaMissense,

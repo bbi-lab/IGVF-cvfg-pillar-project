@@ -41,9 +41,9 @@ openpyxl
 | Aspect | Variant_Classification_analysis | OddsPath_classifications |
 |--------|--------------------------------|--------------------------|
 | Functional evidence | ExCALIBR calibrations (`Fxn_points`) | OddsPath LRs (`OP_points`) |
-| Predictor calibrations | Gene-specific (with genome-wide fallback) | Genome-wide only |
+| Predictor calibrations | Gene-specific (with genome-wide fallback) | Genome-wide only by default (see [Reviewer-only variant](#reviewer-only-variant-supplementary-data-6-gene-specific) below) |
 | Conflict detection | Based on `Fxn_points` | Based on `OP_points` |
-| Applicable datasets | All datasets with ExCALIBR calibrations | Datasets with OddsPath calibrations |
+| Applicable datasets | All datasets with ExCALIBR calibrations | Datasets with an OddsPath calibration on file only (see [Supplementary Data 6 options](#supplementary-data-6-options) below) |
 
 ### OddsPath Points
 
@@ -153,11 +153,42 @@ outputs/Supplementary_Data_6.xlsx.gz  # All category files combined into Excel
 | **gnomAD** | Population variants from gnomAD | `gnomad_MAF` is not null |
 | **Unobserved** | Variants not seen in ClinVar or gnomAD | `clinvar_sig_2025` is null AND `gnomad_MAF` is null (SNVs only) |
 
+## Supplementary Data 6 options
+
+The notebook exposes two independent toggles near the top, right after
+loading the integrated dataset:
+
+| Option | Default | Effect when `True` |
+|--------|---------|---------------------|
+| `ONLY_ODDSPATH_CALIBRATED_DATASETS` | **`True`** (standard) | Restricts to variants from datasets that have an OddsPath calibration on file (`OddsNormal` and/or `OddsAbnormal` computed in `OddsPath_calculations.ipynb`, even if only one direction succeeded). Datasets that never had enough Score-Intervals/Functional-Classification data to attempt a calibration at all are excluded entirely, rather than merely contributing zero functional points. Set to `False` to reproduce the preprint's broader population (every dataset included) for audit/comparison. |
+| `USE_GENE_SPECIFIC_PREDICTOR_CALIBRATIONS` | `False` (reviewer-only) | Uses gene-specific predictor calibrations where available, falling back to genome-wide calibrations otherwise -- the same fallback logic `Variant_Classification_analysis.ipynb` uses for Supplementary Data 5's `Total_Points_GeneSpecific_*` columns. |
+
+`ONLY_ODDSPATH_CALIBRATED_DATASETS` is now baked into the standard
+Supplementary Data 6 pipeline -- a deliberate change from the preprint,
+documented in
+[`docs/variant_classification.md`](../../docs/variant_classification.md)
+under "Supplementary Data 6 restricted to OddsPath-calibrated datasets
+(preprint vs. current)". `USE_GENE_SPECIFIC_PREDICTOR_CALIBRATIONS` remains
+reviewer-only, off by default.
+
+### Reviewer-only variant: Supplementary Data 6, gene-specific
+
+Set `USE_GENE_SPECIFIC_PREDICTOR_CALIBRATIONS = True` (with
+`ONLY_ODDSPATH_CALIBRATED_DATASETS` left at its standard `True`) to produce
+"Supplementary Data 6, gene-specific" -- not used for the manuscript's own
+Supplementary Data 6. Set `OUTPUT_BASENAME` (also near the top, defaults to
+`"Supplementary_Data_6"`) to `"Supplementary_Data_6_gene_specific"` when
+running with this option enabled, so the reviewer-only outputs don't
+overwrite the standard Supplementary Data 6 files. The same applies if you
+set `ONLY_ODDSPATH_CALIBRATED_DATASETS` back to `False` for audit/comparison
+against the preprint's population -- give that run its own `OUTPUT_BASENAME`
+too.
+
 ## Notes
 
-- This pipeline uses **genome-wide** predictor calibrations only (no gene-specific thresholds)
+- By default this pipeline uses **genome-wide** predictor calibrations only (no gene-specific thresholds); see the reviewer-only variant above to opt into gene-specific-with-fallback calibrations
 - OddsPath points are derived from likelihood ratios calculated in the `OddsPath_calculations.ipynb` pipeline
 - The `StandardizedClass` column determines whether `OddsNormal` or `OddsAbnormal` is used for point assignment
-- Variants with missing OddsPath values receive 0 functional points
+- Variants with missing OddsPath values (within an OddsPath-calibrated dataset) receive 0 functional points
 - REVEL and MutPred2 training variants are excluded from their respective analyses
 - ClinVar significance uses 2018 controls for BRCA1, PTEN, MSH2, TP53; 2025 controls for all other genes

@@ -1,0 +1,970 @@
+---
+title: "Extended_Data_figures_gene_specific"
+author: "Claude Sonnet 5"
+date: "2026-09-21"
+output: html_document
+---
+
+<!--
+Reviewer-only companion to Extended_data_figures.Rmd: rebuilds Extended
+Data Figure 6 and Extended Data Figure 6alt (the only two figures in that
+document derived from Supplementary_Data_6.xlsx) from
+Supplementary_Data_6_gene_specific.xlsx instead -- the variant produced by
+OddsPath_classifications.ipynb with ONLY_ODDSPATH_CALIBRATED_DATASETS=True
+and USE_GENE_SPECIFIC_PREDICTOR_CALIBRATIONS=True (see
+README_OddsPath_classifications.md's "Reviewer-only variant" section).
+
+Every other figure in Extended_data_figures.Rmd (4, 4missense, 4alt, 7alt,
+8, 9) reads only Supplementary_Data_5.xlsx, which this variant doesn't
+touch, so they are intentionally not reproduced here.
+
+All helper-function bodies, calibrated dimensions, and plotting logic
+below are copied verbatim from Extended_data_figures.Rmd's "Extended Data
+Figure 4 and 6" / "extended data fig 6" / "Extended Data Figure 6alt"
+chunks, with the ExCALIBR/GeneSpecific (Extended Data Figure 4) portions
+removed (unaffected by this variant) and every output path renamed to a
+"_gene_specific" suffixed folder so nothing here can ever collide with or
+overwrite the standard Extended Data Figure 6/6alt outputs.
+-->
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = FALSE,
+  error = FALSE
+)
+options(warn = 0)
+```
+
+```{r}
+
+DATA_DIR = "../../../data/output"
+OUT_DIR = "../../../data/output/figures/extended_data_figures"
+```
+
+```{r}
+
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(ggsankey)
+library(tidyverse)
+library(readxl)
+library(extrafont)
+library(grid)
+
+loadfonts(device = 'all')
+
+#----color palette----
+
+colors_custom <- c(
+  "Pathogenic" = "#CA7682",
+  "Likely Pathogenic" = "#E6B1B8",
+  "Likely pathogenic" = "#E6B1B8",
+  "Benign" = "#1D7AAB",
+  "Uncertain" = "#A0A0A0",
+  "No Classification" = "#A0A0A0",
+  "Likely Benign" = "#63A1C4",
+  "Likely benign" = "#63A1C4",
+  '-12' = "#176082",  # deepest blue
+  '-11' = "#1D7AAB",  # deep steel blue
+  '-10' = "#4B91A6",  # medium steel blue
+   '-9' = "#63A1C4",  # sky blue
+   '-8' = "#7AB5D1",  # soft blue-gray
+   '-7' = "#99C8DC",  # light blue-gray
+   '-6' = "#B8DCE8",  # very light blue
+   '-5' = "#D0E8F0",  # icy pale blue
+   '-4' = "#E4F1F6",  # faint pale blue
+   '-3' = "#EDF6FA",  # hint of blue
+   '-2' = "#F4F9FC",  # nearly white blue
+   '-1' = "#F9FCFE",  # even paler blue
+    '0' = "#E0E0E0",  # true neutral
+
+    '1' = "#F7E4E7",  # very pale pink
+    '2' = "#F0D0D5",  # pale dusty pink
+    '3' = "#E6B1B8",  # blush pink
+    '4' = "#D68F99",  # dusty rose
+    '5' = "#CA7682",  # muted rose
+    '6' = "#B85C6B",  # deeper rose
+    '7' = "#A84957",  # muted wine
+    '8' = "#943744",  # rich berry red
+    '9' = "#7F2936",  # burgundy
+   '10' = "#671B28",  # dark wine red
+   '11' = "#520F1C",  # deeper red
+   '12' = "#3A060D",  # near black red
+
+  'No evidence'         = "#B09C85FF",  # base gray
+  'No Classification'   = "#A0A0A0",
+  'Gnomad'   = "#A0A0A0",# silver gray
+  'Conflicting evidence'= "grey",  # neutral gray
+   "Functional" = "#C8A2C8",  # lilac
+  "Predictive" = "lightblue",   # warmer orchid
+
+  "mix" = "#A5A9BE",
+  "Functional only" = "#00A087FF",
+    "Predictive only" = "#F39B7FFF",
+    "Both"            = "gold",
+  "-12 to -7" = "#176082",
+  "-6 to -4" = "#63A1C4",
+  "-3 to -1" = "#99C8DC" ,
+  "1 to 3" = "#F0D0D5",
+  "4 to 5" = "#D68F99",
+  "0" = 'grey',
+  "6 to 9" = "#B85C6B",
+  "10 to 12" = "#520F1C",
+  "No conflict" = 'whitesmoke',
+  "Conflicting" = 'darkgrey'
+
+)
+
+```
+
+```{r}
+
+#Extended Data Figure 6, gene-specific variant -- ClinVar controls panel
+
+clinvar_REVEL_OP  = read_excel(file.path(DATA_DIR, "supplementary_data/Supplementary_Data_6_gene_specific.xlsx"), sheet = "controls_REVEL_OP")
+clinvar_AM_OP  = read_excel(file.path(DATA_DIR, "supplementary_data/Supplementary_Data_6_gene_specific.xlsx"), sheet = "controls_AM_OP")
+clinvar_MP2_OP  = read_excel(file.path(DATA_DIR, "supplementary_data/Supplementary_Data_6_gene_specific.xlsx"), sheet = "controls_MP2_OP")
+
+
+##------------ClinVar Sankey plot --------------------
+make_sankey_clinvar <- function(df, points_col, colors_custom, clinvar) {
+
+  df <- df %>% mutate(clinvar = {{ clinvar }})
+
+  # Fix clinvar naming
+  df$clinvar[df$clinvar == 'Pathogenic/Likely pathogenic'] <- "Likely pathogenic"
+  df$clinvar[df$clinvar == 'Benign/Likely benign'] <- "Likely benign"
+
+  # Dynamically pick the points column using {{ }}
+  summary_data <- df %>%
+    group_by(clinvar, {{ points_col }}) %>%
+    summarise(count = n(), .groups = "drop")
+
+  # Expand the dataframe
+  expanded_df <- summary_data[rep(1:nrow(summary_data), summary_data$count), -3]
+  rownames(expanded_df) <- NULL
+
+  # Prepare for sankey
+  sankey_data <- expanded_df %>%
+    ggsankey::make_long(clinvar, {{ points_col }})
+
+  # Factor levels
+  levels_order <- c(
+    'Benign', "Likely benign", "Likely Benign",
+    'Uncertain', "No Classification",
+    "Likely pathogenic", "Likely Pathogenic", "Pathogenic"
+  )
+
+  sankey_data$node <- factor(sankey_data$node, levels = levels_order)
+  sankey_data$next_node <- factor(sankey_data$next_node, levels = levels_order)
+
+  # Make the plot
+  gc <- ggplot(sankey_data, aes(
+    x = x,
+    next_x = next_x,
+    node = node,
+    next_node = next_node,
+    fill = node,
+    label = NA
+  )) +
+    geom_sankey(flow.alpha = 0.7, node.color = "black") +
+    geom_sankey_label(size = 3, color = "black") +
+    scale_fill_manual(values = colors_custom) +
+    theme_minimal() +
+    theme(
+      axis.text = element_blank(),
+      axis.title = element_blank(),
+      axis.ticks = element_blank(),
+      panel.grid = element_blank(),
+      legend.position = "none"
+    ) +
+    labs(
+      title = paste0("Sankey Diagram: ClinVar → ", rlang::as_name(rlang::ensym(points_col))),
+      fill = "Node Category"
+    )
+
+  return(gc)
+}
+
+##----- confusion matrix function ----
+make_confusion_matrix_clinvar_chek2 <- function(df, points_col, clnsig_col, predictor, func_col, pred_col) {
+
+  # ---- Collapse ClinVar ----
+  df[[clnsig_col]] <- dplyr::case_when(
+    df[[clnsig_col]] %in% c("Likely pathogenic", "Likely Pathogenic", "Pathogenic/Likely pathogenic") ~ "Pathogenic",
+    df[[clnsig_col]] %in% c("Likely benign", "Likely Benign", "Benign/Likely benign") ~ "Benign",
+    TRUE ~ df[[clnsig_col]]
+  )
+
+  # ---- Collapse POINTS the same way ----
+  df[[points_col]] <- dplyr::case_when(
+    df[[points_col]] %in% c("Likely pathogenic", "Likely Pathogenic", "Pathogenic/Likely pathogenic") ~ "Pathogenic",
+    df[[points_col]] %in% c("Likely benign", "Likely Benign", "Benign/Likely benign") ~ "Benign",
+    TRUE ~ df[[points_col]]
+  )
+
+  # ---- Only determinates ----
+  df_det <- df[df[[points_col]] %in% c("Pathogenic", "Benign"), ]
+
+  # ---- All possible combinations ----
+  all_levels <- tidyr::expand_grid(
+    clnsig = c("Benign", "Pathogenic"),
+    points = c("Benign", "Pathogenic")
+  )
+
+  # ---- Summary table ----
+  summary_data <- df_det %>%
+    dplyr::count(
+      clnsig = .data[[clnsig_col]],
+      points = .data[[points_col]],
+      name = "count"
+    ) %>%
+    dplyr::right_join(all_levels, by = c("clnsig", "points")) %>%
+    dplyr::mutate(
+      count = tidyr::replace_na(count, 0),
+      consistency = ifelse(clnsig == points, "Consistent", "Inconsistent"),
+      fill_status = ifelse(count == 0, "Zero", consistency)
+    )
+
+  # ---- Extract confusion matrix values ----
+  TP <- summary_data$count[summary_data$clnsig == "Pathogenic" & summary_data$points == "Pathogenic"]
+  TN <- summary_data$count[summary_data$clnsig == "Benign"     & summary_data$points == "Benign"]
+  FP <- summary_data$count[summary_data$clnsig == "Benign"     & summary_data$points == "Pathogenic"]
+  FN <- summary_data$count[summary_data$clnsig == "Pathogenic" & summary_data$points == "Benign"]
+
+  TP <- sum(TP); TN <- sum(TN); FP <- sum(FP); FN <- sum(FN)
+
+  # ---- Metrics ----
+  sensitivity  <- TP / (TP + FN)
+  specificity  <- TN / (TN + FP)
+  concordance  <- (TP + TN) / (TP + TN + FP + FN)
+
+  denominator <- sqrt(
+  as.numeric(TP + FP) *
+  as.numeric(TP + FN) *
+  as.numeric(TN + FP) *
+  as.numeric(TN + FN)
+)
+
+  mcc <- ((TP * TN) - (FP * FN)) / denominator
+
+  mcc <- ((TP * TN) - (FP * FN)) / denominator
+
+  # convert NaN to 0
+  mcc <- ifelse(is.nan(mcc) | is.infinite(mcc), 0, mcc)
+
+  percent_classified <- (TP + TN + FP + FN) / nrow(df)
+
+  metrics_df <- data.frame(
+    TP = TP, TN = TN, FP = FP, FN = FN,
+    Sensitivity = round(sensitivity, 3),
+    Specificity = round(specificity, 3),
+    Concordance = round(concordance, 3),
+    MCC = round(mcc, 3),
+    Determinate_calls = round(percent_classified, 3)
+  )
+
+  #----- FP,FN Stats ----
+
+  # Identify row-level FP and FN
+  FP_rows <- df[df[[clnsig_col]] == "Benign"     & df[[points_col]] == "Pathogenic", ]
+  FN_rows <- df[df[[clnsig_col]] == "Pathogenic" & df[[points_col]] == "Benign", ]
+
+
+  get_stats <- function(df, func_col, pred_col) {
+
+  func_vals <- df[[func_col]]
+  pred_vals <- df[[pred_col]]
+
+  has_func <- func_vals != 0 & !is.na(func_vals)
+  has_pred <- pred_vals != 0 & !is.na(pred_vals)
+
+  both <- has_func & has_pred
+
+  same_direction <- both & (sign(func_vals) == sign(pred_vals))
+  opp_direction  <- both & (sign(func_vals) != sign(pred_vals))
+
+  # 4-way direction breakdown (only for opposite-direction variants)
+  opp <- opp_direction
+
+  opp_func_pos <- sum(opp & func_vals > 0, na.rm = TRUE)
+  opp_func_neg <- sum(opp & func_vals < 0, na.rm = TRUE)
+  opp_pred_pos <- sum(opp & pred_vals > 0, na.rm = TRUE)
+  opp_pred_neg <- sum(opp & pred_vals < 0, na.rm = TRUE)
+
+  data.frame(
+    total                = nrow(df),
+    func_nonzero         = sum(has_func),
+    pred_nonzero         = sum(has_pred),
+    both_nonzero         = sum(both),
+    same_direction       = sum(same_direction),
+    opposite_direction   = sum(opp_direction),
+    only_functional      = sum(has_func & !has_pred),
+    only_predictor       = sum(has_pred & !has_func),
+
+    opp_func_positive     = opp_func_pos,
+    opp_func_negative     = opp_func_neg,
+    opp_pred_positive     = opp_pred_pos,
+    opp_pred_negative     = opp_pred_neg
+  )
+  }
+
+  FP_stats <- get_stats(FP_rows, func_col, pred_col)
+  FN_stats <- get_stats(FN_rows, func_col, pred_col)
+
+  FP_stats$predictor <- predictor
+  FN_stats$predictor <- predictor
+
+  # ---- Plot ----
+  p <- ggplot(summary_data, aes(x = clnsig, y = points, fill = fill_status)) +
+    geom_tile(color = "white") +
+    geom_text(aes(label = count), size = 6, fontface = "bold") +
+    scale_fill_manual(values = c(
+      "Consistent" = "#D8BFD8",
+      "Inconsistent" = "#F2F2F2",
+      "Zero" = "white"
+    )) +
+    labs(
+      x = "ClinVar",
+      y = paste0("Experimental + Predictive classification (", predictor, ")"),
+      title = paste0(
+        "(Determinates = ", nrow(df_det),
+        ", Total = ", nrow(df),
+        ", Error = ", round((FP + FN) / nrow(df) * 100, 2), "%)"
+      )
+    ) +
+    theme_classic(base_size = 10) +
+    theme(legend.position = "none")
+
+  list(plot = p, metrics = metrics_df, summary = summary_data,FP_stats = FP_stats,
+  FN_stats = FN_stats, total_n = nrow(df))
+}
+
+##----sankey----
+
+sankey_clinvar_REVEL_OP = make_sankey_clinvar(clinvar_REVEL_OP, Class_OP_REVEL, colors_custom, clnsig_group_18_25)
+
+sankey_clinvar_MP2_OP = make_sankey_clinvar(clinvar_MP2_OP, Class_OP_MP2, colors_custom, clnsig_group_18_25)
+
+sankey_clinvar_AM_OP = make_sankey_clinvar(clinvar_AM_OP, Class_OP_AM, colors_custom, clnsig_group_18_25)
+
+
+##----apply confusion matrix ----
+
+cm_clinvar_REVEL_OP_1star <- make_confusion_matrix_clinvar_chek2(clinvar_REVEL_OP, "Class_OP_REVEL", "clnsig_group_18_25", "REVEL_OP","OP_points", "Points_REVEL_GenomeWide")
+
+cm_clinvar_AM_OP_1star <- make_confusion_matrix_clinvar_chek2(clinvar_AM_OP, "Class_OP_AM", "clnsig_group_18_25", "AM_OP","OP_points", "Points_AM_GenomeWide")
+
+cm_clinvar_MP2_OP_1star <- make_confusion_matrix_clinvar_chek2(clinvar_MP2_OP, "Class_OP_MP2", "clnsig_group_18_25", "MP2_OP","OP_points", "Points_MP2_GenomeWide")
+
+save_my_plot <- function(plot, filename, folder,
+                         width = 6, height = 4, dpi = 300) {
+
+  # Create folder if it doesn't exist
+  if (!dir.exists(folder)) {
+    dir.create(folder, recursive = TRUE)
+  }
+
+  filepath <- file.path(folder, filename)
+
+  ggsave(
+    filename = filepath,
+    plot = plot,
+    dpi = dpi,
+    device = "png",
+    bg = "transparent",
+    width = width,
+    height = height
+  )
+
+  message("Saved: ", filepath)
+}
+
+clinvar_oddspath <- list(
+  "cm_clinvar_OP_REVEL_Universal.png" = cm_clinvar_REVEL_OP_1star$plot,
+  "cm_clinvar_OP_AM_Universal.png" = cm_clinvar_AM_OP_1star$plot,
+  "cm_clinvar_OP_MP2_Universal.png" = cm_clinvar_MP2_OP_1star$plot,
+  "sankey_clinvar_OP_REVEL_Universal.png" = sankey_clinvar_REVEL_OP,
+  "sankey_clinvar_OP_AM_Universal.png" = sankey_clinvar_AM_OP,
+  "sankey_clinvar_OP_MP2_Universal.png" = sankey_clinvar_MP2_OP
+)
+
+square_plots_OP <- c(
+  "sankey_clinvar_OP_REVEL_Universal.png",
+  "sankey_clinvar_OP_AM_Universal.png",
+  "sankey_clinvar_OP_MP2_Universal.png"
+)
+
+for (nm in names(clinvar_oddspath)) {
+  if (nm %in% square_plots_OP) {
+    w <- 7; h <- 7
+  } else {
+    w <- 7; h <- 6
+  }
+  save_my_plot(
+    plot = clinvar_oddspath[[nm]],
+    filename = nm,
+    folder = file.path(dirname(OUT_DIR), "extended_data_figure_6_gene_specific"),
+    width = w,
+    height = h
+  )
+}
+
+# Calibrated versions: real print size, baked-in name-only labels (no count
+# boxes -- show_count = FALSE), 6pt Arial, 37 x 64mm excluding label overflow
+# (see lib/sankey_calibrated.R). Sourced into its own environment, matching
+# Extended_data_figures.Rmd's own convention (avoids colliding globals with
+# lib/three_ring_donut.R, not used here but kept consistent).
+.sankey_lib <- new.env(parent = globalenv())
+source("../../../src/lib/figures/sankey_calibrated.R", local = .sankey_lib)
+make_sankey_calibrated <- .sankey_lib$make_sankey_calibrated
+
+levels_order_extdata_4_6 <- c(
+  'Benign', "Likely benign", "Likely Benign",
+  'Uncertain', "No Classification",
+  "Likely pathogenic", "Likely Pathogenic", "Pathogenic"
+)
+
+# The OP sheets already use collapsed labels ("Likely pathogenic"/"Likely
+# benign"), so this is a harmless no-op here -- kept for parity with
+# Extended_data_figures.Rmd's own add_clinvar().
+add_clinvar <- function(df) {
+  df$clinvar <- df$clnsig_group_18_25
+  df$clinvar[df$clinvar == 'Pathogenic/Likely pathogenic'] <- "Likely pathogenic"
+  df$clinvar[df$clinvar == 'Benign/Likely benign'] <- "Likely benign"
+  df
+}
+clinvar_REVEL_OP <- add_clinvar(clinvar_REVEL_OP)
+clinvar_AM_OP <- add_clinvar(clinvar_AM_OP)
+clinvar_MP2_OP <- add_clinvar(clinvar_MP2_OP)
+
+sankey_clinvar_REVEL_OP_calibrated <- make_sankey_calibrated(
+  clinvar_REVEL_OP, source_col = clinvar, points_col = Class_OP_REVEL,
+  colors_custom = colors_custom, levels_order = levels_order_extdata_4_6,
+  width_mm = 37, height_mm = 64, label_pt = 6, show_count = FALSE,
+  wrap_destination_labels = TRUE
+)
+sankey_clinvar_AM_OP_calibrated <- make_sankey_calibrated(
+  clinvar_AM_OP, source_col = clinvar, points_col = Class_OP_AM,
+  colors_custom = colors_custom, levels_order = levels_order_extdata_4_6,
+  width_mm = 37, height_mm = 64, label_pt = 6, show_count = FALSE,
+  wrap_destination_labels = TRUE
+)
+sankey_clinvar_MP2_OP_calibrated <- make_sankey_calibrated(
+  clinvar_MP2_OP, source_col = clinvar, points_col = Class_OP_MP2,
+  colors_custom = colors_custom, levels_order = levels_order_extdata_4_6,
+  width_mm = 37, height_mm = 64, label_pt = 6, show_count = FALSE,
+  wrap_destination_labels = TRUE
+)
+
+ggsave(file.path(dirname(OUT_DIR), "extended_data_figure_6_gene_specific/sankey_clinvar_OP_REVEL_Universal_calibrated.pdf"), sankey_clinvar_REVEL_OP_calibrated$plot, width = sankey_clinvar_REVEL_OP_calibrated$width_mm, height = sankey_clinvar_REVEL_OP_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave(file.path(dirname(OUT_DIR), "extended_data_figure_6_gene_specific/sankey_clinvar_OP_AM_Universal_calibrated.pdf"), sankey_clinvar_AM_OP_calibrated$plot, width = sankey_clinvar_AM_OP_calibrated$width_mm, height = sankey_clinvar_AM_OP_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave(file.path(dirname(OUT_DIR), "extended_data_figure_6_gene_specific/sankey_clinvar_OP_MP2_Universal_calibrated.pdf"), sankey_clinvar_MP2_OP_calibrated$plot, width = sankey_clinvar_MP2_OP_calibrated$width_mm, height = sankey_clinvar_MP2_OP_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+
+# Calibrated confusion matrices: real print size, 6pt Arial regular (see
+# lib/confusion_matrix_calibrated.R) -- 26 x 23mm, matching Extended Data
+# Figure 6's own OddsPath trio.
+.cm_lib <- new.env(parent = globalenv())
+source("../../../src/lib/figures/confusion_matrix_calibrated.R", local = .cm_lib)
+make_confusion_matrix_calibrated <- .cm_lib$make_confusion_matrix_calibrated
+
+cm_clinvar_REVEL_OP_calibrated <- make_confusion_matrix_calibrated(
+  TP = cm_clinvar_REVEL_OP_1star$metrics$TP, TN = cm_clinvar_REVEL_OP_1star$metrics$TN,
+  FP = cm_clinvar_REVEL_OP_1star$metrics$FP, FN = cm_clinvar_REVEL_OP_1star$metrics$FN,
+  total_n = cm_clinvar_REVEL_OP_1star$total_n,
+  matrix_width_mm = 26, matrix_height_mm = 23, x_label = "ClinVar classification"
+)
+cm_clinvar_AM_OP_calibrated <- make_confusion_matrix_calibrated(
+  TP = cm_clinvar_AM_OP_1star$metrics$TP, TN = cm_clinvar_AM_OP_1star$metrics$TN,
+  FP = cm_clinvar_AM_OP_1star$metrics$FP, FN = cm_clinvar_AM_OP_1star$metrics$FN,
+  total_n = cm_clinvar_AM_OP_1star$total_n,
+  matrix_width_mm = 26, matrix_height_mm = 23, x_label = "ClinVar classification"
+)
+cm_clinvar_MP2_OP_calibrated <- make_confusion_matrix_calibrated(
+  TP = cm_clinvar_MP2_OP_1star$metrics$TP, TN = cm_clinvar_MP2_OP_1star$metrics$TN,
+  FP = cm_clinvar_MP2_OP_1star$metrics$FP, FN = cm_clinvar_MP2_OP_1star$metrics$FN,
+  total_n = cm_clinvar_MP2_OP_1star$total_n,
+  matrix_width_mm = 26, matrix_height_mm = 23, x_label = "ClinVar classification"
+)
+
+ggsave(file.path(dirname(OUT_DIR), "extended_data_figure_6_gene_specific/cm_clinvar_OP_REVEL_Universal_calibrated.pdf"), cm_clinvar_REVEL_OP_calibrated$plot, width = cm_clinvar_REVEL_OP_calibrated$width_mm, height = cm_clinvar_REVEL_OP_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave(file.path(dirname(OUT_DIR), "extended_data_figure_6_gene_specific/cm_clinvar_OP_AM_Universal_calibrated.pdf"), cm_clinvar_AM_OP_calibrated$plot, width = cm_clinvar_AM_OP_calibrated$width_mm, height = cm_clinvar_AM_OP_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave(file.path(dirname(OUT_DIR), "extended_data_figure_6_gene_specific/cm_clinvar_OP_MP2_Universal_calibrated.pdf"), cm_clinvar_MP2_OP_calibrated$plot, width = cm_clinvar_MP2_OP_calibrated$width_mm, height = cm_clinvar_MP2_OP_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+
+```
+
+```{r}
+#Extended Data Figure 6, gene-specific variant -- ClinGen Evidence Repository panel
+
+ClinGen_REVEL_OP  = read_excel(file.path(DATA_DIR, "supplementary_data/Supplementary_Data_6_gene_specific.xlsx"), sheet = "ClinGen_Repo_REVEL_OP")
+ClinGen_AM_OP  = read_excel(file.path(DATA_DIR, "supplementary_data/Supplementary_Data_6_gene_specific.xlsx"), sheet = "ClinGen_repo_AM_OP")
+ClinGen_MP2_OP  = read_excel(file.path(DATA_DIR, "supplementary_data/Supplementary_Data_6_gene_specific.xlsx"), sheet = "ClinGen_repo_MP2_OP")
+
+# ------ Sankey function for ClinGen ------
+
+make_sankey_clingen <- function(df, points_col, colors_custom) {
+
+  df <- df %>%
+  filter(Updated_Classification_ClinGen_repo != "VUS")
+
+
+  # Fix clnsig_group naming
+  df$Updated_Classification_ClinGen_repo[df$Updated_Classification_ClinGen_repo == 'Pathogenic/Likely pathogenic'] <- "Likely pathogenic"
+  df$Updated_Classification_ClinGen_repo[df$Updated_Classification_ClinGen_repo == 'Benign/Likely benign'] <- "Likely benign"
+
+  # Dynamically pick the points column using {{ }}
+  summary_data <- df %>%
+    group_by(Updated_Classification_ClinGen_repo, {{ points_col }}) %>%
+    summarise(count = n(), .groups = "drop")
+
+  # Expand the dataframe
+  expanded_df <- summary_data[rep(1:nrow(summary_data), summary_data$count), -3]
+  rownames(expanded_df) <- NULL
+
+  # Prepare for sankey
+  sankey_data <- expanded_df %>%
+    ggsankey::make_long(Updated_Classification_ClinGen_repo, {{ points_col }})
+
+  # Factor levels
+  levels_order <- c(
+    'Benign', "Likely benign", "Likely Benign",
+    'Uncertain', "No Classification",
+    "Likely pathogenic", "Likely Pathogenic", "Pathogenic"
+  )
+
+  sankey_data$node <- factor(sankey_data$node, levels = levels_order)
+  sankey_data$next_node <- factor(sankey_data$next_node, levels = levels_order)
+
+  # Make the plot
+  gc <- ggplot(sankey_data, aes(
+    x = x,
+    next_x = next_x,
+    node = node,
+    next_node = next_node,
+    fill = node,
+    label = NA
+  )) +
+    geom_sankey(flow.alpha = 0.7, node.color = "black") +
+    geom_sankey_label(size = 3, color = "black") +
+    scale_fill_manual(values = colors_custom) +
+    theme_minimal() +
+    theme(
+      axis.text = element_blank(),
+      axis.title = element_blank(),
+      axis.ticks = element_blank(),
+      panel.grid = element_blank(),
+      legend.position = "none"
+    ) +
+    labs(
+      title = paste0("Sankey Diagram: ClinGen --> ", rlang::as_name(rlang::ensym(points_col))),
+      fill = "Node Category"
+    )
+
+  return(gc)
+}
+
+##----- confusion matrix function clingen ----
+make_confusion_matrix_clingen <- function(df, points_col, clnsig_col, predictor, func_col, pred_col) {
+
+  df <- df[df[[clnsig_col]] != "VUS", ]
+
+
+  # ---- Collapse ClinGen ----
+  df[[clnsig_col]] <- dplyr::case_when(
+    df[[clnsig_col]] %in% c("Likely pathogenic", "Likely Pathogenic", "Pathogenic/Likely pathogenic") ~ "Pathogenic",
+    df[[clnsig_col]] %in% c("Likely benign", "Likely Benign", "Benign/Likely benign") ~ "Benign",
+    TRUE ~ df[[clnsig_col]]
+  )
+
+  # ---- Collapse POINTS the same way ----
+  df[[points_col]] <- dplyr::case_when(
+    df[[points_col]] %in% c("Likely pathogenic", "Likely Pathogenic", "Pathogenic/Likely pathogenic") ~ "Pathogenic",
+    df[[points_col]] %in% c("Likely benign", "Likely Benign", "Benign/Likely benign") ~ "Benign",
+    TRUE ~ df[[points_col]]
+  )
+
+  # ---- Only determinates ----
+  df_det <- df[df[[points_col]] %in% c("Pathogenic", "Benign"), ]
+
+  # ---- All possible combinations ----
+  all_levels <- tidyr::expand_grid(
+    clnsig = c("Benign", "Pathogenic"),
+    points = c("Benign", "Pathogenic")
+  )
+
+  # ---- Summary table ----
+  summary_data <- df_det %>%
+    dplyr::count(
+      clnsig = .data[[clnsig_col]],
+      points = .data[[points_col]],
+      name = "count"
+    ) %>%
+    dplyr::right_join(all_levels, by = c("clnsig", "points")) %>%
+    dplyr::mutate(
+      count = tidyr::replace_na(count, 0),
+      consistency = ifelse(clnsig == points, "Consistent", "Inconsistent"),
+      fill_status = ifelse(count == 0, "Zero", consistency)
+    )
+
+  # ---- Extract confusion matrix values ----
+  TP <- summary_data$count[summary_data$clnsig == "Pathogenic" & summary_data$points == "Pathogenic"]
+  TN <- summary_data$count[summary_data$clnsig == "Benign"     & summary_data$points == "Benign"]
+  FP <- summary_data$count[summary_data$clnsig == "Benign"     & summary_data$points == "Pathogenic"]
+  FN <- summary_data$count[summary_data$clnsig == "Pathogenic" & summary_data$points == "Benign"]
+
+  TP <- sum(TP); TN <- sum(TN); FP <- sum(FP); FN <- sum(FN)
+
+  # ---- Metrics ----
+  sensitivity  <- TP / (TP + FN)
+  specificity  <- TN / (TN + FP)
+  concordance  <- (TP + TN) / (TP + TN + FP + FN)
+
+  denominator <- sqrt(
+  as.numeric(TP + FP) *
+  as.numeric(TP + FN) *
+  as.numeric(TN + FP) *
+  as.numeric(TN + FN)
+)
+
+  mcc <- ((TP * TN) - (FP * FN)) / denominator
+
+  mcc <- ((TP * TN) - (FP * FN)) / denominator
+
+  # convert NaN to 0
+  mcc <- ifelse(is.nan(mcc) | is.infinite(mcc), 0, mcc)
+
+  percent_classified <- (TP + TN + FP + FN) / nrow(df)
+
+  metrics_df <- data.frame(
+    TP = TP, TN = TN, FP = FP, FN = FN,
+    Sensitivity = round(sensitivity, 3),
+    Specificity = round(specificity, 3),
+    Concordance = round(concordance, 3),
+    MCC = round(mcc, 3),
+    Determinate_calls = round(percent_classified, 3)
+  )
+
+  #----- FP,FN Stats ----
+
+  # Identify row-level FP and FN
+  FP_rows <- df[df[[clnsig_col]] == "Benign"     & df[[points_col]] == "Pathogenic", ]
+  FN_rows <- df[df[[clnsig_col]] == "Pathogenic" & df[[points_col]] == "Benign", ]
+
+
+  get_stats <- function(df, func_col, pred_col) {
+
+  func_vals <- df[[func_col]]
+  pred_vals <- df[[pred_col]]
+
+  has_func <- func_vals != 0 & !is.na(func_vals)
+  has_pred <- pred_vals != 0 & !is.na(pred_vals)
+
+  both <- has_func & has_pred
+
+  same_direction <- both & (sign(func_vals) == sign(pred_vals))
+  opp_direction  <- both & (sign(func_vals) != sign(pred_vals))
+
+  # 4-way direction breakdown (only for opposite-direction variants)
+  opp <- opp_direction
+
+  opp_func_pos <- sum(opp & func_vals > 0, na.rm = TRUE)
+  opp_func_neg <- sum(opp & func_vals < 0, na.rm = TRUE)
+  opp_pred_pos <- sum(opp & pred_vals > 0, na.rm = TRUE)
+  opp_pred_neg <- sum(opp & pred_vals < 0, na.rm = TRUE)
+
+  data.frame(
+    total                = nrow(df),
+    func_nonzero         = sum(has_func),
+    pred_nonzero         = sum(has_pred),
+    both_nonzero         = sum(both),
+    same_direction       = sum(same_direction),
+    opposite_direction   = sum(opp_direction),
+    only_functional      = sum(has_func & !has_pred),
+    only_predictor       = sum(has_pred & !has_func),
+
+    opp_func_positive     = opp_func_pos,
+    opp_func_negative     = opp_func_neg,
+    opp_pred_positive     = opp_pred_pos,
+    opp_pred_negative     = opp_pred_neg
+  )
+  }
+
+  FP_stats <- get_stats(FP_rows, func_col, pred_col)
+  FN_stats <- get_stats(FN_rows, func_col, pred_col)
+
+  FP_stats$predictor <- predictor
+  FN_stats$predictor <- predictor
+
+  # ---- Plot ----
+  p <- ggplot(summary_data, aes(x = clnsig, y = points, fill = fill_status)) +
+    geom_tile(color = "white") +
+    geom_text(aes(label = count), size = 6, fontface = "bold") +
+    scale_fill_manual(values = c(
+      "Consistent" = "#D8BFD8",
+      "Inconsistent" = "#F2F2F2",
+      "Zero" = "white"
+    )) +
+    labs(
+      x = "ClinGen",
+      y = paste0("Experimental + Predictive classification (", predictor, ")"),
+      title = paste0(
+        "(Determinates = ", nrow(df_det),
+        ", Total = ", nrow(df),
+        ", Error = ", round((FP + FN) / nrow(df) * 100, 2), "%)"
+      )
+    ) +
+    theme_classic(base_size = 10) +
+    theme(legend.position = "none")
+
+  list(plot = p, metrics = metrics_df, summary = summary_data,FP_stats = FP_stats,
+  FN_stats = FN_stats, total_n = nrow(df))
+}
+
+
+sankey_clingen_OP_REVEL = make_sankey_clingen(ClinGen_REVEL_OP, Class_OP_REVEL, colors_custom)
+
+sankey_clingen_OP_AM = make_sankey_clingen(ClinGen_AM_OP, Class_OP_AM, colors_custom)
+
+sankey_clingen_OP_MP2 = make_sankey_clingen(ClinGen_MP2_OP, Class_OP_MP2, colors_custom)
+
+cm_ClinGen_REVEL_OP <- make_confusion_matrix_clingen(ClinGen_REVEL_OP, "Class_OP_REVEL", "Updated_Classification_ClinGen_repo", "REVEL_OP","OP_points", "Points_REVEL_GenomeWide")
+
+cm_ClinGen_AM_OP <- make_confusion_matrix_clingen(ClinGen_AM_OP, "Class_OP_AM", "Updated_Classification_ClinGen_repo", "AM_OP","OP_points", "Points_AM_GenomeWide")
+
+cm_ClinGen_MP2_OP <- make_confusion_matrix_clingen(ClinGen_MP2_OP, "Class_OP_MP2", "Updated_Classification_ClinGen_repo", "MP2_OP","OP_points", "Points_MP2_GenomeWide")
+
+clingen_oddspath <- list(
+  "cm_clingen_OP_MP2_Universal.png" = cm_ClinGen_MP2_OP$plot,
+  "cm_clingen_OP_AM_Universal.png" = cm_ClinGen_AM_OP$plot,
+  "cm_clingen_OP_REVEL_Universal.png" = cm_ClinGen_REVEL_OP$plot,
+  "sankey_clingen_OP_REVEL_Universal.png" = sankey_clingen_OP_REVEL,
+  "sankey_clingen_OP_AM_Universal.png" = sankey_clingen_OP_AM,
+  "sankey_clingen_OP_MP2_Universal.png" = sankey_clingen_OP_MP2
+)
+
+square_plots_clingen_OP <- c(
+  "sankey_clingen_OP_REVEL_Universal.png",
+  "sankey_clingen_OP_AM_Universal.png",
+  "sankey_clingen_OP_MP2_Universal.png"
+)
+
+for (nm in names(clingen_oddspath)) {
+  if (nm %in% square_plots_clingen_OP) {
+    w <- 7; h <- 7
+  } else {
+    w <- 7; h <- 6
+  }
+  save_my_plot(
+    plot = clingen_oddspath[[nm]],
+    filename = nm,
+    folder = file.path(dirname(OUT_DIR), "extended_data_figure_6_gene_specific"),
+    width = w,
+    height = h
+  )
+}
+
+# Calibrated versions: real print size, baked-in name-only labels, 6pt
+# Arial, 37 x 64mm excluding label overflow (see lib/sankey_calibrated.R
+# and the clinvar panel above, which sources it and defines
+# levels_order_extdata_4_6). make_sankey_clingen() only excludes VUS rows
+# and fixes classification naming on its own local copy of the data, so
+# that's repeated here for our own calls.
+ClinGen_REVEL_OP_det <- ClinGen_REVEL_OP %>% filter(Updated_Classification_ClinGen_repo != "VUS")
+ClinGen_AM_OP_det <- ClinGen_AM_OP %>% filter(Updated_Classification_ClinGen_repo != "VUS")
+ClinGen_MP2_OP_det <- ClinGen_MP2_OP %>% filter(Updated_Classification_ClinGen_repo != "VUS")
+
+fix_clingen_naming <- function(df) {
+  df$Updated_Classification_ClinGen_repo[df$Updated_Classification_ClinGen_repo == 'Pathogenic/Likely pathogenic'] <- "Likely pathogenic"
+  df$Updated_Classification_ClinGen_repo[df$Updated_Classification_ClinGen_repo == 'Benign/Likely benign'] <- "Likely benign"
+  df
+}
+ClinGen_REVEL_OP_det <- fix_clingen_naming(ClinGen_REVEL_OP_det)
+ClinGen_AM_OP_det <- fix_clingen_naming(ClinGen_AM_OP_det)
+ClinGen_MP2_OP_det <- fix_clingen_naming(ClinGen_MP2_OP_det)
+
+sankey_clingen_REVEL_OP_calibrated <- make_sankey_calibrated(
+  ClinGen_REVEL_OP_det, source_col = Updated_Classification_ClinGen_repo, points_col = Class_OP_REVEL,
+  colors_custom = colors_custom, levels_order = levels_order_extdata_4_6,
+  width_mm = 37, height_mm = 64, label_pt = 6, show_count = FALSE,
+  wrap_destination_labels = TRUE
+)
+sankey_clingen_AM_OP_calibrated <- make_sankey_calibrated(
+  ClinGen_AM_OP_det, source_col = Updated_Classification_ClinGen_repo, points_col = Class_OP_AM,
+  colors_custom = colors_custom, levels_order = levels_order_extdata_4_6,
+  width_mm = 37, height_mm = 64, label_pt = 6, show_count = FALSE,
+  wrap_destination_labels = TRUE
+)
+sankey_clingen_MP2_OP_calibrated <- make_sankey_calibrated(
+  ClinGen_MP2_OP_det, source_col = Updated_Classification_ClinGen_repo, points_col = Class_OP_MP2,
+  colors_custom = colors_custom, levels_order = levels_order_extdata_4_6,
+  width_mm = 37, height_mm = 64, label_pt = 6, show_count = FALSE,
+  wrap_destination_labels = TRUE
+)
+
+ggsave(file.path(dirname(OUT_DIR), "extended_data_figure_6_gene_specific/sankey_clingen_OP_REVEL_Universal_calibrated.pdf"), sankey_clingen_REVEL_OP_calibrated$plot, width = sankey_clingen_REVEL_OP_calibrated$width_mm, height = sankey_clingen_REVEL_OP_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave(file.path(dirname(OUT_DIR), "extended_data_figure_6_gene_specific/sankey_clingen_OP_AM_Universal_calibrated.pdf"), sankey_clingen_AM_OP_calibrated$plot, width = sankey_clingen_AM_OP_calibrated$width_mm, height = sankey_clingen_AM_OP_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave(file.path(dirname(OUT_DIR), "extended_data_figure_6_gene_specific/sankey_clingen_OP_MP2_Universal_calibrated.pdf"), sankey_clingen_MP2_OP_calibrated$plot, width = sankey_clingen_MP2_OP_calibrated$width_mm, height = sankey_clingen_MP2_OP_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+
+# Calibrated confusion matrices: real print size, 6pt Arial regular (see
+# lib/confusion_matrix_calibrated.R and the clinvar panel above, which
+# sources it) -- 26 x 23mm, matching Extended Data Figure 6's own
+# OddsPath trio.
+cm_clingen_REVEL_OP_calibrated <- make_confusion_matrix_calibrated(
+  TP = cm_ClinGen_REVEL_OP$metrics$TP, TN = cm_ClinGen_REVEL_OP$metrics$TN,
+  FP = cm_ClinGen_REVEL_OP$metrics$FP, FN = cm_ClinGen_REVEL_OP$metrics$FN,
+  total_n = cm_ClinGen_REVEL_OP$total_n,
+  matrix_width_mm = 26, matrix_height_mm = 23, x_label = "ClinGen classification"
+)
+cm_clingen_AM_OP_calibrated <- make_confusion_matrix_calibrated(
+  TP = cm_ClinGen_AM_OP$metrics$TP, TN = cm_ClinGen_AM_OP$metrics$TN,
+  FP = cm_ClinGen_AM_OP$metrics$FP, FN = cm_ClinGen_AM_OP$metrics$FN,
+  total_n = cm_ClinGen_AM_OP$total_n,
+  matrix_width_mm = 26, matrix_height_mm = 23, x_label = "ClinGen classification"
+)
+cm_clingen_MP2_OP_calibrated <- make_confusion_matrix_calibrated(
+  TP = cm_ClinGen_MP2_OP$metrics$TP, TN = cm_ClinGen_MP2_OP$metrics$TN,
+  FP = cm_ClinGen_MP2_OP$metrics$FP, FN = cm_ClinGen_MP2_OP$metrics$FN,
+  total_n = cm_ClinGen_MP2_OP$total_n,
+  matrix_width_mm = 26, matrix_height_mm = 23, x_label = "ClinGen classification"
+)
+
+ggsave(file.path(dirname(OUT_DIR), "extended_data_figure_6_gene_specific/cm_clingen_OP_REVEL_Universal_calibrated.pdf"), cm_clingen_REVEL_OP_calibrated$plot, width = cm_clingen_REVEL_OP_calibrated$width_mm, height = cm_clingen_REVEL_OP_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave(file.path(dirname(OUT_DIR), "extended_data_figure_6_gene_specific/cm_clingen_OP_AM_Universal_calibrated.pdf"), cm_clingen_AM_OP_calibrated$plot, width = cm_clingen_AM_OP_calibrated$width_mm, height = cm_clingen_AM_OP_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+ggsave(file.path(dirname(OUT_DIR), "extended_data_figure_6_gene_specific/cm_clingen_OP_MP2_Universal_calibrated.pdf"), cm_clingen_MP2_OP_calibrated$plot, width = cm_clingen_MP2_OP_calibrated$width_mm, height = cm_clingen_MP2_OP_calibrated$height_mm, units = 'mm', device = cairo_pdf, create.dir = TRUE)
+```
+
+```{r}
+
+#Extended Data Figure 6alt, gene-specific variant
+
+# Same missense-only-companion structure as Extended_data_figures.Rmd's own
+# "Extended Data Figure 6alt" chunk (REVEL/AlphaMissense/MutPred2 x ClinVar
+# controls/ClinGen Evidence Repository, all via OddsPath/"Universal"
+# calibration, doubled to an All-variants + Missense-only block), but
+# reusing this file's own gene-specific clinvar_*_OP/ClinGen_*_OP objects
+# (loaded from Supplementary_Data_6_gene_specific.xlsx above) instead of
+# Extended_data_figures.Rmd's standard-Supplementary-Data-6 objects. All
+# calibrated dimensions, label overrides, and helper reuse are unchanged
+# from the original chunk. Writes to extended_data_figure_6alt_gene_specific/
+# instead of extended_data_figure_6alt/.
+
+EXT_DATA_FIG_6ALT_DIR <- file.path(dirname(OUT_DIR), "extended_data_figure_6alt_gene_specific")
+
+SANKEY_6ALT_WIDTH_MM <- 18.5
+SANKEY_6ALT_HEIGHT_MM <- 32
+CM_6ALT_WIDTH_MM <- 13
+CM_6ALT_HEIGHT_MM <- 11.5
+
+label_overrides_6alt <- c(
+  "Benign" = "B", "Likely benign" = "LB", "Likely Benign" = "LB",
+  "Uncertain" = "VUS", "No Classification" = "VUS",
+  "Likely pathogenic" = "LP", "Likely Pathogenic" = "LP", "Pathogenic" = "P"
+)
+
+# simplified_consequence lives on every OP sheet (same column Figure5_6.Rmd's
+# own consequence_filter param uses) -- no filtering infrastructure needed
+# beyond this.
+filter_missense_6alt <- function(df) df[df$simplified_consequence == "missense_variant", ]
+
+PREDICTORS_6ALT <- list(
+  REVEL = list(class_col = "Class_OP_REVEL", pred_col = "Points_REVEL_GenomeWide"),
+  AM    = list(class_col = "Class_OP_AM",    pred_col = "Points_AM_GenomeWide"),
+  MP2   = list(class_col = "Class_OP_MP2",   pred_col = "Points_MP2_GenomeWide")
+)
+
+# ---- ClinVar controls ----
+
+clinvar_op_raw_6alt <- list(REVEL = clinvar_REVEL_OP, AM = clinvar_AM_OP, MP2 = clinvar_MP2_OP)
+
+build_clinvar_op_6alt <- function(predictor_name, consequence) {
+  spec <- PREDICTORS_6ALT[[predictor_name]]
+  df <- clinvar_op_raw_6alt[[predictor_name]]
+  if (consequence == "missense") df <- filter_missense_6alt(df)
+
+  cm <- make_confusion_matrix_clinvar_chek2(
+    df, spec$class_col, "clnsig_group_18_25", paste0(predictor_name, "_OP"),
+    "OP_points", spec$pred_col
+  )
+  cm_calibrated <- make_confusion_matrix_calibrated(
+    TP = cm$metrics$TP, TN = cm$metrics$TN, FP = cm$metrics$FP, FN = cm$metrics$FN,
+    total_n = cm$total_n, matrix_width_mm = CM_6ALT_WIDTH_MM, matrix_height_mm = CM_6ALT_HEIGHT_MM,
+    x_label = "ClinVar classification", y_label = NULL
+  )
+
+  df_sankey <- add_clinvar(df)
+  sankey_calibrated <- make_sankey_calibrated(
+    df_sankey, source_col = clinvar, points_col = !!rlang::sym(spec$class_col),
+    colors_custom = colors_custom, levels_order = levels_order_extdata_4_6,
+    width_mm = SANKEY_6ALT_WIDTH_MM, height_mm = SANKEY_6ALT_HEIGHT_MM, label_pt = 6,
+    show_count = FALSE, wrap_destination_labels = TRUE, label_overrides = label_overrides_6alt
+  )
+
+  list(cm = cm_calibrated, sankey = sankey_calibrated)
+}
+
+for (predictor_name in names(PREDICTORS_6ALT)) {
+  for (consequence in c("all", "missense")) {
+    panel <- build_clinvar_op_6alt(predictor_name, consequence)
+    ggsave(
+      file.path(EXT_DATA_FIG_6ALT_DIR, sprintf("sankey_clinvar_OP_%s_Universal_%s_calibrated.pdf", predictor_name, consequence)),
+      panel$sankey$plot, width = panel$sankey$width_mm, height = panel$sankey$height_mm,
+      units = 'mm', device = cairo_pdf, create.dir = TRUE
+    )
+    ggsave(
+      file.path(EXT_DATA_FIG_6ALT_DIR, sprintf("cm_clinvar_OP_%s_Universal_%s_calibrated.pdf", predictor_name, consequence)),
+      panel$cm$plot, width = panel$cm$width_mm, height = panel$cm$height_mm,
+      units = 'mm', device = cairo_pdf, create.dir = TRUE
+    )
+  }
+}
+
+# ---- ClinGen Evidence Repository ----
+
+clingen_op_raw_6alt <- list(REVEL = ClinGen_REVEL_OP, AM = ClinGen_AM_OP, MP2 = ClinGen_MP2_OP)
+
+build_clingen_op_6alt <- function(predictor_name, consequence) {
+  spec <- PREDICTORS_6ALT[[predictor_name]]
+  df <- clingen_op_raw_6alt[[predictor_name]]
+  if (consequence == "missense") df <- filter_missense_6alt(df)
+
+  cm <- make_confusion_matrix_clingen(
+    df, spec$class_col, "Updated_Classification_ClinGen_repo", paste0(predictor_name, "_OP"),
+    "OP_points", spec$pred_col
+  )
+  cm_calibrated <- make_confusion_matrix_calibrated(
+    TP = cm$metrics$TP, TN = cm$metrics$TN, FP = cm$metrics$FP, FN = cm$metrics$FN,
+    total_n = cm$total_n, matrix_width_mm = CM_6ALT_WIDTH_MM, matrix_height_mm = CM_6ALT_HEIGHT_MM,
+    x_label = "ClinGen classification", y_label = NULL
+  )
+
+  df_sankey <- df %>% filter(Updated_Classification_ClinGen_repo != "VUS")
+  df_sankey <- fix_clingen_naming(df_sankey)
+  sankey_calibrated <- make_sankey_calibrated(
+    df_sankey, source_col = Updated_Classification_ClinGen_repo, points_col = !!rlang::sym(spec$class_col),
+    colors_custom = colors_custom, levels_order = levels_order_extdata_4_6,
+    width_mm = SANKEY_6ALT_WIDTH_MM, height_mm = SANKEY_6ALT_HEIGHT_MM, label_pt = 6,
+    show_count = FALSE, wrap_destination_labels = TRUE, label_overrides = label_overrides_6alt
+  )
+
+  list(cm = cm_calibrated, sankey = sankey_calibrated)
+}
+
+for (predictor_name in names(PREDICTORS_6ALT)) {
+  for (consequence in c("all", "missense")) {
+    panel <- build_clingen_op_6alt(predictor_name, consequence)
+    ggsave(
+      file.path(EXT_DATA_FIG_6ALT_DIR, sprintf("sankey_clingen_OP_%s_Universal_%s_calibrated.pdf", predictor_name, consequence)),
+      panel$sankey$plot, width = panel$sankey$width_mm, height = panel$sankey$height_mm,
+      units = 'mm', device = cairo_pdf, create.dir = TRUE
+    )
+    ggsave(
+      file.path(EXT_DATA_FIG_6ALT_DIR, sprintf("cm_clingen_OP_%s_Universal_%s_calibrated.pdf", predictor_name, consequence)),
+      panel$cm$plot, width = panel$cm$width_mm, height = panel$cm$height_mm,
+      units = 'mm', device = cairo_pdf, create.dir = TRUE
+    )
+  }
+}
+```
