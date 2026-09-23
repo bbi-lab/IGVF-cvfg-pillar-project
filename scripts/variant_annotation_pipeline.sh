@@ -49,8 +49,20 @@ set -euo pipefail
 # path-mapping subtlety" section of docs/variant_annotation_pipeline.md.
 ########################################################################################################################
 
+LAST_STEP=21
+
+# Print a progress banner before each step so a run (including the smoke
+# test, which just calls through to this script) shows which of the 21
+# steps is currently executing instead of only Docker's own container-level
+# log noise.
+log_step() {
+  echo
+  echo "=== Step $1/$LAST_STEP: $2 ==="
+}
+
 # Step 1: Mapping
 step_1() {
+log_step 1 "Mapping"
 src/scripts/run_map_variants.sh /work/data/cvfg_variants.0.tsv /work/data/cvfg_variants.1.tsv \
   --preferred-transcript-col preferred_transcript \
   --drop-columns target_sequence --drop-columns preferred_transcript \
@@ -68,6 +80,7 @@ src/scripts/run_map_variants.sh /work/data/cvfg_variants.0.tsv /work/data/cvfg_v
 # data/input/reference/MANE.GRCh38.v1.5.summary.txt.gz -- see
 # docs/variant_annotation_pipeline.md.
 step_2() {
+log_step 2 "Replace Ensembl accessions with RefSeq"
 src/scripts/run_remap_transcript_ids.sh /work/data/cvfg_variants.1.tsv /work/data/cvfg_variants.2.tsv \
   --mane-file /work/data/MANE.GRCh38.v1.5.summary.txt.gz \
   --csv-field-size-limit 10000000
@@ -76,6 +89,7 @@ src/scripts/run_remap_transcript_ids.sh /work/data/cvfg_variants.1.tsv /work/dat
 # Step 3: Reverse translation
 # Note that --wt-codon-mode unambiguous means that for WT Met and Trp "substitutions" we will generate "no_change" DNA variants in the form of codon delinses.
 step_3() {
+log_step 3 "Reverse translation"
 src/scripts/run_reverse_translate_protein_variants.sh /work/data/cvfg_variants.2.tsv /work/data/cvfg_variants.3.tsv \
   --include-indels \
   --wt-codon-mode unambiguous
@@ -83,11 +97,13 @@ src/scripts/run_reverse_translate_protein_variants.sh /work/data/cvfg_variants.2
 
 # Step 4: Add VCF-style identifiers to assayed variants (both DNA and protein; already done for reverse translation candidates)
 step_4() {
+log_step 4 "Add VCF-style identifiers"
 src/scripts/run_add_vcf_identifiers.sh /work/data/cvfg_variants.3.tsv /work/data/cvfg_variants.4.tsv --csv-field-size-limit 10000000
 }
 
 # Step 5: Add ClinGen allele IDs to reverse translations
 step_5() {
+log_step 5 "Add ClinGen allele IDs to reverse translations"
 src/scripts/run_add_dna_clingen_allele_ids.sh /work/data/cvfg_variants.4.tsv /work/data/cvfg_variants.5.tsv \
   --csv-field-size-limit 10000000 \
   --max-workers 5
@@ -95,6 +111,7 @@ src/scripts/run_add_dna_clingen_allele_ids.sh /work/data/cvfg_variants.4.tsv /wo
 
 # Step 6: ClinVar
 step_6() {
+log_step 6 "ClinVar (2018, 2025, 2026 releases)"
 src/scripts/run_annotate_clinvar.sh /work/data/cvfg_variants.5.tsv /work/data/cvfg_variants.6-1.tsv \
   --clinvar-version 201812 \
   --cache-dir ./clinvar_cache \
@@ -119,6 +136,8 @@ src/scripts/run_annotate_clinvar.sh /work/data/cvfg_variants.6-2.tsv /work/data/
 # doesn't need it again. Rebuilding takes ~6-7 hours with local[1] for a
 # full gnomAD joint sites table.
 prepare_gnomad_cache() {
+echo
+echo "=== Preparing gnomAD Hail table cache (one-time per checkout, ~6-7 hours) ==="
 src/scripts/run_annotate_gnomad.sh /dev/null /dev/null \
   --gnomad-version v4.1 \
   --download-only \
@@ -129,6 +148,7 @@ src/scripts/run_annotate_gnomad.sh /dev/null /dev/null \
 # Step 7: gnomAD (using local Hail table copy and Docker-volume cache; see
 # prepare_gnomad_cache above for the one-time cache build/refresh)
 step_7() {
+log_step 7 "gnomAD"
 # GNOMAD_CACHE_DIR=/gnomad-cache is injected automatically from the Docker volume; no --cache-dir needed.
 src/scripts/run_annotate_gnomad.sh /work/data/cvfg_variants.6.tsv /work/data/cvfg_variants.7.tsv \
   --gnomad-version v4.1 \
@@ -141,6 +161,7 @@ src/scripts/run_annotate_gnomad.sh /work/data/cvfg_variants.6.tsv /work/data/cvf
 
 # Step 8: SpliceAI
 step_8() {
+log_step 8 "SpliceAI"
 src/scripts/run_annotate_spliceai.sh /work/data/cvfg_variants.7.tsv /work/data/cvfg_variants.8.tsv \
   --mode precomputed \
   --precomputed-snv-vcf spliceai_scores.masked.snv.hg38.vcf.gz \
@@ -151,12 +172,14 @@ src/scripts/run_annotate_spliceai.sh /work/data/cvfg_variants.7.tsv /work/data/c
 
 # Step 9: ClinGen Evidence Repository
 step_9() {
+log_step 9 "ClinGen Evidence Repository"
 src/scripts/run_annotate_erepo.sh /work/data/cvfg_variants.8.tsv /work/data/cvfg_variants.9.tsv \
   --csv-field-size-limit 10000000
 }
 
 # Step 10: VEP mutational consequence
 step_10() {
+log_step 10 "VEP mutational consequence"
 src/scripts/run_annotate_vep.sh /work/data/cvfg_variants.9.tsv /work/data/cvfg_variants.10.tsv \
   --vep-batch-size 25 \
   --row-batch-size 100 \
@@ -176,6 +199,7 @@ src/scripts/run_annotate_vep.sh /work/data/cvfg_variants.9.tsv /work/data/cvfg_v
 # checkout is in use instead of our own staged data/input/maves/score_sets.tsv
 # -- see docs/variant_annotation_pipeline.md.
 step_11() {
+log_step 11 "MaveDB variant functional classifications"
 src/scripts/run_annotate_mavedb.sh /work/data/cvfg_variants.10.tsv /work/data/cvfg_variants.11.tsv \
   --requested-calibrations-file /work/data/score_sets.tsv \
   --csv-field-size-limit 10000000
@@ -185,6 +209,7 @@ src/scripts/run_annotate_mavedb.sh /work/data/cvfg_variants.10.tsv /work/data/cv
 # from the CVFG pillar project rather than variant-annotation -- see
 # src/scripts/run_postprocess_mavedb_functional_classifications.sh there).
 step_12() {
+log_step 12 "Fix known MaveDB functional-classification overrides"
 "$CVFG_PROJECT_DIR/src/scripts/run_postprocess_mavedb_functional_classifications.sh" /work/data/cvfg_variants.11.tsv /work/data/cvfg_variants.12.tsv
 }
 
@@ -192,6 +217,7 @@ step_12() {
 # CVFG pillar project rather than variant-annotation -- see
 # src/scripts/run_add_mavedb_active_calibration_columns.sh there).
 step_13() {
+log_step 13 "Choose the active functional classification"
 "$CVFG_PROJECT_DIR/src/scripts/run_add_mavedb_active_calibration_columns.sh" /work/data/cvfg_variants.12.tsv /work/data/cvfg_variants.13.tsv
 }
 
@@ -212,6 +238,7 @@ step_13() {
 # there -- so it's forced to /work explicitly, same as step_11 and step_16 --
 # see docs/variant_annotation_pipeline.md.
 step_14() {
+log_step 14 "Dataset names"
 "$CVFG_PROJECT_DIR/src/scripts/run_derive_score_set_urn.sh" /work/data/cvfg_variants.13.tsv /work/data/cvfg_variants.14.temp.tsv
 src/scripts/run_utilities.sh merge-columns \
   /work/data/cvfg_variants.14.temp.tsv \
@@ -233,6 +260,7 @@ rm "$VARIANT_DATA_DIR/data/cvfg_variants.14.temp.tsv"
 # incorrectly prefer a variant-annotation checkout's own copy if one happens
 # to exist there -- see docs/variant_annotation_pipeline.md.
 step_15() {
+log_step 15 "Assay metadata from Supplementary Data 3"
 src/scripts/run_utilities.sh merge-columns \
   /work/data/cvfg_variants.14.tsv \
   /work/data/Supplementary_Data_3.xlsx \
@@ -307,6 +335,7 @@ src/scripts/run_utilities.sh merge-columns \
 # REVEL section of vendor/variant-annotation/docs/annotate_predictors.md),
 # not the plain 5-column layout "coordinate" mode works with.
 step_16() {
+log_step 16 "Predictors (AlphaMissense, MutPred2, REVEL)"
 "$CVFG_PROJECT_DIR/src/scripts/run_build_training_variant_files.sh"
 src/scripts/run_annotate_predictors.sh /work/data/cvfg_variants.15.tsv /work/data/cvfg_variants.16.tsv \
   --alphamissense-file /work/data/AlphaMissense_hg38.tsv.gz \
@@ -325,6 +354,7 @@ src/scripts/run_annotate_predictors.sh /work/data/cvfg_variants.15.tsv /work/dat
 # rather than variant-annotation -- see
 # src/scripts/run_annotate_simplified_consequence.sh there).
 step_17() {
+log_step 17 "Simplified consequence"
 "$CVFG_PROJECT_DIR/src/scripts/run_annotate_simplified_consequence.sh" /work/data/cvfg_variants.16.tsv /work/data/cvfg_variants.17.tsv
 }
 
@@ -332,12 +362,14 @@ step_17() {
 # (Dockerized, from the CVFG pillar project -- see
 # src/scripts/run_recalculate_clingen_classification.sh there).
 step_18() {
+log_step 18 "Recalculate ClinGen classification without functional-assay evidence"
 "$CVFG_PROJECT_DIR/src/scripts/run_recalculate_clingen_classification.sh" /work/data/cvfg_variants.17.tsv /work/data/cvfg_variants.18.tsv
 }
 
 # Step 19: Flag variants (Dockerized, from the CVFG pillar project rather
 # than variant-annotation -- see src/scripts/run_flag_variants.sh there).
 step_19() {
+log_step 19 "Flag variants"
 "$CVFG_PROJECT_DIR/src/scripts/run_flag_variants.sh" /work/data/cvfg_variants.18.tsv /work/data/cvfg_variants.19.tsv
 }
 
@@ -356,12 +388,11 @@ step_19() {
 # real run). translate_assayed_variant_level.py reads/writes with pandas
 # instead, same fix as derive_score_set_urn.py.
 step_20() {
+log_step 20 "Translate assayed-variant-level codes, merge RNA scores"
 "$CVFG_PROJECT_DIR/src/scripts/run_translate_assayed_variant_level.sh" /work/data/cvfg_variants.19.tsv /work/data/cvfg_variants.20.codes.tsv
 "$CVFG_PROJECT_DIR/src/scripts/run_merge_rna_score_columns.sh" /work/data/cvfg_variants.20.codes.tsv /work/data/cvfg_variants.20.tsv
 rm "$VARIANT_DATA_DIR/data/cvfg_variants.20.codes.tsv"
 }
-
-LAST_STEP=21
 
 # Step 21: Flatten cvfg_variants.20.tsv, then assemble the condensed and
 # expanded final integrated MAVE dataset files. Unlike the other steps, this
@@ -375,6 +406,7 @@ LAST_STEP=21
 # selection/renaming, so COLUMN_MAP below is built once and reused for both
 # rename-columns calls.
 step_21() {
+log_step 21 "Flatten and assemble final integrated datasets"
 
 # Flatten. --dna-variant-columns is passed explicitly rather than relying on
 # flatten_dna_variants.py's own auto-detection (get_dna_variant_columns):
