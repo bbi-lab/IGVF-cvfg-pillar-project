@@ -21,6 +21,12 @@ The pipeline runs in three stages, each covered in its own section below:
 See [Roadmap](#roadmap) below for the current state of Dockerizing the
 remaining notebook-based stages.
 
+**Verifying your setup:** `scripts/smoke_test_variant_annotation.sh` and
+`scripts/smoke_test_analysis.sh` run Stage 1 and Stage 2 end-to-end against
+tiny real-data fixtures, so you can check your environment setup without a
+multi-hour, multi-GB full run. See
+[`docs/smoke_tests.md`](docs/smoke_tests.md).
+
 ---
 
 ## 1. Data preparation and variant annotation
