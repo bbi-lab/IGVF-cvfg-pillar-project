@@ -18,8 +18,8 @@ The pipeline runs in three stages, each covered in its own section below:
 2. [Data analysis / variant classification and table preparation](#2-data-analysis--variant-classification-and-table-preparation)
 3. [Figure preparation](#3-figure-preparation)
 
-See [Roadmap](#roadmap) below for the current state of Dockerizing the
-remaining notebook-based stages.
+All three stages run in Docker -- see
+[Software Requirements](#software-requirements) below.
 
 **Verifying your setup:** `scripts/smoke_test_variant_annotation.sh` and
 `scripts/smoke_test_analysis.sh` run Stage 1 and Stage 2 end-to-end against
@@ -168,12 +168,14 @@ and produces the manuscript's classification tables: OddsPath calibrations,
 ACMG/AMP evidence-point assignment, and the final per-gene, per-predictor
 classification files (Supplementary Data 5).
 
-This stage still runs as Jupyter notebooks under `notebooks/analysis/`,
-executed locally via Poetry rather than in Docker — Dockerizing them (as
-notebooks, not converted to `src/` scripts) is the remaining item on the
-[Roadmap](#roadmap) below. Each notebook has a companion `README_*.md` in
-the same directory documenting its inputs, methods, and outputs in detail —
-read those before running or modifying one.
+This stage runs as Jupyter notebooks under `notebooks/analysis/`, executed
+inside Docker via the `analysis-notebooks` Compose service (same approach as
+Stage 1 and the R figures) — no local Poetry/Jupyter setup needed to
+reproduce results; see [Software Requirements](#software-requirements)
+below only if you want to develop/debug a notebook interactively. Each notebook has a
+companion `README_*.md` in the same directory documenting its inputs,
+methods, and outputs in detail — read those before running or modifying
+one.
 
 Run in this order:
 
@@ -219,39 +221,41 @@ above) and are already converted:
 ### Running it
 
 ```bash
-poetry install --all-extras
-poetry run python -m ipykernel install --user --name igvf-cvfg-pillar-project \
-  --display-name "IGVF CVFG Pillar Project (Poetry)"
+# One-time: build the tools image (adds the "notebooks" Poetry extra --
+# ipykernel/jupyterlab -- and Arial for matplotlib; see Dockerfile)
+docker compose build mave-dataset-stats
 
 # Refresh Supplementary Data 4 from the latest exCALIBR calibrations
-poetry run python -m src.load_excalibr_calibrations
+src/scripts/run_load_excalibr_calibrations.sh
 
 # 1. OddsPath likelihood-ratio calculations
-poetry run jupyter nbconvert --to notebook --execute \
-  --ExecutePreprocessor.kernel_name=igvf-cvfg-pillar-project \
+src/scripts/run_notebook.sh --to notebook --execute \
+  --ExecutePreprocessor.kernel_name=python3 \
   --ExecutePreprocessor.timeout=600 \
   --output executed_OddsPath_calculations.ipynb \
   notebooks/analysis/OddsPath_calculations.ipynb
 
 # 2. Refresh Supplementary Data 4's OddsPath_calibrations sheet from that run
-poetry run python -m src.load_oddspath_calibrations
+src/scripts/run_load_oddspath_calibrations.sh
 
 # 3-4. Remaining notebooks above, in order
 for nb in Variant_Classification_analysis OddsPath_classifications; do
-  poetry run jupyter nbconvert --to notebook --execute \
-    --ExecutePreprocessor.kernel_name=igvf-cvfg-pillar-project \
+  src/scripts/run_notebook.sh --to notebook --execute \
+    --ExecutePreprocessor.kernel_name=python3 \
     --ExecutePreprocessor.timeout=600 \
     --output executed_${nb}.ipynb \
     notebooks/analysis/${nb}.ipynb
 done
 
 # 5. Build the biobank-analysis reclassification export from that notebook's checkpoint
-poetry run python -m src.build_variant_reclassification_dataset
+src/scripts/run_build_variant_reclassification_dataset.sh
 ```
 
 Each `nbconvert --execute` leaves a side-effect `executed_<name>.ipynb` next
 to the original (nbconvert's copy with outputs attached) — gitignored, so no
-need to delete them.
+need to delete them. `kernel_name=python3` is `ipykernel`'s default kernel
+inside the container, not a registered project-specific one — nothing in
+the repo depends on a particular kernel name.
 
 Outputs land under `data/output/supplementary_data/` (`Supplementary_Data_4.xlsx`,
 `Supplementary_Data_5.xlsx`), `data/output/predictor_calibration/` (the
@@ -268,10 +272,12 @@ from Stage 2's outputs. Each figure directory under `notebooks/figures/`
 contains its own plotting notebook(s)/script(s) and any small supporting
 inputs.
 
-Two toolchains are in play, depending on the figure:
+Two toolchains are in play, depending on the figure, both Dockerized:
 
-- **Python notebooks** (Altair/matplotlib), run with the Poetry environment
-  and `jupyter nbconvert --execute` — no Docker needed.
+- **Python notebooks/scripts** (Altair/matplotlib), run via the
+  `analysis-notebooks` Compose service (`jupyter nbconvert --execute`) or a
+  dedicated per-script service (e.g. `build-figure3-data`) -- same tools
+  image as Stage 2, no local Poetry/Jupyter setup needed.
 - **R scripts/`.Rmd` files** (tidyverse, ggplot2 extensions like `ggsankey`,
   `patchwork`, `ggh4x`), run via the `r-figures` Docker Compose service
   (`Dockerfile.r`) rather than a local R install, since they depend on
@@ -283,35 +289,28 @@ separately from https://data.igvf.org/tabular-files/IGVFFI3804AVJR/ (nothing
 in this repo produces it) and placed at
 `data/input/biobank/IGVFFI3804AVJR.csv.gz`.
 
-As with Stage 2, the Python notebooks here still run locally via Poetry
-rather than in Docker (see [Roadmap](#roadmap) below) — the R
-scripts/`.Rmd` files already do, via the `r-figures` service.
-
 ### Running it
 
 One-time setup:
 
 ```bash
-poetry install --all-extras
-poetry run python -m ipykernel install --user --name igvf-cvfg-pillar-project \
-  --display-name "IGVF CVFG Pillar Project (Poetry)"
-docker compose build r-figures
+docker compose build mave-dataset-stats r-figures
 ```
 
 #### Figure 2
 
 ```bash
 # 1. Prep notebook (run first; everything else in this figure depends on it)
-poetry run jupyter nbconvert --to notebook --execute \
-  --ExecutePreprocessor.kernel_name=igvf-cvfg-pillar-project \
+src/scripts/run_notebook.sh --to notebook --execute \
+  --ExecutePreprocessor.kernel_name=python3 \
   --ExecutePreprocessor.timeout=600 \
   --output executed_PP_ProcessBigDataFrame.ipynb \
   notebooks/figures/figure_2/PP_ProcessBigDataFrame.ipynb
 
 # 2. Panel notebooks (independent of each other; all read step 1's output)
 for nb in PP_ClinVarPrecisionRecall PP_Fig2_Heatmaps PP_ResolutionOverview PP_StackedHistograms; do
-  poetry run jupyter nbconvert --to notebook --execute \
-    --ExecutePreprocessor.kernel_name=igvf-cvfg-pillar-project \
+  src/scripts/run_notebook.sh --to notebook --execute \
+    --ExecutePreprocessor.kernel_name=python3 \
     --ExecutePreprocessor.timeout=600 \
     --output executed_${nb}.ipynb \
     notebooks/figures/figure_2/${nb}.ipynb
@@ -327,7 +326,7 @@ docker compose run --rm -w /usr/src/app/notebooks/figures/figure_2 \
 ```bash
 # Rebuild Figure3a/c/d.csv.gz (gitignored intermediates, not committed) --
 # see docs/build_figure3_data.md.
-poetry run python -m src.build_figure3_data
+src/scripts/run_build_figure3_data.sh
 
 # Writes executed_curation_summary_figure3.html next to the .Rmd (gitignored)
 # and PNGs/an SVG to data/output/figures/figure_3/.
@@ -344,12 +343,12 @@ pipeline behind it.
 ```bash
 # 1. Rebuild figure4_data.json.gz, carrying forward fields that can't be
 #    regenerated (see docs/build_figure4_data.md)
-poetry run python -m src.build_figure4_data \
+src/scripts/run_build_figure4_data.sh \
   --cached-json notebooks/figures/figure_4/old_figure4_data.json.gz
 
 # 2. Execute the notebook to produce data/output/figures/figure_4.png
-poetry run jupyter nbconvert --to notebook --execute \
-  --ExecutePreprocessor.kernel_name=igvf-cvfg-pillar-project \
+src/scripts/run_notebook.sh --to notebook --execute \
+  --ExecutePreprocessor.kernel_name=python3 \
   --ExecutePreprocessor.timeout=600 \
   --output executed_figure4.ipynb \
   notebooks/figures/figure_4/figure4.ipynb
@@ -384,8 +383,8 @@ docker compose run --rm -w /usr/src/app/notebooks/figures/extended_data_figure_2
 #### Extended Data Figure 5
 
 ```bash
-poetry run jupyter nbconvert --to notebook --execute \
-  --ExecutePreprocessor.kernel_name=igvf-cvfg-pillar-project \
+src/scripts/run_notebook.sh --to notebook --execute \
+  --ExecutePreprocessor.kernel_name=python3 \
   --ExecutePreprocessor.timeout=600 \
   --output executed_extended_data_figure_5.ipynb \
   notebooks/figures/extended_data_figure_5/Extended_Data_Figure_5.ipynb
@@ -401,24 +400,32 @@ docker compose run --rm -w /usr/src/app/notebooks/figures/extended_data_figure_4
 #### Extended Data Figure 7alt (candidate replacement for Fig. 7)
 
 ```bash
-poetry run python -m src.make_extended_data_figure_7alt
+src/scripts/run_make_extended_data_figure_7alt.sh
 
 # Optional: same chart, restricted to missense_variant rows only. Writes to
 # extended_data_figure_7alt_missense/ instead, so it doesn't overwrite the
 # all-consequences run above.
-poetry run python -m src.make_extended_data_figure_7alt --consequence-filter missense
+src/scripts/run_make_extended_data_figure_7alt.sh --consequence-filter missense
+```
+
+OddsPath-calibrated variant, visualizing `Supplementary_Data_6.xlsx`'s
+VUS/gnomAD/Unobserved sheets instead (see
+[`docs/figures.md`](docs/figures.md#extended-data-figure-7alt-oddspath-variant-srcmake_extended_data_figure_7alt_oppy)):
+
+```bash
+src/scripts/run_make_extended_data_figure_7alt_op.sh
 ```
 
 #### Extended Data Figure 10 (functional-vs-predictor evidence ablation)
 
 ```bash
-poetry run python -m src.ablation_variant_reclassification \
+src/scripts/run_ablation_variant_reclassification.sh \
   --calibrated-figure data/output/figures/extended_data_figure_10/ablation.pdf
 
 # Optional: same figure, restricted to missense-only variants. Writes to
 # ablation_missense.pdf instead, so it doesn't overwrite the all-variants
 # run above.
-poetry run python -m src.ablation_variant_reclassification \
+src/scripts/run_ablation_variant_reclassification.sh \
   --consequence missense_only \
   --calibrated-figure data/output/figures/extended_data_figure_10/ablation_missense.pdf
 ```
@@ -483,7 +490,15 @@ before redistributing this repository's derived outputs.
 
 ## Software Requirements
 
-- **Python 3.12** — dependencies are Poetry-managed (`pyproject.toml`):
+- **Docker and Docker Compose** — the only requirement to reproduce
+  results. All three stages run in Docker: the variant-annotation pipeline
+  and this project's own steps (Stage 1), the analysis notebooks and
+  per-script figure builders (Stages 2-3, `python:3.12-slim`-based tools
+  image), and the R figure scripts (Stage 3, `r-figures` service, R 4.4.2
+  via `rocker/r-ver`). Neither a local Python nor R install is required.
+- **Python 3.12** (optional) — only needed to develop/debug a notebook or
+  script interactively outside Docker. Dependencies are Poetry-managed
+  (`pyproject.toml`):
   ```bash
   poetry env use python3.12   # one-time, only if `poetry env use` picks the wrong interpreter
   poetry install --all-extras
@@ -491,19 +506,5 @@ before redistributing this repository's derived outputs.
   This creates an in-project `.venv/` with the pipeline dependencies plus
   the `dev` (Ruff, nbstripout, pre-commit), `tests` (pytest), and
   `notebooks` (JupyterLab/ipykernel) extras.
-- **Docker and Docker Compose** — required for the variant-annotation
-  pipeline (Stage 1) and the R figure scripts (Stage 3, `r-figures` service,
-  R 4.4.2 via `rocker/r-ver`). A local R install is not required.
 - Additional per-script package dependencies are declared in
   `pyproject.toml` (Python) or the top of each `.R`/`.Rmd` file (R).
-
-## Roadmap
-
-Stage 1 (the `variant-annotation` pipeline) and Stage 3's R figures
-(`r-figures` service) already run in Docker. The remaining piece is
-Dockerizing Stage 2's three analysis notebooks
-(`OddsPath_calculations.ipynb`, `OddsPath_classifications.ipynb`,
-`Variant_Classification_analysis.ipynb`) and Stage 3's Python figure
-notebooks, which still run locally via `poetry run jupyter nbconvert` — as
-notebooks, not converted to `src/` scripts; the plan is to run them as-is
-inside a container, the same way Stage 1 and the R figures already do.

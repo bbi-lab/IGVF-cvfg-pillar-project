@@ -6,24 +6,34 @@ set -euo pipefail
 # README.md's "2. Data analysis / variant classification and table
 # preparation" section, whose exact script/notebook order this mirrors.
 #
-# Runs the full Stage 2 sequence -- src.load_excalibr_calibrations,
-# OddsPath_calculations.ipynb, src.load_oddspath_calibrations,
+# Runs the full Stage 2 sequence -- load-excalibr-calibrations,
+# OddsPath_calculations.ipynb, load-oddspath-calibrations,
 # Variant_Classification_analysis.ipynb, OddsPath_classifications.ipynb,
-# src.build_variant_reclassification_dataset -- against a tiny fixture
+# build-variant-reclassification-dataset -- against a tiny fixture
 # (tests/fixtures/smoke_test/integrated_variant_effect_dataset.smoke.tsv.gz,
 # 14 real rows from two real datasets: BARD1_IGVF and G6PD_IGVF) instead of
 # the real data/output/maves/integrated_variant_effect_dataset.tsv.gz. This
-# validates the Poetry/Jupyter environment setup (dependencies, the
-# igvf-cvfg-pillar-project kernel, notebook execution) end to end, fast,
-# without Docker.
+# validates the Docker environment setup (image build, the "notebooks"
+# Poetry extra, notebook execution) end to end -- Stage 2 now runs the same
+# way Stage 1 and the R figures already do, no local Poetry/Jupyter needed.
 #
 # All three notebooks resolve their own data directory from a PROJECT_ROOT
 # env var (default "../.."; see the first cell of each notebook). This
-# script points PROJECT_ROOT at an isolated scratch directory containing a
-# symlink to this project's own src/ (so `from src.lib... import ...` still
-# resolves) plus the fixture files below, so the smoke test never reads or
-# writes your real data/output/ or data/input/maves/CHEK2_Gebbia_2024.xlsx --
-# safe to run alongside real Stage 2 output you already have.
+# script points PROJECT_ROOT at an isolated scratch directory (via
+# src/scripts/run_notebook.sh's --env passthrough) containing a symlink to
+# this project's own src/ (so `from src.lib... import ...` still resolves)
+# plus the fixture files below, so the smoke test never reads or writes
+# your real data/output/ or data/input/maves/CHEK2_Gebbia_2024.xlsx -- safe
+# to run alongside real Stage 2 output you already have.
+#
+# The scratch directory lives under data/intermediate/ (gitignored) rather
+# than /tmp: none of the Stage 2 Docker services (analysis-notebooks,
+# load-excalibr-calibrations, load-oddspath-calibrations,
+# build-variant-reclassification-dataset) mount anything but this repo's own
+# tree, so scratch data has to live inside the repo for them to see it --
+# same reasoning as scripts/smoke_test_variant_annotation.sh's scratch
+# directory and Step 16's --output-dir fix in
+# scripts/variant_annotation_pipeline.sh.
 #
 # Fixtures used (see tests/fixtures/smoke_test/):
 #   - integrated_variant_effect_dataset.smoke.tsv.gz: the Stage 2 input.
@@ -32,7 +42,7 @@ set -euo pipefail
 #     exercise CHEK2-specific logic (no CHEK2 rows in the fixture).
 #   - Supplementary_Data_4.smoke.xlsx: header-only stub of the workbook
 #     Variant_Classification_analysis.ipynb reads and
-#     src.load_oddspath_calibrations/src.load_excalibr_calibrations update in
+#     load-oddspath-calibrations/load-excalibr-calibrations update in
 #     place -- data/output/supplementary_data/ is gitignored, so nothing
 #     builds this workbook from scratch otherwise.
 # data/input/maves/Supplementary_Data_3.xlsx is committed to the repo and
@@ -45,11 +55,6 @@ set -euo pipefail
 # --keep leaves the scratch directory in place afterwards for inspection
 # (normally removed on success, left in place on failure regardless of this
 # flag).
-#
-# Env vars:
-#   CVFG_JUPYTER_KERNEL   Jupyter kernel name to execute notebooks with.
-#                         Defaults to igvf-cvfg-pillar-project (see README.md
-#                         for how to register it).
 ########################################################################################################################
 
 keep=0
@@ -60,8 +65,6 @@ elif [[ $# -gt 0 ]]; then
   echo "usage: $0 [--keep]" >&2
   exit 1
 fi
-
-kernel_name="${CVFG_JUPYTER_KERNEL:-igvf-cvfg-pillar-project}"
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 project_dir="$(cd "$script_dir/.." && pwd)"
@@ -74,19 +77,11 @@ for f in integrated_variant_effect_dataset.smoke.tsv.gz CHEK2_Gebbia_2024.smoke.
   fi
 done
 
-if ! poetry run jupyter kernelspec list 2>/dev/null | grep -q "^\s*${kernel_name}\s"; then
-  cat >&2 <<EOF
-error: Jupyter kernel '$kernel_name' is not registered.
-
-Register it (see README.md's "Environment: Poetry + Ruff" / Section 2
-"Running it"):
-  poetry run python -m ipykernel install --user --name igvf-cvfg-pillar-project \\
-    --display-name "IGVF CVFG Pillar Project (Poetry)"
-EOF
-  exit 1
-fi
-
-scratch_dir="$(mktemp -d "${TMPDIR:-/tmp}/cvfg_smoke_analysis.XXXXXX")"
+scratch_root="$project_dir/data/intermediate"
+mkdir -p "$scratch_root"
+scratch_dir="$(mktemp -d "$scratch_root/cvfg_smoke_analysis.XXXXXX")"
+rel="${scratch_dir#"$project_dir"/}"
+container_project_root="/usr/src/app/$rel"
 
 cleanup() {
   local exit_code=$?
@@ -99,7 +94,10 @@ cleanup() {
 trap cleanup EXIT
 
 echo "Staging fixtures into scratch PROJECT_ROOT: $scratch_dir ..."
-ln -s "$project_dir/src" "$scratch_dir/src"
+# Target is the *container* path (/usr/src/app/src), not a host path: this
+# symlink is only ever resolved from inside the analysis-notebooks
+# container, where /usr/src/app is the repo root bind mount.
+ln -s /usr/src/app/src "$scratch_dir/src"
 mkdir -p \
   "$scratch_dir/data/input/maves" \
   "$scratch_dir/data/output/maves" \
@@ -115,20 +113,22 @@ run_notebook() {
   local name="$1"
   echo
   echo "Running notebooks/analysis/${name}.ipynb ..."
-  PROJECT_ROOT="$scratch_dir" poetry run jupyter nbconvert --to notebook --execute \
-    --ExecutePreprocessor.kernel_name="$kernel_name" \
+  "$project_dir/src/scripts/run_notebook.sh" \
+    --env "PROJECT_ROOT=$container_project_root" \
+    --to notebook --execute \
+    --ExecutePreprocessor.kernel_name=python3 \
     --ExecutePreprocessor.timeout=300 \
-    --output-dir "$scratch_dir/executed" \
+    --output-dir "$container_project_root/executed" \
     --output "executed_${name}.ipynb" \
-    "$project_dir/notebooks/analysis/${name}.ipynb"
+    "notebooks/analysis/${name}.ipynb"
 }
 
 cd "$project_dir"
 
 echo "Refreshing ExCALIBR_calibrations sheet (empty fixture JSON dir -- expected 0 rows) ..."
-poetry run python -m src.load_excalibr_calibrations \
-  "$scratch_dir/data/input/mave_calibration/excalibr/json" \
-  "$scratch_dir/data/output/supplementary_data/Supplementary_Data_4.xlsx"
+src/scripts/run_load_excalibr_calibrations.sh \
+  "$rel/data/input/mave_calibration/excalibr/json" \
+  "$rel/data/output/supplementary_data/Supplementary_Data_4.xlsx"
 
 run_notebook "OddsPath_calculations"
 
@@ -140,9 +140,9 @@ fi
 
 echo
 echo "Refreshing OddsPath_calibrations sheet ..."
-poetry run python -m src.load_oddspath_calibrations \
-  "$odds_path_csv" \
-  "$scratch_dir/data/output/supplementary_data/Supplementary_Data_4.xlsx"
+src/scripts/run_load_oddspath_calibrations.sh \
+  "$rel/data/output/mave_calibration/OddsPath_calibrations.csv.gz" \
+  "$rel/data/output/supplementary_data/Supplementary_Data_4.xlsx"
 
 run_notebook "Variant_Classification_analysis"
 
@@ -165,12 +165,13 @@ fi
 
 echo
 echo "Building the biobank-analysis reclassification export ..."
-reclassification_output="$scratch_dir/data/output/reclassification/integrated_variant_effect_biobank_input_data.tsv.gz"
-poetry run python -m src.build_variant_reclassification_dataset \
-  "$checkpoint" \
-  --chek2-file "$scratch_dir/data/input/maves/CHEK2_Gebbia_2024.xlsx" \
-  --output "$reclassification_output"
+reclassification_output_rel="$rel/data/output/reclassification/integrated_variant_effect_biobank_input_data.tsv.gz"
+src/scripts/run_build_variant_reclassification_dataset.sh \
+  "$rel/data/output/reclassification/integrated_variant_effect_dataset_analysis.csv.gz" \
+  --chek2-file "$rel/data/input/maves/CHEK2_Gebbia_2024.xlsx" \
+  --output "$reclassification_output_rel"
 
+reclassification_output="$scratch_dir/data/output/reclassification/integrated_variant_effect_biobank_input_data.tsv.gz"
 if [[ ! -s "$reclassification_output" ]]; then
   echo "FAIL: expected output missing or empty: $reclassification_output" >&2
   exit 1

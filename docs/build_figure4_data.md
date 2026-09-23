@@ -69,7 +69,7 @@ Running without `--cached-json` raises immediately and lists these fields.
 ## Usage
 
 ```bash
-poetry run python -m src.build_figure4_data \
+src/scripts/run_build_figure4_data.sh \
     --cached-json notebooks/figures/figure_4/old_figure4_data.json.gz
 ```
 

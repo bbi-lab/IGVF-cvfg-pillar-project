@@ -78,31 +78,35 @@ scripts/smoke_test_analysis.sh [--keep]
 
 Runs the full Stage 2 sequence documented in the repo README's "2. Data
 analysis / variant classification and table preparation" section --
-`src.load_excalibr_calibrations`, `OddsPath_calculations.ipynb`,
-`src.load_oddspath_calibrations`, `Variant_Classification_analysis.ipynb`,
-`OddsPath_classifications.ipynb`, `src.build_variant_reclassification_dataset`,
-in that order -- against
+`load-excalibr-calibrations`, `OddsPath_calculations.ipynb`,
+`load-oddspath-calibrations`, `Variant_Classification_analysis.ipynb`,
+`OddsPath_classifications.ipynb`, `build-variant-reclassification-dataset`,
+in that order, each via its Docker Compose service -- against
 `tests/fixtures/smoke_test/integrated_variant_effect_dataset.smoke.tsv.gz`
 (14 real rows from two real datasets, `BARD1_IGVF` and `G6PD_IGVF`) instead
 of the real `data/output/maves/integrated_variant_effect_dataset.tsv.gz`.
 
-Unlike Stage 1, this needs no Docker -- just the Poetry environment and the
-`igvf-cvfg-pillar-project` Jupyter kernel (see the repo README's
-"Environment: Poetry + Ruff" section for how to register it; the script
-checks for it up front and prints the registration command if it's
-missing). It validates that notebook execution itself works end to end:
-dependencies, the kernel, and the whole calibration -> classification ->
-reclassification chain.
+Like Stage 1, this runs entirely in Docker -- no local Poetry/Jupyter setup
+needed. It validates that the `analysis-notebooks` image and the other
+Stage 2 services build and run correctly: the "notebooks" Poetry extra,
+notebook execution inside the container, and the whole calibration ->
+classification -> reclassification chain.
 
 All three notebooks resolve their own data directory from a `PROJECT_ROOT`
 env var (default `../..`, i.e. two directories up from
 `notebooks/analysis/`; see the first cell of each notebook). This script
-points `PROJECT_ROOT` at a scratch directory containing a symlink to this
-project's own `src/` (so `from src.lib... import ...` still resolves) plus
-the fixture files, so the real notebooks run unmodified against isolated
-data. `data/input/maves/Supplementary_Data_3.xlsx` is committed to the repo
-and used as-is (real dataset metadata) rather than faked, since the
-fixture's `Dataset` values are real entries in it.
+passes `PROJECT_ROOT` to the `analysis-notebooks` container (via
+`src/scripts/run_notebook.sh --env`) pointing at a scratch directory under
+`data/intermediate/` containing a symlink to `/usr/src/app/src` (so `from
+src.lib... import ...` still resolves inside the container) plus the
+fixture files, so the real notebooks run unmodified against isolated data.
+The scratch directory has to live under `data/intermediate/` rather than
+`/tmp`: none of the Stage 2 services mount anything but this repo's own
+tree, same reasoning as the Stage 1 scratch directory and Step 16's
+`--output-dir` fix in `scripts/variant_annotation_pipeline.sh`.
+`data/input/maves/Supplementary_Data_3.xlsx` is committed to the repo and
+used as-is (real dataset metadata) rather than faked, since the fixture's
+`Dataset` values are real entries in it.
 
 ## Fixture provenance
 
@@ -141,8 +145,8 @@ approximation of it:
   sheet) of the 5 data sheets `Variant_Classification_analysis.ipynb` reads
   (`ExCALIBR_calibrations`, `REVEL_gene_specific_calibration`,
   `MP2_gene_specific_calibrations`, `AM_gene_specific_calibrations`,
-  `OddsPath_calibrations`) and `src.load_excalibr_calibrations` /
-  `src.load_oddspath_calibrations` overwrite in place.
+  `OddsPath_calibrations`) and `load-excalibr-calibrations` /
+  `load-oddspath-calibrations` overwrite in place.
   `data/output/supplementary_data/` is gitignored, so nothing else builds
   this workbook from a fresh checkout -- gene-specific calibration lookups
   simply find nothing for `BARD1`/`G6PD`, the same as any other gene without

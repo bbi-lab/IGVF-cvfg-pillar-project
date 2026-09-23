@@ -153,7 +153,7 @@ just freshness:
 ## Usage
 
 ```bash
-poetry run python -m src.build_figure3_data
+src/scripts/run_build_figure3_data.sh
 ```
 
 Optional flags: `--integrated-dataset`, `--curation-sheet`, `--gencc`,

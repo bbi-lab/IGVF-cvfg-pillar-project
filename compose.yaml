@@ -183,6 +183,106 @@ services:
     volumes:
       - .:/usr/src/app
 
+  # Builds data/output/reclassification/integrated_variant_effect_biobank_input_data.tsv.gz
+  # from Variant_Classification_analysis.ipynb's own checkpoint -- Stage 2's
+  # final step. Reads/writes only this repo's own tree, so like
+  # mave-dataset-stats it only needs the repo bind mount. checkpoint_file's
+  # default (DEFAULT_CHECKPOINT_FILE) makes a bare invocation useful.
+  build-variant-reclassification-dataset:
+    <<: *tools-image
+    profiles:
+      - tools
+    entrypoint: ["python", "-m", "src.build_variant_reclassification_dataset"]
+    command: []
+    volumes:
+      - .:/usr/src/app
+
+  # Generic runner for the Stage 2 analysis notebooks
+  # (notebooks/analysis/OddsPath_calculations.ipynb,
+  # OddsPath_classifications.ipynb, Variant_Classification_analysis.ipynb)
+  # and the Stage 3 Python figure notebooks (notebooks/figures/figure_2/*.ipynb,
+  # figure_4/figure4.ipynb, extended_data_figure_5/Extended_Data_Figure_5.ipynb).
+  # Unlike the R figure scripts below, `jupyter nbconvert --execute`'s
+  # ExecutePreprocessor already defaults the *kernel's* cwd to the notebook's
+  # own directory regardless of the invoking shell's cwd, so -- unlike
+  # r-figures -- no --workdir override is needed per invocation; just pass
+  # the repo-relative notebook path, e.g.:
+  #   docker compose run --rm analysis-notebooks --to notebook --execute \
+  #     --ExecutePreprocessor.kernel_name=python3 \
+  #     --ExecutePreprocessor.timeout=600 \
+  #     --output executed_OddsPath_calculations.ipynb \
+  #     notebooks/analysis/OddsPath_calculations.ipynb
+  # kernel_name is python3 (ipykernel's default), not a registered
+  # project-specific kernel -- nothing in the repo depends on a particular
+  # kernel name, only on the packages the "notebooks" Poetry extra installs.
+  analysis-notebooks:
+    <<: *tools-image
+    profiles:
+      - tools
+    entrypoint: ["jupyter", "nbconvert"]
+    command: ["--help"]
+    volumes:
+      - .:/usr/src/app
+
+  # Figure 3's data-prep script. All CLI args have defaults pointing at
+  # committed/generated repo files, so like mave-dataset-stats it only needs
+  # the repo bind mount and a bare invocation is useful.
+  build-figure3-data:
+    <<: *tools-image
+    profiles:
+      - tools
+    entrypoint: ["python", "-m", "src.build_figure3_data"]
+    command: []
+    volumes:
+      - .:/usr/src/app
+
+  # Figure 4's data-prep script. --cached-json has no usable default (three
+  # sub-panels can't be regenerated from scratch -- see docs/figures.md), so
+  # a bare invocation isn't useful; default to --help like flag-variants.
+  build-figure4-data:
+    <<: *tools-image
+    profiles:
+      - tools
+    entrypoint: ["python", "-m", "src.build_figure4_data"]
+    command: ["--help"]
+    volumes:
+      - .:/usr/src/app
+
+  # Extended Data Figure 7alt (candidate replacement for Fig. 7). All CLI
+  # args have defaults, so a bare invocation is useful.
+  make-extended-data-figure-7alt:
+    <<: *tools-image
+    profiles:
+      - tools
+    entrypoint: ["python", "-m", "src.make_extended_data_figure_7alt"]
+    command: []
+    volumes:
+      - .:/usr/src/app
+
+  # Extended Data Figure 7alt, OddsPath-calibrated variant -- same reasoning
+  # as make-extended-data-figure-7alt above.
+  make-extended-data-figure-7alt-op:
+    <<: *tools-image
+    profiles:
+      - tools
+    entrypoint: ["python", "-m", "src.make_extended_data_figure_7alt_op"]
+    command: []
+    volumes:
+      - .:/usr/src/app
+
+  # Extended Data Figure 10 (functional-vs-predictor evidence ablation).
+  # --calibrated-figure has no default, and the figure is the whole point of
+  # running this, so default to --help like flag-variants/build-figure4-data
+  # rather than a silent no-op.
+  ablation-variant-reclassification:
+    <<: *tools-image
+    profiles:
+      - tools
+    entrypoint: ["python", "-m", "src.ablation_variant_reclassification"]
+    command: ["--help"]
+    volumes:
+      - .:/usr/src/app
+
   # Generic runner for the manuscript's R figure scripts
   # (notebooks/figures/**/*.R, notebooks/figures/**/*.Rmd). These scripts
   # read/write relative filenames (e.g.

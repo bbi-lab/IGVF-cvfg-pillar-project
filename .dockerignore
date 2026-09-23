@@ -1,0 +1,17 @@
+# Every tools-image/r-tools-image service bind-mounts the repo at runtime
+# (`.:/usr/src/app` in compose.yaml), which always shadows whatever `COPY . .`
+# bakes into the image -- so excluding these from the build context changes
+# nothing at runtime, and avoids sending gitignored, regenerated data (tens
+# of GB) to the Docker daemon on every build.
+.git
+data/
+vendor/
+
+# Local dev/cache artifacts, never needed in the image.
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.ipynb_checkpoints/

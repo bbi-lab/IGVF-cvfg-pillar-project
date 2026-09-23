@@ -6,9 +6,9 @@ How to (re)generate each manuscript figure from `notebooks/figures/`.
 
 Directory: `notebooks/figures/figure_2/`. Six scripts: one prep notebook everything
 else depends on, four independent Python panel notebooks, and one standalone
-R script. The Python notebooks only need the Poetry environment (`pandas`,
-`altair`, `matplotlib`, `vl-convert-python`) -- no Docker/R involved until
-`Figure_2i.R`.
+R script. The Python notebooks run via the `analysis-notebooks` Compose
+service (`pandas`, `altair`, `matplotlib`, `vl-convert-python`); `Figure_2i.R`
+needs the separate `r-figures` service.
 
 ### 1. `PP_ProcessBigDataFrame.ipynb` (run this first)
 
@@ -30,8 +30,8 @@ themselves by amino-acid position, since `Dataset` no longer distinguishes
 them. Every panel notebook below reads the first two of these xlsx files.
 
 ```bash
-poetry run jupyter nbconvert --to notebook --execute \
-  --ExecutePreprocessor.kernel_name=igvf-cvfg-pillar-project \
+src/scripts/run_notebook.sh --to notebook --execute \
+  --ExecutePreprocessor.kernel_name=python3 \
   --ExecutePreprocessor.timeout=600 \
   --output executed_PP_ProcessBigDataFrame.ipynb \
   notebooks/figures/figure_2/PP_ProcessBigDataFrame.ipynb
@@ -62,8 +62,8 @@ poetry run jupyter nbconvert --to notebook --execute \
 
 ```bash
 for nb in PP_ClinVarPrecisionRecall PP_Fig2_Heatmaps PP_ResolutionOverview PP_StackedHistograms; do
-  poetry run jupyter nbconvert --to notebook --execute \
-    --ExecutePreprocessor.kernel_name=igvf-cvfg-pillar-project \
+  src/scripts/run_notebook.sh --to notebook --execute \
+    --ExecutePreprocessor.kernel_name=python3 \
     --ExecutePreprocessor.timeout=600 \
     --output executed_${nb}.ipynb \
     notebooks/figures/figure_2/${nb}.ipynb
@@ -118,7 +118,7 @@ Reads four inputs, all relative to the `.Rmd`'s own directory:
   `data/input/maves/Supplementary_Data_3.xlsx`'s `Curation` sheet.
 - **`Figure3a.csv.gz`** / **`Figure3c.csv.gz`** / **`Figure3d.csv.gz`**:
   gitignored, rebuilt into `data/intermediate/figures/figure_3/` with
-  `poetry run python -m src.build_figure3_data` -- see
+  `src/scripts/run_build_figure3_data.sh` -- see
   `docs/build_figure3_data.md`. Not committed -- run that command before
   rendering the `.Rmd` for the first time in a checkout. `Figure3a` additionally
   needs the three reference files under `data/input/genes/` (GenCC, UniProt,
@@ -130,7 +130,7 @@ Reads four inputs, all relative to the `.Rmd`'s own directory:
 # Required before the first render in a checkout (Figure3a/c/d.csv.gz are
 # gitignored intermediates, not committed) and any time you want to refresh
 # them against the current pipeline output.
-poetry run python -m src.build_figure3_data
+src/scripts/run_build_figure3_data.sh
 
 # Writes executed_curation_summary_figure3.html next to the .Rmd (gitignored)
 # and PNGs/an SVG to data/output/figures/figure_3/.
@@ -156,19 +156,14 @@ cache -- see `docs/build_figure4_data.md` for exactly which fields and why.
 ### Steps
 
 ```bash
-# One-time environment setup (skip if already done)
-poetry install --all-extras
-poetry run python -m ipykernel install --user --name igvf-cvfg-pillar-project \
-  --display-name "IGVF CVFG Pillar Project (Poetry)"
-
 # 1. Rebuild figure4_data.json.gz, carrying forward the fields that can't be
 #    regenerated (see docs/build_figure4_data.md)
-poetry run python -m src.build_figure4_data \
+src/scripts/run_build_figure4_data.sh \
   --cached-json notebooks/figures/figure_4/old_figure4_data.json.gz
 
 # 2. Execute the notebook to produce data/output/figures/figure_4.png
-poetry run jupyter nbconvert --to notebook --execute \
-  --ExecutePreprocessor.kernel_name=igvf-cvfg-pillar-project \
+src/scripts/run_notebook.sh --to notebook --execute \
+  --ExecutePreprocessor.kernel_name=python3 \
   --ExecutePreprocessor.timeout=600 \
   --output executed_figure4.ipynb \
   notebooks/figures/figure_4/figure4.ipynb
@@ -315,21 +310,17 @@ produce them. The three files share the same column shape (`Class_REVEL`/
 `Class_AM`/`Class_MP2` all present in each) but not the same row set -- each
 drops the variants missing that predictor's own score -- so the notebook reads
 each predictor's own file rather than reusing REVEL's with a different column
-name. No R/Docker dependency here; it only needs the Poetry environment
-(`pandas`, `numpy`, `scipy`, `statsmodels`, `matplotlib`).
+name. No R dependency here; it runs via the `analysis-notebooks` Compose
+service, same as Figure 2/4 above (`pandas`, `numpy`, `scipy`, `statsmodels`,
+`matplotlib`).
 
 ```bash
-# One-time environment setup (skip if already done -- see Figure 4 above)
-poetry install --all-extras
-poetry run python -m ipykernel install --user --name igvf-cvfg-pillar-project \
-  --display-name "IGVF CVFG Pillar Project (Poetry)"
-
 # The savefig() target directory isn't created for you -- make it first if
 # it doesn't already exist.
 mkdir -p data/output/figures/extended_data_figure_5
 
-poetry run jupyter nbconvert --to notebook --execute \
-  --ExecutePreprocessor.kernel_name=igvf-cvfg-pillar-project \
+src/scripts/run_notebook.sh --to notebook --execute \
+  --ExecutePreprocessor.kernel_name=python3 \
   --ExecutePreprocessor.timeout=600 \
   --output executed_extended_data_figure_5.ipynb \
   notebooks/figures/extended_data_figure_5/Extended_Data_Figure_5.ipynb
@@ -517,10 +508,11 @@ and row-wise percentage, colored on a single monochromatic 0-100% scale
 
 Unlike the rest of Extended Data Figs 4-9, this one is a standalone Python
 script (matplotlib) rather than an `Extended_data_figures.Rmd` chunk, and
-reads `Supplementary_Data_5.xlsx` directly -- no R/Docker required:
+reads `Supplementary_Data_5.xlsx` directly -- no R required, via the
+`make-extended-data-figure-7alt` Compose service:
 
 ```bash
-poetry run python -m src.make_extended_data_figure_7alt
+src/scripts/run_make_extended_data_figure_7alt.sh
 ```
 
 Writes `data/output/figures/extended_data_figure_7alt/new_classification_heatmap.pdf`
@@ -556,7 +548,7 @@ so a category absent from a sheet is plotted as a genuine zero rather than
 raising, unlike `make_extended_data_figure_7alt.py`'s stricter check.
 
 ```bash
-poetry run python -m src.make_extended_data_figure_7alt_op
+src/scripts/run_make_extended_data_figure_7alt_op.sh
 ```
 
 Writes `data/output/figures/extended_data_figure_7alt_op/new_classification_heatmap_op.pdf`
@@ -567,7 +559,7 @@ gene-specific variant (Supplementary Data 6, gene-specific -- see
 variant" section) instead of the standard one:
 
 ```bash
-poetry run python -m src.make_extended_data_figure_7alt_op \
+src/scripts/run_make_extended_data_figure_7alt_op.sh \
   --input data/output/supplementary_data/Supplementary_Data_6_gene_specific.xlsx \
   --output data/output/figures/extended_data_figure_7alt_op_gene_specific/new_classification_heatmap_op_gene_specific.pdf
 ```
@@ -581,7 +573,8 @@ see [`docs/ablation_variant_reclassification.md`](ablation_variant_reclassificat
 for the full method). Reads the same `Variant_Classification_analysis.ipynb`
 checkpoint as `src/build_variant_reclassification_dataset.py`
 (`data/output/reclassification/integrated_variant_effect_dataset_analysis.csv.gz`
-by default) directly -- no R/Docker required, and no dependency on
+by default) directly -- no R required, via the
+`ablation-variant-reclassification` Compose service, and no dependency on
 Supplementary Data 5/6.
 
 The figure itself is `save_calibrated_ablation_figure`'s hand-calibrated
@@ -595,10 +588,10 @@ start-loss, see `is_missense_only`) -- as separate files rather than
 overwriting one another:
 
 ```bash
-poetry run python -m src.ablation_variant_reclassification \
+src/scripts/run_ablation_variant_reclassification.sh \
   --calibrated-figure data/output/figures/extended_data_figure_10/ablation.pdf
 
-poetry run python -m src.ablation_variant_reclassification \
+src/scripts/run_ablation_variant_reclassification.sh \
   --consequence missense_only \
   --calibrated-figure data/output/figures/extended_data_figure_10/ablation_missense.pdf
 ```
@@ -622,7 +615,7 @@ reconstruct). See `docs/ablation_variant_reclassification.md`'s "Splitting
 the document into individual chart files" section for the full mechanics.
 
 ```bash
-poetry run python -m src.ablation_variant_reclassification \
+src/scripts/run_ablation_variant_reclassification.sh \
   --document-split-dir data/output/figures/extended_data_figure_10
 ```
 
