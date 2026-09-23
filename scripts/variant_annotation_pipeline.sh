@@ -305,7 +305,16 @@ src/scripts/run_utilities.sh merge-columns \
 # Preparatory: regenerate the REVEL/MutPred2 training-set overlap files
 # (Dockerized, from the CVFG pillar project -- see
 # src/scripts/run_build_training_variant_files.sh there) before running
-# annotate_predictors.
+# annotate_predictors. Unlike every other Dockerized step in this file, that
+# service only bind-mounts this repo's own tree (no VARIANT_DATA_DIR /work
+# mount -- see compose.yaml's comment above build-training-variant-files),
+# so its --output-dir default (data/intermediate/variant_annotation/data,
+# matching this repo's default staging location) has to be overridden
+# explicitly whenever VARIANT_DATA_DIR points somewhere else -- e.g.
+# scripts/smoke_test_variant_annotation.sh's scratch directory. Passing
+# VARIANT_DATA_DIR's path relative to CVFG_PROJECT_DIR keeps this correct in
+# both cases, and reproduces the original default when VARIANT_DATA_DIR is
+# unchanged.
 #
 # All five predictor-file flags below are written as /work/data/... rather
 # than bare filenames, so every input to this step comes from our own
@@ -336,7 +345,8 @@ src/scripts/run_utilities.sh merge-columns \
 # not the plain 5-column layout "coordinate" mode works with.
 step_16() {
 log_step 16 "Predictors (AlphaMissense, MutPred2, REVEL)"
-"$CVFG_PROJECT_DIR/src/scripts/run_build_training_variant_files.sh"
+"$CVFG_PROJECT_DIR/src/scripts/run_build_training_variant_files.sh" \
+  --output-dir "${VARIANT_DATA_DIR#"$CVFG_PROJECT_DIR"/}/data"
 src/scripts/run_annotate_predictors.sh /work/data/cvfg_variants.15.tsv /work/data/cvfg_variants.16.tsv \
   --alphamissense-file /work/data/AlphaMissense_hg38.tsv.gz \
   --mutpred2-properties-file /work/data/mp2_annotations.csv.gz \
