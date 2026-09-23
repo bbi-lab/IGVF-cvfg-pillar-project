@@ -1,3 +1,9 @@
+#!/usr/bin/env bash
+# set -e: a step that crashes (e.g. a Dockerized command exiting non-zero)
+# must abort the run immediately rather than silently continuing into the
+# next step against truncated/empty data.
+set -euo pipefail
+
 ########################################################################################################################
 # IGVF CVFG pipeline
 #
@@ -283,9 +289,9 @@ src/scripts/run_utilities.sh merge-columns \
 # the variant-annotation checkout's own bind mount (/usr/src/app), not
 # /work, so a bare "data/..." path here would resolve against whichever
 # checkout is in use instead of our staged data. AlphaMissense_hg38.tsv.gz,
-# revel_hg38.tsv.gz (plus their .tbi indexes), and
-# data_frame_missense_variants_MP2_properties.csv.gz all live in this
-# project's own data/input/predictors/ and are staged automatically by
+# revel_hg38.tsv.gz (plus their .tbi indexes), mp2_annotations.csv.gz, and
+# mp2_gene_symbol_map.tsv all live in this project's own
+# data/input/predictors/ and are staged automatically by
 # scripts/run_variant_annotation_pipeline.sh (gated on whether Step 16 is
 # actually about to run, same as cvfg_variants.0.tsv for Step 1) -- no
 # manual copy needed for any of them.

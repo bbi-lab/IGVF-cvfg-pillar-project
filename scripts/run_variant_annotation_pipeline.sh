@@ -41,6 +41,19 @@ set -euo pipefail
 #                           the large reference files / caches downloaded
 #                           (AlphaMissense, REVEL, SpliceAI, clinvar_cache,
 #                           etc.) to avoid re-fetching multi-GB data.
+#   CVFG_STAGE_DIR          Overrides the staging directory (default
+#                           data/intermediate/variant_annotation). Used by
+#                           scripts/smoke_test_variant_annotation.sh to run
+#                           against a scratch directory instead of a real
+#                           run's staged data.
+#   CVFG_OUTPUT_DIR         Overrides the final output directory (default
+#                           data/output/maves). Same purpose as
+#                           CVFG_STAGE_DIR above.
+#   CVFG_VARIANTS_0_FILE    Overrides Step 1's input file (default
+#                           data/input/maves/cvfg_variants.0.tsv). Used by
+#                           scripts/smoke_test_variant_annotation.sh to
+#                           substitute a tiny fixture for the real MAVE
+#                           variant list.
 ########################################################################################################################
 
 step=""
@@ -80,7 +93,7 @@ EOF
   exit 1
 fi
 
-stage_dir="$CVFG_PROJECT_DIR/data/intermediate/variant_annotation"
+stage_dir="${CVFG_STAGE_DIR:-$CVFG_PROJECT_DIR/data/intermediate/variant_annotation}"
 mkdir -p "$stage_dir/data"
 
 if [[ "$prepare_gnomad_cache" -eq 1 ]]; then
@@ -116,32 +129,34 @@ cp "$CVFG_PROJECT_DIR/data/input/reference/MANE.GRCh38.v1.5.summary.txt.gz" "$st
 # actually about to run -- a full run, or --step 1. Later --step N runs read
 # an already-staged cvfg_variants.<N-1>.tsv and shouldn't require this file.
 if [[ -z "$step" || "$step" == "1" ]]; then
-  echo "Staging data/input/maves/cvfg_variants.0.tsv -> ${stage_dir#"$CVFG_PROJECT_DIR"/}/data/cvfg_variants.0.tsv ..."
-  cp "$CVFG_PROJECT_DIR/data/input/maves/cvfg_variants.0.tsv" "$stage_dir/data/cvfg_variants.0.tsv"
+  variants_0_file="${CVFG_VARIANTS_0_FILE:-$CVFG_PROJECT_DIR/data/input/maves/cvfg_variants.0.tsv}"
+  echo "Staging $variants_0_file -> ${stage_dir#"$CVFG_PROJECT_DIR"/}/data/cvfg_variants.0.tsv ..."
+  cp "$variants_0_file" "$stage_dir/data/cvfg_variants.0.tsv"
 fi
 
 # Step 16's predictor files (AlphaMissense_hg38.tsv.gz, revel_hg38.tsv.gz,
-# their .tbi indexes, and data_frame_missense_variants_MP2_properties.csv.gz)
-# are hundreds of MB each, so they're only staged when Step 16 is actually
-# about to run -- a full run, or --step 16 -- same gating as
-# cvfg_variants.0.tsv above. Step 16 reads them as
-# /work/data/AlphaMissense_hg38.tsv.gz, /work/data/revel_hg38.tsv.gz, and
-# /work/data/data_frame_missense_variants_MP2_properties.csv.gz; see
-# docs/variant_annotation_pipeline.md.
+# their .tbi indexes, mp2_annotations.csv.gz, and mp2_gene_symbol_map.tsv)
+# are hundreds of MB each (AlphaMissense/REVEL), so they're only staged when
+# Step 16 is actually about to run -- a full run, or --step 16 -- same
+# gating as cvfg_variants.0.tsv above. Step 16 reads them as
+# /work/data/AlphaMissense_hg38.tsv.gz, /work/data/revel_hg38.tsv.gz,
+# /work/data/mp2_annotations.csv.gz, and /work/data/mp2_gene_symbol_map.tsv;
+# see docs/variant_annotation_pipeline.md.
 if [[ -z "$step" || "$step" == "16" ]]; then
   echo "Staging data/input/predictors/ predictor files -> ${stage_dir#"$CVFG_PROJECT_DIR"/}/data/ ..."
   cp "$CVFG_PROJECT_DIR/data/input/predictors/AlphaMissense_hg38.tsv.gz" "$stage_dir/data/AlphaMissense_hg38.tsv.gz"
   cp "$CVFG_PROJECT_DIR/data/input/predictors/AlphaMissense_hg38.tsv.gz.tbi" "$stage_dir/data/AlphaMissense_hg38.tsv.gz.tbi"
   cp "$CVFG_PROJECT_DIR/data/input/predictors/revel_hg38.tsv.gz" "$stage_dir/data/revel_hg38.tsv.gz"
   cp "$CVFG_PROJECT_DIR/data/input/predictors/revel_hg38.tsv.gz.tbi" "$stage_dir/data/revel_hg38.tsv.gz.tbi"
-  cp "$CVFG_PROJECT_DIR/data/input/predictors/data_frame_missense_variants_MP2_properties.csv.gz" "$stage_dir/data/data_frame_missense_variants_MP2_properties.csv.gz"
+  cp "$CVFG_PROJECT_DIR/data/input/predictors/mp2_annotations.csv.gz" "$stage_dir/data/mp2_annotations.csv.gz"
+  cp "$CVFG_PROJECT_DIR/data/input/predictors/mp2_gene_symbol_map.tsv" "$stage_dir/data/mp2_gene_symbol_map.tsv"
 fi
 
 export VARIANT_DATA_DIR="$stage_dir"
 
 expanded="$stage_dir/data/integrated_variant_effect_dataset.tsv"
 condensed="$stage_dir/data/integrated_variant_effect_dataset.condensed.tsv"
-out_dir="$CVFG_PROJECT_DIR/data/output/maves"
+out_dir="${CVFG_OUTPUT_DIR:-$CVFG_PROJECT_DIR/data/output/maves}"
 
 gzip_final_outputs() {
   mkdir -p "$out_dir"

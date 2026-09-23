@@ -236,25 +236,39 @@ against that checkout's copy instead (`_open_maybe_gzipped` in
 `remap_transcript_ids.py` reads the `.gz` transparently) -- see
 `data/raw_mave_data/README.md`.
 
-**Exception: Step 16's AlphaMissense/REVEL/MutPred2-properties files.** Unlike
-the rest, `step_16` passes `--alphamissense-file`/`--revel-file`/
-`--mutpred2-properties-file` as `/work/data/...` paths, so
-`AlphaMissense_hg38.tsv.gz`, `revel_hg38.tsv.gz` (plus their `.tbi` indexes),
-and `data_frame_missense_variants_MP2_properties.csv.gz` must all resolve
-from `data/intermediate/variant_annotation/data/` -- they don't resolve from
-a `variant-annotation` checkout for this step. Unlike the SpliceAI
-VCFs/`clinvar_cache/`/dbNSFP above (generic reference data too large and
-too widely shared across projects to duplicate here), all three of these
-files are pinned copies specific to this pipeline run, so they're committed
-to this project's own `data/input/predictors/` alongside the other predictor
-inputs (see [`build_training_variant_files`: a preparatory step before Step
-16](#build_training_variant_files-a-preparatory-step-before-step-16) below),
-and `scripts/run_variant_annotation_pipeline.sh` copies all of them into
+**Exception: Step 16's AlphaMissense/REVEL/MutPred2 files.** Unlike the rest,
+`step_16` passes `--alphamissense-file`/`--revel-file`/
+`--mutpred2-properties-file`/`--mutpred2-gene-symbol-map-file` as
+`/work/data/...` paths, so `AlphaMissense_hg38.tsv.gz`, `revel_hg38.tsv.gz`
+(plus their `.tbi` indexes), `mp2_annotations.csv.gz`, and
+`mp2_gene_symbol_map.tsv` must all resolve from
+`data/intermediate/variant_annotation/data/` -- they don't resolve from a
+`variant-annotation` checkout for this step. Unlike the SpliceAI
+VCFs/`clinvar_cache/`/dbNSFP above (generic reference data too large and too
+widely shared across projects to duplicate here), all four of these files
+are pinned copies specific to this pipeline run, so they live in this
+project's own `data/input/predictors/` alongside the other predictor inputs
+(see [`build_training_variant_files`: a preparatory step before Step
+16](#build_training_variant_files-a-preparatory-step-before-step-16) below)
+-- `mp2_annotations.csv.gz`/`mp2_gene_symbol_map.tsv` are small enough to be
+committed to git; `AlphaMissense_hg38.tsv.gz`/`revel_hg38.tsv.gz` (hundreds
+of MB each) are not, and must be provided locally (see `docs/data.md`).
+`scripts/run_variant_annotation_pipeline.sh` copies all four into
 `data/intermediate/variant_annotation/data/` automatically -- but only when
 Step 16 is actually about to run (a full run, or `--step 16`), the same
-gating `cvfg_variants.0.tsv` gets for Step 1, since together they're well
-over a gigabyte and too big to copy on every single-step invocation. No
-manual copy is needed for any of them.
+gating `cvfg_variants.0.tsv` gets for Step 1, since AlphaMissense/REVEL
+together are well over a gigabyte and too big to copy on every single-step
+invocation. No manual copy is needed for any of them.
+
+`mp2_annotations.csv.gz` is a `gene_symbol`/`AA`/`MutPred2 score` lookup
+table assembled from three sources -- MaveDB's own per-variant MP2-properties
+export, a small curated gene/AA-keyed supplement, and a DDX3X-specific
+supplement -- looked up per row on gene symbol + amino-acid substitution
+(`--mutpred2-properties-join-key gene-aa`) rather than the genomic-coordinate
+join `annotate_predictors.py` also supports. `mp2_gene_symbol_map.tsv` remaps
+`CALM1, CALM2, CALM3` (this project's combined-target gene symbol) to
+`CALM1` (the properties data's own naming) before that lookup. See
+`docs/data.md` for exactly how `mp2_annotations.csv.gz` is assembled.
 
 **Exception: `score_sets.tsv` and `Supplementary_Data_3.xlsx` (Steps 11, 15,
 and 16).** These two CVFG-specific inputs live in this project's own
@@ -379,9 +393,10 @@ left in the `variant-annotation` checkout for every other step -- see
 [above](#the-variant_data_dir-path-mapping-subtlety)) are also copied,
 together with their `.tbi` indexes, into
 `data/intermediate/variant_annotation/data/` specifically for Step 16 --
-committed to `data/input/predictors/` and staged automatically like
-`data_frame_missense_variants_MP2_properties.csv.gz`, rather than requiring
-a manual copy.
+staged automatically from `data/input/predictors/` like
+`mp2_annotations.csv.gz`/`mp2_gene_symbol_map.tsv` (though unlike those two,
+AlphaMissense/REVEL are too large to commit -- see `docs/data.md`), rather
+than requiring a manual copy.
 
 Unlike `recalculate_clingen_classification`/`flag_variants`, this step reads
 and writes paths that are fixed under this project's own tree (`data/input/predictors/`
